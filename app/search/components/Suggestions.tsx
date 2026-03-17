@@ -10,7 +10,7 @@ type Props = {
 export default function Suggestions({ items, onSelect }: Props) {
   if (!items.length) return null;
   return (
-    <div className="border border-black/10 rounded-[5px] bg-white text-sm divide-y divide-black/5">
+    <div className="border-b border-t border-black/10 bg-white text-sm divide-y divide-black/5">
       {items.map((s) => (
         <button
           key={s.label}

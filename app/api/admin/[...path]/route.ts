@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+﻿import { NextRequest } from "next/server";
 
 const backendBase =
   process.env.BACKEND_URL ||
@@ -14,7 +14,7 @@ async function proxy(req: NextRequest, params: { path?: string[] }) {
   const search = req.nextUrl.search || "";
   const url = `${targetBase}/${joined}${search}`;
 
-  const init: RequestInit = {
+  const init: RequestInit & { duplex?: "half" } = {
     method: req.method,
     headers: Object.fromEntries(
       Array.from(req.headers.entries()).filter(
@@ -26,7 +26,7 @@ async function proxy(req: NextRequest, params: { path?: string[] }) {
 
   if (req.method !== "GET" && req.method !== "HEAD") {
     const body = await req.arrayBuffer();
-    init.body = body;
+    init.body = body;`n    init.duplex = "half";
   }
 
   try {
@@ -65,3 +65,4 @@ export async function DELETE(req: NextRequest, { params }: { params: { path?: st
   const resolved = await Promise.resolve(params);
   return proxy(req, resolved);
 }
+

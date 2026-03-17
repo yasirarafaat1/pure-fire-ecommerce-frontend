@@ -9,7 +9,8 @@ export default function PublicFrame({ children }: { children: React.ReactNode })
     pathname.startsWith("/admin") ||
     pathname.startsWith("/api") ||
     pathname.startsWith("/auth") ||
-    pathname.startsWith("/login");
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/search");
 
   if (hide) return <>{children}</>;
 

@@ -23,11 +23,15 @@ type Props = {
   selectedColor?: string | null;
   onSelectColor?: (color: string) => void;
   sizes: string[];
+  selectedSize?: string | null;
+  onSelectSize?: (size: string) => void;
   delivery: { pincode: string; eta: string };
   highlights: Highlight[];
   description: string;
-  onAddToCart?: () => void;
-  onBuyNow?: () => void;
+  onAddToCart?: (payload: { color: string; size: string }) => void;
+  onBuyNow?: (payload: { color: string; size: string }) => void;
+  addedToCart?: boolean;
+  onGoToCart?: () => void;
 };
 
 const Caret = ({ open }: { open: boolean }) => (
@@ -58,11 +62,15 @@ export default function InfoPanel({
   selectedColor,
   onSelectColor,
   sizes,
+  selectedSize: selectedSizeProp,
+  onSelectSize,
   delivery,
   highlights,
   description,
   onAddToCart,
   onBuyNow,
+  addedToCart,
+  onGoToCart,
 }: Props) {
   const [pin, setPin] = useState(delivery.pincode);
   const [pinError, setPinError] = useState<string | null>(null);
@@ -70,6 +78,7 @@ export default function InfoPanel({
   const [showHighlights, setShowHighlights] = useState(true);
   const [showDescription, setShowDescription] = useState(false);
   const [showPolicy, setShowPolicy] = useState(false);
+  const [selectionError, setSelectionError] = useState<string | null>(null);
   const safeSizes = useMemo(
     () =>
       sizes
@@ -77,17 +86,24 @@ export default function InfoPanel({
         .filter((s) => s && s !== "[object Object]"),
     [sizes],
   );
-  const [selectedSize, setSelectedSize] = useState<string | null>(safeSizes[0] || null);
+  const [localSize, setLocalSize] = useState<string | null>(safeSizes[0] || null);
+  const selectedSize = selectedSizeProp ?? localSize;
   useEffect(() => {
-    if (!selectedSize || !safeSizes.includes(selectedSize)) {
-      setSelectedSize(safeSizes[0] || null);
-    }
-  }, [safeSizes, selectedSize]);
+    const next = safeSizes[0] || null;
+    if (!next) return;
+    if (selectedSize && safeSizes.includes(selectedSize)) return;
+    if (selectedSize === next) return;
+    if (selectedSizeProp !== undefined) onSelectSize?.(next);
+    else setLocalSize(next);
+  }, [safeSizes, selectedSize, selectedSizeProp, onSelectSize]);
+  useEffect(() => {
+    setSelectionError(null);
+  }, [selectedColor, selectedSize]);
   const policyLines = returnPolicyText.split("\n").map((l) => l.trim()).filter(Boolean);
   const policyHeading = policyLines.shift() || "Returns, Exchange & Refund Policy";
 
   return (
-    <section className="grid p-3 md:pl-8 gap-4">
+    <section className="grid p-3 md:pl-10 gap-4">
       <nav className="hidden md:flex text-[12px] text-[var(--muted)] flex-wrap gap-1">
         {breadcrumbs.map((c, i) => (
           <span key={i} className="flex items-center gap-1">
@@ -160,7 +176,10 @@ export default function InfoPanel({
               <button
                 key={`${s}-${i}`}
                 type="button"
-                onClick={() => setSelectedSize(s)}
+                onClick={() => {
+                  if (selectedSizeProp !== undefined) onSelectSize?.(s);
+                  else setLocalSize(s);
+                }}
                 className={`relative cursor-pointer px-4 py-3 mb-4 border rounded-[8px] text-sm transition-colors ${
                   active ? "bg-black text-white border-black" : "border-gray-400 hover:bg-black hover:text-white"
                 }`}
@@ -175,30 +194,63 @@ export default function InfoPanel({
       <div className="hidden md:flex flex-wrap gap-4">
         <button
           className="flex-1 min-w-[200px] cursor-pointer bg-[#222] text-white font-extrabold uppercase tracking-wide py-3 rounded-[10px] border border-[#222] flex items-center justify-center gap-2 text-sm"
-          onClick={onAddToCart}
+          onClick={() => {
+            if (addedToCart) {
+              onGoToCart?.();
+              return;
+            }
+            if (!selectedColor || !selectedSize) {
+              setSelectionError("Please select color and size.");
+              return;
+            }
+            onAddToCart?.({ color: selectedColor, size: selectedSize });
+          }}
         >
-          <FaShoppingCart /> Add to Cart
+          <FaShoppingCart /> {addedToCart ? "Go to Cart" : "Add to Cart"}
         </button>
         <button
           className="flex-1 min-w-[200px] cursor-pointer text-black font-extrabold uppercase tracking-wide py-3 rounded-[10px] border border-gray-600 flex items-center justify-center text-sm"
-          onClick={onBuyNow}
+          onClick={() => {
+            if (!selectedColor || !selectedSize) {
+              setSelectionError("Please select color and size.");
+              return;
+            }
+            onBuyNow?.({ color: selectedColor, size: selectedSize });
+          }}
         >
           Buy Now
         </button>
       </div>
+      {selectionError && <p className="text-sm text-red-600">{selectionError}</p>}
 
       {/* Mobile sticky CTA */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 border-t border-black/10 px-4 py-3 shadow-md">
         <div className="flex gap-3">
           <button
             className="flex-1 min-w-[150px] cursor-pointer bg-[#222] text-white font-extrabold uppercase tracking-wide py-3 rounded-[10px] border border-[#222] flex items-center justify-center gap-2 text-sm"
-            onClick={onAddToCart}
+            onClick={() => {
+              if (addedToCart) {
+                onGoToCart?.();
+                return;
+              }
+              if (!selectedColor || !selectedSize) {
+                setSelectionError("Please select color and size.");
+                return;
+              }
+              onAddToCart?.({ color: selectedColor, size: selectedSize });
+            }}
           >
-            <FaShoppingCart /> Add to Cart
+            <FaShoppingCart /> {addedToCart ? "Go to Cart" : "Add to Cart"}
           </button>
           <button
             className="flex-1 min-w-[150px] cursor-pointer text-black font-extrabold uppercase tracking-wide py-3 rounded-[10px] border border-gray-600 flex items-center justify-center text-sm"
-            onClick={onBuyNow}
+            onClick={() => {
+              if (!selectedColor || !selectedSize) {
+                setSelectionError("Please select color and size.");
+                return;
+              }
+              onBuyNow?.({ color: selectedColor, size: selectedSize });
+            }}
           >
             Buy Now
           </button>

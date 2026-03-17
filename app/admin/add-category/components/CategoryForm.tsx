@@ -138,6 +138,12 @@ export default function CategoryForm() {
               value={newRoot}
               onChange={(e) => setNewRoot(e.target.value)}
               placeholder="Mens"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleCreate();
+                }
+              }}
             />
             <button className="btn btn-primary w-full mt-2" onClick={handleCreate}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -154,6 +160,12 @@ export default function CategoryForm() {
               value={newChild}
               onChange={(e) => setNewChild(e.target.value)}
               placeholder="Jeans / Shoes / Accessories"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleCreateChild();
+                }
+              }}
             />
             <button
               className="btn btn-ghost w-full mt-2"
@@ -177,6 +189,12 @@ export default function CategoryForm() {
               value={renameValue}
               onChange={(e) => setRenameValue(e.target.value)}
               placeholder="New name"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleRename();
+                }
+              }}
             />
             <button className="btn btn-ghost" onClick={handleRename}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

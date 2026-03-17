@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+﻿import { NextRequest } from "next/server";
 
 const targetBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -11,15 +11,18 @@ async function proxy(
   const search = req.nextUrl.search || "";
   const url = `${targetBase}/user/${joined}${search}`;
 
-  const init: RequestInit = {
+  const init: RequestInit & { duplex?: "half" } = {
     method: req.method,
-    headers: { ...Object.fromEntries(req.headers) },
-    body: req.method === "GET" || req.method === "HEAD" ? undefined : req.body,
+    headers: Object.fromEntries(
+      Array.from(req.headers.entries()).filter(
+        ([key]) => !["host", "content-length"].includes(key.toLowerCase())
+      )
+    ),
     redirect: "manual",
   };
-  if (init.body) {
-    // Required for Node fetch when streaming a request body (e.g. FormData)
-    (init as any).duplex = "half";
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    const body = await req.arrayBuffer();
+    init.body = body;`n    init.duplex = "half";
   }
 
   const res = await fetch(url, init);
@@ -64,3 +67,4 @@ export async function DELETE(
 ) {
   return proxy(req, ctx);
 }
+

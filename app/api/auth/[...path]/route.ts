@@ -20,6 +20,7 @@ async function proxy(req: NextRequest, params: { path?: string[] }) {
   };
   if (req.method !== "GET" && req.method !== "HEAD") {
     init.body = await req.arrayBuffer();
+    (init as any).duplex = "half";
   }
   try {
     const res = await fetch(url, init);

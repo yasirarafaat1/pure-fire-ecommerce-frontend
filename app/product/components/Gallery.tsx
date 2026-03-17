@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { FaStar } from "react-icons/fa";
 import { IoIosClose } from "react-icons/io";
 import { IoChevronBack, IoChevronForward } from "react-icons/io5";
-import { PiShareNetworkThin, PiArrowsOutLight, PiHeartLight } from "react-icons/pi";
+import { PiShareNetworkThin, PiArrowsOutLight, PiHeartLight, PiHeartFill } from "react-icons/pi";
 
 type SimilarItem = { title: string; price: string; image: string; badge?: string };
 type Props = {
@@ -15,6 +15,10 @@ type Props = {
   rating?: number;
   reviews?: number;
   highlights?: { key: string; value: string }[];
+  selectedColor?: string | null;
+  selectedSize?: string | null;
+  wishlisted?: boolean;
+  onToggleWishlist?: () => void;
 };
 type Media = { type: "image" | "video"; src: string };
 
@@ -26,6 +30,10 @@ export default function Gallery({
   rating = 0,
   reviews = 0,
   highlights = [],
+  selectedColor,
+  selectedSize,
+  wishlisted,
+  onToggleWishlist,
 }: Props) {
   const media: Media[] = useMemo(() => {
     const list: Media[] = [];
@@ -94,7 +102,14 @@ export default function Gallery({
                   className="w-10 h-10 rounded-full bg-white shadow border flex items-center justify-center"
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigator?.share?.({ title, url: window.location.href }).catch(() => {});
+                    try {
+                      const url = new URL(window.location.href);
+                      if (selectedColor) url.searchParams.set("color", selectedColor);
+                      if (selectedSize) url.searchParams.set("size", selectedSize);
+                      navigator?.share?.({ title, url: url.toString() }).catch(() => {});
+                    } catch {
+                      navigator?.share?.({ title, url: window.location.href }).catch(() => {});
+                    }
                   }}
                 >
                   <PiShareNetworkThin size={20} />
@@ -138,9 +153,10 @@ export default function Gallery({
                 className="absolute left-3 bottom-3 z-10 bg-white text-black w-10 h-10 rounded-full border shadow flex items-center justify-center"
                 onClick={(e) => {
                   e.stopPropagation();
+                  onToggleWishlist?.();
                 }}
               >
-                <PiHeartLight size={20} />
+                {wishlisted ? <PiHeartFill size={20} /> : <PiHeartLight size={20} />}
               </button>
             </div>
           ))}

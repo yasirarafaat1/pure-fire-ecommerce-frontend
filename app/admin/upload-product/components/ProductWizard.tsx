@@ -116,13 +116,9 @@ export default function ProductWizard({ product, onSaved, onClose }: Props) {
   const level2Options = useMemo(() => (level1 ? findNode(tree, level1)?.children || [] : []), [tree, level1]);
   const level3Options = useMemo(() => (level2 ? findNode(tree, level2)?.children || [] : []), [tree, level2]);
   useEffect(() => {
-    const selected =
-      level3 ||
-      (level2 && !(findNode(tree, level2)?.children?.length) && level2) ||
-      (level1 && !(findNode(tree, level1)?.children?.length) && level1) ||
-      categoryId || "";
-    setCategoryId(selected || categoryId);
-  }, [level1, level2, level3, tree]);
+    // Only allow final (sub-child) selection to enable next/publish
+    setCategoryId(level3 || "");
+  }, [level3]);
 
   useEffect(() => {
     if (!variants.length) return;
@@ -329,7 +325,15 @@ export default function ProductWizard({ product, onSaved, onClose }: Props) {
       <FooterControls
         active={active}
         categorySelected={!!categoryId}
-        canNext={active === 2 ? !validateDetails() : active === 3 ? !validateVariants() : true}
+        canNext={
+          active === 1
+            ? !!categoryId
+            : active === 2
+              ? !validateDetails()
+              : active === 3
+                ? !validateVariants()
+                : true
+        }
         canPublish={publishReady}
         canDraft={!product}
         busyAction={busyAction}
@@ -338,7 +342,7 @@ export default function ProductWizard({ product, onSaved, onClose }: Props) {
         onCancel={() => onClose?.()}
         onDraft={() => submit("draft")}
         onPublish={() => submit("published")}
-        onRequireCategory={() => setMessage("Select a category first.")}
+        onRequireCategory={() => setMessage("Select category, sub category, sub child.")}
       />
       {message && <p className="mt-3 text-sm text-[var(--muted)]">{message}</p>}
       {!publishReady && !message && (

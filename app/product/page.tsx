@@ -1,19 +1,26 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import namer from "color-namer";
 import Gallery from "./components/Gallery";
 import InfoPanel from "./components/InfoPanel";
 import ProductRail from "./components/ProductRail";
 import Reviews from "./components/Reviews";
+import { getUserToken } from "../utils/auth";
 
 const API_BASE = "/api/user";
+const getToken = () => getUserToken();
 
 export default function ProductPage() {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const productId = searchParams.get("id") || undefined;
   const colorParam = searchParams.get("color");
+  const sizeParam = searchParams.get("size");
+  const queryString = searchParams.toString();
+  const nextUrl = queryString ? `${pathname}?${queryString}` : pathname;
 
   const leftRef = useRef<HTMLDivElement | null>(null);
   const rightRef = useRef<HTMLDivElement | null>(null);
@@ -24,6 +31,20 @@ export default function ProductPage() {
   const [reviews, setReviews] = useState<any[]>([]);
   const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [addedToCart, setAddedToCart] = useState(false);
+  const [cartItems, setCartItems] = useState<any[]>([]);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [wishlistIds, setWishlistIds] = useState<Set<string>>(new Set());
+
+  const requireAuth = () => {
+    const token = getToken();
+    if (!token) {
+      router.push(`/login?next=${encodeURIComponent(nextUrl || "/")}`);
+      return false;
+    }
+    return true;
+  };
   const normalizeProduct = (raw: any) => {
     if (!raw) return null;
     const parseList = (val: any) => {
@@ -79,13 +100,23 @@ export default function ProductPage() {
     };
   };
   const colorNameFromHex = useMemo(
-    () => (hex: string) => {
-      try {
-        const result = namer(hex);
-        return result?.basic?.[0]?.name || result?.html?.[0]?.name || "Custom";
-      } catch {
-        return "Custom";
+    () => (input: string) => {
+      const raw = (input || "").trim();
+      if (!raw) return "Custom";
+      const hex = raw.startsWith("#")
+        ? raw
+        : /^[0-9a-f]{3}$|^[0-9a-f]{6}$/i.test(raw)
+          ? `#${raw}`
+          : "";
+      if (hex) {
+        try {
+          const result = namer(hex);
+          return result?.basic?.[0]?.name || result?.html?.[0]?.name || "Custom";
+        } catch {
+          return "Custom";
+        }
       }
+      return raw.replace(/\b\w/g, (c) => c.toUpperCase());
     },
     [],
   );
@@ -112,6 +143,7 @@ export default function ProductPage() {
 
   useEffect(() => {
     const load = async () => {
+      setLoading(true);
       try {
         const listRes = await fetch(`${API_BASE}/show-product`);
         const listData = await listRes.json();
@@ -126,6 +158,7 @@ export default function ProductPage() {
         const prod = normalizeProduct(detail || first);
         setProduct(prod);
         setSelectedColor(colorParam || prod?.variants?.[0]?.color || prod?.colors?.[0] || null);
+        if (sizeParam) setSelectedSize(sizeParam);
 
         setRecentlyViewed((list || []).slice(0, 8).map(normalizeProduct));
 
@@ -144,12 +177,45 @@ export default function ProductPage() {
         const revRes = await fetch(`${API_BASE}/get-product-reviews/${id}`);
         const revData = await revRes.json();
         setReviews(revData?.reviews || revData?.data || []);
+
+        const cartId = localStorage.getItem("cart_id") || "";
+        if (cartId && prod?.product_id) {
+          const cartRes = await fetch(`${API_BASE}/get-user-cart`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ cart_id: cartId }),
+          });
+          const cartData = await cartRes.json();
+          setCartItems(cartData?.items || []);
+        } else {
+          setCartItems([]);
+        }
+
+        const token = getToken();
+        if (token) {
+          const email = (localStorage.getItem("user_email") || "guest@purefire.local").trim();
+          localStorage.setItem("user_email", email);
+          const wishRes = await fetch(`${API_BASE}/wishlist/list`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-user-token": token },
+            body: JSON.stringify({ email }),
+          });
+          const wishData = await wishRes.json();
+          const ids = new Set(
+            (wishData?.products || []).map((p: any) => String(p.product_id || p._id || "")),
+          );
+          setWishlistIds(ids);
+        } else {
+          setWishlistIds(new Set());
+        }
       } catch (err) {
         console.error("product fetch error", err);
+      } finally {
+        setLoading(false);
       }
     };
     load();
-  }, [productId, colorParam]);
+  }, [productId, colorParam, sizeParam]);
 
   const breadcrumbs =
     product?.breadcrumbs ||
@@ -166,8 +232,23 @@ export default function ProductPage() {
   const displayImages =
     currentVariant?.images && currentVariant.images.length > 0 ? currentVariant.images : product?.images || [];
   const displayVideo = currentVariant?.video || product?.video || "";
-  const displaySizes =
-    currentVariant?.sizes && currentVariant.sizes.length > 0 ? currentVariant.sizes : product?.sizes || [];
+  const displaySizes = useMemo(() => {
+    const base =
+      currentVariant?.sizes && currentVariant.sizes.length > 0 ? currentVariant.sizes : product?.sizes || [];
+    return (Array.isArray(base) ? base : [])
+      .map((s: any) => (typeof s === "string" ? s : s?.label || s?.size || String(s)))
+      .filter((s: any) => s && s !== "[object Object]");
+  }, [currentVariant?.sizes, product?.sizes]);
+  const displaySizesKey = useMemo(() => displaySizes.join("|"), [displaySizes]);
+  useEffect(() => {
+    if (!displaySizes.length) {
+      if (selectedSize !== null) setSelectedSize(null);
+      return;
+    }
+    if (!selectedSize || !displaySizes.includes(selectedSize)) {
+      setSelectedSize(displaySizes[0]);
+    }
+  }, [displaySizesKey, selectedColor, selectedSize]);
   const displayPrice =
     currentVariant?.discountedPrice ?? product?.discountedPrice ?? product?.price ?? 0;
   const displayMrp = currentVariant?.mrp ?? product?.mrp ?? product?.price ?? 0;
@@ -178,16 +259,16 @@ export default function ProductPage() {
   const variantCards =
     product?.variants?.length > 0
       ? product.variants
-          .filter((v: any) => v.color && v.color !== selectedColor)
-          .map((v: any) => ({
-            id: product.product_id || product._id,
-            color: v.color,
-            title: product.name,
-            price: v.discountedPrice ?? product.discountedPrice ?? product.price,
-            mrp: v.mrp ?? product.mrp ?? product.price,
-            image: (v.images && v.images[0]) || product.images?.[0] || "",
-            images: v.images || [],
-          }))
+        .filter((v: any) => v.color && v.color !== selectedColor)
+        .map((v: any) => ({
+          id: product.product_id || product._id,
+          color: v.color,
+          title: product.name,
+          price: v.discountedPrice ?? product.discountedPrice ?? product.price,
+          mrp: v.mrp ?? product.mrp ?? product.price,
+          image: (v.images && v.images[0]) || product.images?.[0] || "",
+          images: v.images || [],
+        }))
       : [];
   const uniqueSimilarProducts = similarProducts.filter((p: any, idx: number, arr: any[]) => {
     const key = String(p.product_id || p._id || "");
@@ -244,9 +325,85 @@ export default function ProductPage() {
     reviews.length > 0
       ? reviews.reduce((sum, r: any) => sum + Number(r.review_rate ?? r.rating ?? 0), 0) / reviews.length
       : product?.avgRating || 0;
+  const addToCart = async ({ color, size }: { color: string; size: string }) => {
+    if (!product?.product_id) return;
+    const cartId = localStorage.getItem("cart_id") || "";
+    const payload = {
+      cart_id: cartId,
+      product_id: product.product_id,
+      color,
+      size,
+      qty: 1,
+      price: displayPrice,
+      mrp: displayMrp,
+      title: product.name,
+      image: displayImages?.[0] || "",
+    };
+    const res = await fetch(`${API_BASE}/add-to-cart`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data?.cart_id) localStorage.setItem("cart_id", data.cart_id);
+    if (data?.items) {
+      setCartItems(data.items);
+    }
+    window.dispatchEvent(new Event("cart:updated"));
+  };
+
+  const toggleWishlist = async () => {
+    if (!requireAuth()) return;
+    if (!product?.product_id) return;
+    const email = (localStorage.getItem("user_email") || "guest@purefire.local").trim();
+    localStorage.setItem("user_email", email);
+    const isWishlisted = wishlistIds.has(String(product.product_id));
+    const endpoint = isWishlisted ? "/wishlist/remove" : "/wishlist/add";
+    try {
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-user-token": getToken() },
+        body: JSON.stringify({ email, product_id: product.product_id }),
+      });
+      const data = await res.json();
+      const ids = new Set(
+        (data?.products || []).map((p: any) => String(p.product_id || p._id || "")),
+      );
+      setWishlistIds(ids);
+      window.dispatchEvent(new Event("wishlist:updated"));
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    if (!product?.product_id || !selectedColor || !selectedSize) {
+      setAddedToCart(false);
+      return;
+    }
+    const exists = cartItems.some(
+      (i: any) =>
+        String(i.product_id) === String(product.product_id) &&
+        String(i.color || "") === String(selectedColor || "") &&
+        String(i.size || "") === String(selectedSize || ""),
+    );
+    setAddedToCart(Boolean(exists));
+  }, [cartItems, product?.product_id, selectedColor, selectedSize]);
 
   return (
-    <main className="max-w-6xl mx-auto md:p-2 grid gap-2 pb-24 md:pb-0">
+    <main className="max-w-6xl mx-auto md:p-2 grid gap-2 pb-24 md:pb-0 relative">
+      {loading && (
+        <div className="fixed inset-0 z-50 bg-white flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative w-20 h-20">
+              <div className="absolute inset-0 rounded-full border border-black/20" />
+              <div className="absolute inset-0 rounded-full border-2 border-black/10 border-t-black animate-spin" />
+              <div className="absolute inset-4 rounded-full border border-black/20" />
+            </div>
+            <div className="text-sm font-semibold tracking-wide">Loading Product…</div>
+          </div>
+        </div>
+      )}
       <div className="md:hidden">
         <nav className="text-[11px] pl-3 text-[var(--muted)] flex flex-wrap gap-1">
           {breadcrumbs.map((c: any, i: number) => (
@@ -267,18 +424,22 @@ export default function ProductPage() {
       <div className="grid md:grid-cols-[1.2fr_1fr] gap-2 md:gap-8 items-start">
         <div ref={leftRef} className={`${stick === "left" ? "md:sticky md:top-4" : ""}`}>
           {product && (
-            <Gallery
-              title={product.name}
-              images={displayImages}
-              video={displayVideo}
-              rating={avgRating || 0}
-              reviews={reviewCount}
-              highlights={product.key_highlights || []}
-              similarItems={similarProducts.map((p) => ({
-                title: p.name,
-                price: p.price,
-                image: p.images?.[0] || "",
-                badge: p.discount ? `${p.discount}% OFF` : undefined,
+              <Gallery
+                title={product.name}
+                images={displayImages}
+                video={displayVideo}
+                rating={avgRating || 0}
+                reviews={reviewCount}
+                highlights={product.key_highlights || []}
+                selectedColor={selectedColor}
+                selectedSize={selectedSize}
+                wishlisted={wishlistIds.has(String(product.product_id))}
+                onToggleWishlist={toggleWishlist}
+                similarItems={similarProducts.map((p) => ({
+                  title: p.name,
+                  price: p.price,
+                  image: p.images?.[0] || "",
+                  badge: p.discount ? `${p.discount}% OFF` : undefined,
               }))}
             />
           )}
@@ -302,11 +463,18 @@ export default function ProductPage() {
               selectedColor={selectedColor}
               onSelectColor={setSelectedColor}
               sizes={displaySizes}
+              selectedSize={selectedSize}
+              onSelectSize={setSelectedSize}
               delivery={{ pincode: "", eta: "" }}
               highlights={product.key_highlights || []}
               description={product.description || ""}
-              onAddToCart={() => alert("Added to cart")}
-              onBuyNow={() => alert("Proceed to checkout")}
+              onAddToCart={addToCart}
+              addedToCart={addedToCart}
+              onGoToCart={() => (window.location.href = "/cart")}
+              onBuyNow={async (payload) => {
+                await addToCart(payload);
+                window.location.href = "/cart";
+              }}
             />
           )}
         </div>
@@ -335,6 +503,7 @@ export default function ProductPage() {
       )}
 
       <Reviews
+        title="Reviews"
         reviews={reviews.map((r: any) => ({
           user: r.user_name || r.userName || "User",
           rating: Number(r.review_rate ?? r.rating ?? 5),

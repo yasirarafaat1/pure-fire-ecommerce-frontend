@@ -4,14 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 import { IoIosClose } from "react-icons/io";
 import { IoChevronBack, IoChevronForward } from "react-icons/io5";
 import { FaStar, FaRegStar } from "react-icons/fa6";
+import { title } from "process";
 
 type Review = { user: string; rating: number; date: string; text: string; images?: string[] };
-
+type Props = { title: string };
 type SubmitPayload = { rating: number; text: string; images: File[]; video?: File | null };
 export default function Reviews({
+  title,
   reviews,
   onSubmit,
 }: {
+  title: string;
   reviews: Review[];
   onSubmit: (payload: SubmitPayload) => Promise<{ ok: boolean; message?: string }>;
 }) {
@@ -23,6 +26,7 @@ export default function Reviews({
       ),
     [reviews]
   );
+
 
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<"recent" | "high" | "low">("recent");
@@ -66,12 +70,14 @@ export default function Reviews({
 
   return (
     <section className="grid p-4 md:p-4 gap-4">
-      <h3 className="text-lg font-semibold">Reviews</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold border-b border-gray-600">{title}</h3>
+      </div>
       <div className="flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-1 text-[#f59e0b] text-lg">
           {Array.from({ length: 5 }).map((_, i) =>
             i < Math.round(Number(avgRating)) ? <FaStar key={i} /> : <FaRegStar key={i} />
-          )}
+           )}
         </div>
         <div className="text-base font-semibold">{reviews.length} reviews</div>
         <div className="flex gap-2 ml-auto">
@@ -114,9 +120,8 @@ export default function Reviews({
             return (
               <div
                 key={i}
-                className={`border border-black/20 rounded-[6px] p-4 bg-white ${
-                  hasImage ? "md:row-span-2" : ""
-                }`}
+                className={`border border-black/20 rounded-[6px] p-4 bg-white ${hasImage ? "md:row-span-2" : ""
+                  }`}
               >
                 <div className="flex items-center justify-between text-sm font-medium">
                   <span>{r.user}</span>

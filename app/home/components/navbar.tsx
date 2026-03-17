@@ -1,7 +1,8 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { getUserToken } from "../../utils/auth";
 
 const IconArrowLeft = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -64,12 +65,47 @@ const IconSupport = () => (
   </svg>
 );
 
+const IconChevron = ({ open }: { open: boolean }) => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={`transition-transform ${open ? "rotate-180" : "rotate-0"}`}
+  >
+    <path d="M6 9l6 6 6-6" />
+  </svg>
+);
+
+type CategoryNode = {
+  _id: string;
+  name: string;
+  children?: CategoryNode[];
+};
+
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
 export default function HomeNavbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchMode, setSearchMode] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const [cartCount, setCartCount] = useState(0);
+  const [categoryTree, setCategoryTree] = useState<CategoryNode[]>([]);
+  const [expandedRoot, setExpandedRoot] = useState<string | null>(null);
+  const [expandedSub, setExpandedSub] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
+
 
   useEffect(() => {
     if (pathname.startsWith("/search")) {
@@ -79,6 +115,72 @@ export default function HomeNavbar() {
       setSearchText("");
     }
   }, [pathname]);
+
+  useEffect(() => {
+    const loadCartCount = async () => {
+      const cartId = localStorage.getItem("cart_id") || "";
+      if (!cartId) {
+        setCartCount(0);
+        return;
+      }
+      try {
+        const res = await fetch("/api/user/get-user-cart", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cart_id: cartId }),
+        });
+        const data = await res.json();
+        const count = (data?.items || []).reduce((sum: number, i: any) => sum + Number(i.qty || 1), 0);
+        setCartCount(count);
+      } catch {
+        setCartCount(0);
+      }
+    };
+    loadCartCount();
+    const onUpdated = () => loadCartCount();
+    window.addEventListener("focus", onUpdated);
+    window.addEventListener("cart:updated", onUpdated as EventListener);
+    return () => {
+      window.removeEventListener("focus", onUpdated);
+      window.removeEventListener("cart:updated", onUpdated as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const [treeRes, productsRes] = await Promise.all([
+          fetch("/api/admin/categories/tree", { cache: "no-store" }),
+          fetch("/api/admin/get-products", { cache: "no-store" }),
+        ]);
+        const treeData = await treeRes.json();
+        const productsData = await productsRes.json();
+        const products = (productsData?.products || []).filter(
+          (p: any) => !p.status || p.status === "published",
+        );
+        const usedIds = new Set(
+          products
+            .map((p: any) => String(p.catagory_id?._id || p.catagory_id || ""))
+            .filter(Boolean),
+        );
+        const prune = (node: CategoryNode): CategoryNode | null => {
+          const kids = (node.children || [])
+            .map(prune)
+            .filter(Boolean) as CategoryNode[];
+          const hasDirect = usedIds.has(String(node._id));
+          if (!hasDirect && kids.length === 0) return null;
+          return { ...node, children: kids };
+        };
+        const filtered = (treeData?.categories || [])
+          .map(prune)
+          .filter(Boolean) as CategoryNode[];
+        setCategoryTree(filtered);
+      } catch {
+        setCategoryTree([]);
+      }
+    };
+    loadCategories();
+  }, []);
 
   const toggleMenu = () => setMenuOpen((v) => !v);
 
@@ -142,13 +244,23 @@ export default function HomeNavbar() {
         {/* Right cluster */}
         {!searchMode ? (
           <div className="flex items-center gap-3">
-            <button className="btn btn-ghost !p-2" aria-label="Cart">
+            <button className="btn btn-ghost cursor-pointer !p-2 relative" aria-label="Cart" onClick={() => router.push("/cart")}>
               <IconCart />
+              {cartCount > 0 && (
+                <span className="absolute top-1 right-0.5 w-2.5 h-2.5 rounded-full bg-black border border-white" />
+              )}
             </button>
-            <button className="btn btn-ghost !p-2" aria-label="Login">
+            <button
+              className="btn btn-ghost cursor-pointer !p-2"
+              aria-label="Profile"
+              onClick={() => {
+                const token = getUserToken();
+                router.push(token ? "/profile" : "/login?next=/profile");
+              }}
+            >
               <IconUser />
             </button>
-            <button className="btn btn-ghost !p-2" aria-label="24x7 Support">
+            <button className="btn btn-ghost cursor-pointer !p-2" aria-label="24x7 Support" onClick={() => router.push("/support")}>
               <IconSupport />
             </button>
           </div>
@@ -159,24 +271,96 @@ export default function HomeNavbar() {
 
       {/* Slide-in menu */}
       <div
-        className={`fixed inset-0 z-20 transition-opacity duration-200 ${
-          menuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        }`}
+        className={`fixed inset-0 z-20 transition-opacity duration-200 ${menuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          }`}
         onClick={() => setMenuOpen(false)}
       >
         <div
-          className={`absolute top-0 left-0 h-full w-64 bg-white border-r border-black/10 transition-transform duration-200 ${
-            menuOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+          className={`absolute top-0 left-0 h-full w-64 bg-white border-r border-black/10 transition-transform duration-200 ${menuOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="p-4 font-semibold">Menu</div>
-          <nav className="grid gap-2 px-4 pb-6 text-sm">
-            <a className="py-2 border-b border-black/10" href="/">Home</a>
-            <a className="py-2 border-b border-black/10" href="/collections">Collections</a>
-            <a className="py-2 border-b border-black/10" href="/offers">Offers</a>
-            <a className="py-2 border-b border-black/10" href="/support">Support</a>
+          <div className="flex items-center justify-between gap-3 border-b border-black/10 p-4 pb-2 font-semibold">
+            <h3>Pure Fire</h3>
+            <button className="cursor-pointer !p-2" aria-label="Close menu" onClick={() => setMenuOpen(false)}>
+              <IconClose />
+            </button>
+          </div>
+          <nav className="grid gap-2 px-4 pt-2 text-sm">
+            {categoryTree.map((root) => {
+              const openRoot = expandedRoot === root._id;
+              return (
+                <div key={root._id} className="border-b border-black/10 pb-2">
+                  <button
+                    className="w-full cursor-pointer flex items-center justify-between py-2 text-left"
+                    onClick={() => {
+                      const next = openRoot ? null : root._id;
+                      setExpandedRoot(next);
+                      setExpandedSub(null);
+                    }}
+                  >
+                    <span>{root.name}</span>
+                    <IconChevron open={openRoot} />
+                  </button>
+                  {openRoot && (
+                    <div className="pl-3 grid gap-1">
+                      {root.children?.map((sub) => {
+                        const openSub = expandedSub === sub._id;
+                        return (
+                          <div key={sub._id} className="border-l border-black/10 pl-2">
+                            <button
+                              className="w-full cursor-pointer flex items-center justify-between py-1 text-left"
+                              onClick={() => setExpandedSub(openSub ? null : sub._id)}
+                            >
+                              <span>{sub.name}</span>
+                              <IconChevron open={openSub} />
+                            </button>
+                            {openSub && sub.children?.length ? (
+                              <div className="pl-3 grid gap-1">
+                                {sub.children.map((child) => (
+                                  <button
+                                    key={child._id}
+                                    className="py-1 text-left cursor-pointer text-black border-b border-t border-black/10 hover:text-black"
+                                    onClick={() => {
+                                      setMenuOpen(false);
+                                      router.push(
+                                        `/collections/${slugify(child.name)}?category=${encodeURIComponent(root.name)}&sub=${encodeURIComponent(sub.name)}&child=${encodeURIComponent(child.name)}`
+                                      );
+                                    }}
+                                  >
+                                    {child.name}
+                                  </button>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {categoryTree.length === 0 && <div className="text-xs text-[var(--muted)]">No categories</div>}
+            <div className="border-black/10 grid gap-2">
+              <a className="py-2 border-b border-black/10" href="/wishlist">Wishlist</a>
+              <a className="py-2 border-b border-black/10" href="/orders">Orders</a>
+              <a className="py-2 border-b border-black/10" href="/return-exchange-policy">Return & Exchange Policy</a>
+              <a className="py-2 border-b border-black/10" href="/support">Support</a>
+            </div>
           </nav>
+          <div className="absolute bottom-0 right-0 mt-auto px-4 py-5">
+            <div className="flex items-center justify-center gap-1 text-[#f59e0b]">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <svg key={i} width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.1 6.6L12 17.8 6.2 20.6l1.1-6.6L2.5 9.4l6.6-.9L12 2.5z" />
+                </svg>
+              ))}
+            </div>
+            <p className="text-center text-sm font-extrabold tracking-[0.12em] mt-3">
+              LOVED BY 7,00,000+ CUSTOMERS
+            </p>
+          </div>
         </div>
       </div>
     </header>
