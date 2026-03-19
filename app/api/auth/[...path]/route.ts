@@ -7,27 +7,38 @@ const backendBase =
 
 const targetBase = `${backendBase.replace(/\/$/, "")}/api/auth`;
 
+const buildHeaders = (res: Response) => {
+  const headers = new Headers();
+  const contentType = res.headers.get("content-type");
+  const setCookie = res.headers.get("set-cookie");
+  const cacheControl = res.headers.get("cache-control");
+  if (contentType) headers.set("content-type", contentType);
+  if (cacheControl) headers.set("cache-control", cacheControl);
+  if (setCookie) headers.set("set-cookie", setCookie);
+  return headers;
+};
+
 async function proxy(req: NextRequest, params: { path?: string[] }) {
   const joined = (params.path || []).join("/");
   const url = `${targetBase}/${joined}`;
-  const init: RequestInit = {
+  const init: RequestInit & { duplex?: "half" } = {
     method: req.method,
     headers: Object.fromEntries(
       Array.from(req.headers.entries()).filter(
-        ([key]) => !["host", "content-length"].includes(key.toLowerCase())
+        ([key]) => !["host", "content-length", "accept-encoding"].includes(key.toLowerCase())
       )
     ),
   };
   if (req.method !== "GET" && req.method !== "HEAD") {
     init.body = await req.arrayBuffer();
-    (init as any).duplex = "half";
+    init.duplex = "half";
   }
   try {
     const res = await fetch(url, init);
-    const text = await res.text();
-    return new Response(text, {
+    const buffer = await res.arrayBuffer();
+    return new Response(buffer, {
       status: res.status,
-      headers: { "content-type": res.headers.get("content-type") || "application/json" },
+      headers: buildHeaders(res),
     });
   } catch (error: any) {
     return NextResponse.json(

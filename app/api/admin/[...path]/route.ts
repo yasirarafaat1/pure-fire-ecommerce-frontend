@@ -1,4 +1,4 @@
-﻿import { NextRequest } from "next/server";
+import { NextRequest } from "next/server";
 
 const backendBase =
   process.env.BACKEND_URL ||
@@ -9,8 +9,23 @@ const targetBase = backendBase.replace(/\/$/, "").endsWith("/admin")
   ? backendBase.replace(/\/$/, "")
   : `${backendBase.replace(/\/$/, "")}/admin`;
 
-async function proxy(req: NextRequest, params: { path?: string[] }) {
-  const joined = (params.path || []).join("/");
+const buildHeaders = (res: Response) => {
+  const headers = new Headers();
+  const contentType = res.headers.get("content-type");
+  const setCookie = res.headers.get("set-cookie");
+  const cacheControl = res.headers.get("cache-control");
+  if (contentType) headers.set("content-type", contentType);
+  if (cacheControl) headers.set("cache-control", cacheControl);
+  if (setCookie) headers.set("set-cookie", setCookie);
+  return headers;
+};
+
+async function proxy(
+  req: NextRequest,
+  context: { params: Promise<{ path: string[] }> },
+) {
+  const { path = [] } = await context.params;
+  const joined = path.join("/");
   const search = req.nextUrl.search || "";
   const url = `${targetBase}/${joined}${search}`;
 
@@ -18,7 +33,7 @@ async function proxy(req: NextRequest, params: { path?: string[] }) {
     method: req.method,
     headers: Object.fromEntries(
       Array.from(req.headers.entries()).filter(
-        ([key]) => !["host", "content-length"].includes(key.toLowerCase())
+        ([key]) => !["host", "content-length", "accept-encoding"].includes(key.toLowerCase())
       )
     ),
     redirect: "manual",
@@ -30,43 +45,41 @@ async function proxy(req: NextRequest, params: { path?: string[] }) {
     init.duplex = "half";
   }
 
-  try {
-    const res = await fetch(url, init);
-    const text = await res.text();
-    return new Response(text, {
-      status: res.status,
-      headers: {
-        "content-type": res.headers.get("content-type") || "application/json",
-      },
-    });
-  } catch (err: any) {
-    return new Response(
-      JSON.stringify({
-        status: false,
-        message: `Upstream ${url} unreachable: ${err.message}`,
-      }),
-      { status: 502, headers: { "content-type": "application/json" } }
-    );
-  }
+  const res = await fetch(url, init);
+  const buffer = await res.arrayBuffer();
+  return new Response(buffer, {
+    status: res.status,
+    headers: buildHeaders(res),
+  });
 }
 
-export async function GET(req: NextRequest, { params }: { params: { path?: string[] } }) {
-  const resolved = await Promise.resolve(params);
-  return proxy(req, resolved);
+export async function GET(
+  req: NextRequest,
+  ctx: { params: Promise<{ path: string[] }> },
+) {
+  return proxy(req, ctx);
 }
-export async function POST(req: NextRequest, { params }: { params: { path?: string[] } }) {
-  const resolved = await Promise.resolve(params);
-  return proxy(req, resolved);
+export async function POST(
+  req: NextRequest,
+  ctx: { params: Promise<{ path: string[] }> },
+) {
+  return proxy(req, ctx);
 }
-export async function PUT(req: NextRequest, { params }: { params: { path?: string[] } }) {
-  const resolved = await Promise.resolve(params);
-  return proxy(req, resolved);
+export async function PUT(
+  req: NextRequest,
+  ctx: { params: Promise<{ path: string[] }> },
+) {
+  return proxy(req, ctx);
 }
-export async function PATCH(req: NextRequest, { params }: { params: { path?: string[] } }) {
-  const resolved = await Promise.resolve(params);
-  return proxy(req, resolved);
+export async function PATCH(
+  req: NextRequest,
+  ctx: { params: Promise<{ path: string[] }> },
+) {
+  return proxy(req, ctx);
 }
-export async function DELETE(req: NextRequest, { params }: { params: { path?: string[] } }) {
-  const resolved = await Promise.resolve(params);
-  return proxy(req, resolved);
+export async function DELETE(
+  req: NextRequest,
+  ctx: { params: Promise<{ path: string[] }> },
+) {
+  return proxy(req, ctx);
 }

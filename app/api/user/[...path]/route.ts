@@ -1,10 +1,21 @@
-﻿import { NextRequest } from "next/server";
+import { NextRequest } from "next/server";
 
 const targetBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
+const buildHeaders = (res: Response) => {
+  const headers = new Headers();
+  const contentType = res.headers.get("content-type");
+  const setCookie = res.headers.get("set-cookie");
+  const cacheControl = res.headers.get("cache-control");
+  if (contentType) headers.set("content-type", contentType);
+  if (cacheControl) headers.set("cache-control", cacheControl);
+  if (setCookie) headers.set("set-cookie", setCookie);
+  return headers;
+};
+
 async function proxy(
   req: NextRequest,
-  context: { params: Promise<{ path?: string[] }> },
+  context: { params: Promise<{ path: string[] }> },
 ) {
   const { path = [] } = await context.params;
   const joined = path.join("/");
@@ -15,7 +26,7 @@ async function proxy(
     method: req.method,
     headers: Object.fromEntries(
       Array.from(req.headers.entries()).filter(
-        ([key]) => !["host", "content-length"].includes(key.toLowerCase())
+        ([key]) => !["host", "content-length", "accept-encoding"].includes(key.toLowerCase())
       )
     ),
     redirect: "manual",
@@ -27,45 +38,44 @@ async function proxy(
   }
 
   const res = await fetch(url, init);
-  const text = await res.text();
-  return new Response(text, {
+  const buffer = await res.arrayBuffer();
+  return new Response(buffer, {
     status: res.status,
-    headers: res.headers,
+    headers: buildHeaders(res),
   });
 }
 
 export async function GET(
   req: NextRequest,
-  ctx: { params: Promise<{ path?: string[] }> },
+  ctx: { params: Promise<{ path: string[] }> },
 ) {
   return proxy(req, ctx);
 }
 
 export async function POST(
   req: NextRequest,
-  ctx: { params: Promise<{ path?: string[] }> },
+  ctx: { params: Promise<{ path: string[] }> },
 ) {
   return proxy(req, ctx);
 }
 
 export async function PUT(
   req: NextRequest,
-  ctx: { params: Promise<{ path?: string[] }> },
+  ctx: { params: Promise<{ path: string[] }> },
 ) {
   return proxy(req, ctx);
 }
 
 export async function PATCH(
   req: NextRequest,
-  ctx: { params: Promise<{ path?: string[] }> },
+  ctx: { params: Promise<{ path: string[] }> },
 ) {
   return proxy(req, ctx);
 }
 
 export async function DELETE(
   req: NextRequest,
-  ctx: { params: Promise<{ path?: string[] }> },
+  ctx: { params: Promise<{ path: string[] }> },
 ) {
   return proxy(req, ctx);
 }
-
