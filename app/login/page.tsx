@@ -16,10 +16,7 @@ export default function LoginPage() {
   const [info, setInfo] = useState("");
   const [cooldown, setCooldown] = useState(0);
   const [nextPath, setNextPath] = useState("/profile");
-  const authBase =
-    process.env.NEXT_PUBLIC_API_URL?.trim()
-      ? `${process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, "")}/api/auth`
-      : "/api/auth";
+  const authBase = "/api/auth";
 
   useEffect(() => {
     if (!cooldown) return;
