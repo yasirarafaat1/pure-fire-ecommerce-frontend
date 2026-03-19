@@ -114,7 +114,7 @@ export default function BannerCarousel() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto py-4 space-y-3">
+    <div className="max-w-6xl mx-auto pb-4 md:py-4 space-y-3">
       <div
         className="relative overflow-hidden"
         onMouseEnter={() => setHovering(true)}
@@ -132,7 +132,7 @@ export default function BannerCarousel() {
               style={{ width }}
             >
               <div
-                className="w-full h-[200px] w-[400px] sm:w-[300px] md:w-[500px] sm:h-[220px] md:h-[240px] gap-20 p-5 lg:p-0 cursor-pointer rounded-[5px] border border-black/10 overflow-hidden"
+                className="w-full h-[200px] w-[400px] sm:w-[300px] md:w-[500px] sm:h-[220px] md:h-[240px] gap-20 py-5 px-2 lg:p-0 cursor-pointer rounded-[5px] border border-black/10 overflow-hidden"
                 role="button"
                 tabIndex={0}
                 onClick={() => slide?.href && window.open(slide.href, "_self")}

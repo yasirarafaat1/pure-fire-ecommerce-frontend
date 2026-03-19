@@ -63,7 +63,7 @@ export default function TopProducts() {
   };
 
   return (
-    <section className="max-w-6xl mx-auto p-4 md:px-4 py-3 md:py-5 border border-black/10 rounded-[5px] bg-black/50 text-white">
+    <section className="max-w-6xl mx-4 md:mx-auto p-4 md:px-4 py-3 md:py-5 border border-black/10 rounded-[5px] bg-black/50 text-white">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Top Products</h2>
       </div>
