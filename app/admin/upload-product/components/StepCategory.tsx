@@ -11,6 +11,8 @@ type Props = {
   setLevel2: (v: string) => void;
   setLevel3: (v: string) => void;
   level1Options: CategoryNode[];
+  level2Options: CategoryNode[];
+  level3Options: CategoryNode[];
 };
 
 export default function StepCategory({
@@ -21,6 +23,8 @@ export default function StepCategory({
   setLevel2,
   setLevel3,
   level1Options,
+  level2Options,
+  level3Options,
 }: Props) {
   const [expandedRoot, setExpandedRoot] = useState<string | null>(null);
   const [expandedSub, setExpandedSub] = useState<string | null>(null);
@@ -62,7 +66,7 @@ export default function StepCategory({
 
             {expandedRoot === root._id && (
               <div className="px-4 pb-3">
-                {(root.children || []).map((sub) => (
+                {(expandedRoot === level1 ? level2Options : root.children || []).map((sub) => (
                   <div key={sub._id} className="mt-2 border border-black/5 rounded">
                     <button
                       className={`w-full text-left px-3 py-2 flex justify-between items-center ${expandedSub === sub._id ? "bg-black/5" : ""}`}
@@ -79,7 +83,7 @@ export default function StepCategory({
 
                     {expandedSub === sub._id && (
                       <div className="px-3 pb-2">
-                        {(sub.children || []).map((child) => (
+                        {(expandedSub === level2 ? level3Options : sub.children || []).map((child) => (
                           <button
                             key={child._id}
                             className={`w-full text-left px-3 py-2 rounded mb-1 ${level3 === child._id ? "bg-black text-white" : "bg-black/5"}`}

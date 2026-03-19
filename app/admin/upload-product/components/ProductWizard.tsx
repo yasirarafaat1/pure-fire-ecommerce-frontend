@@ -260,7 +260,7 @@ export default function ProductWizard({ product, onSaved, onClose }: Props) {
     }
   };
   const skuOk = /^[A-Z]{3,5}-\d{2,5}$/.test((form.sku || "").trim().toUpperCase());
-  const basicsOk = form.name.trim() && form.sku.trim() && form.price.trim() && form.selling_price.trim();
+  const basicsOk = !!(form.name.trim() && form.sku.trim() && form.price.trim() && form.selling_price.trim());
   const detailErr = validateDetails();
   const variantErr = validateVariants();
   const publishReady = !!categoryId && !detailErr && !variantErr && basicsOk && skuOk;
