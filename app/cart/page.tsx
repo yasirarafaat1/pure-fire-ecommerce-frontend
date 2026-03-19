@@ -392,6 +392,7 @@ export default function CartPage() {
               <span>Subtotal</span>
               <span>₹{totals.subtotal.toLocaleString("en-IN")}</span>
             </div>
+            
             <button
               className="btn btn-primary w-full"
               onClick={() => {
