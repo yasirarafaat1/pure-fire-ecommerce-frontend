@@ -9,9 +9,10 @@ type Props = {
   products: CardProduct[];
   discount: (price: number, mrp: number) => number;
   onSelect: (product: CardProduct) => void;
+  gridKey?: string;
 };
 
-export default function ProductsGrid({ isLoading, products, discount, onSelect }: Props) {
+export default function ProductsGrid({ isLoading, products, discount, onSelect, gridKey }: Props) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -37,11 +38,29 @@ export default function ProductsGrid({ isLoading, products, discount, onSelect }
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-      {products.map((p) => (
+    <>
+      <style jsx>{`
+        .product-card-animate {
+          animation: productCardFade 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+          will-change: transform, opacity;
+        }
+        @keyframes productCardFade {
+          from {
+            opacity: 0;
+            transform: translateY(6px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
+      <div key={gridKey} className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        {products.map((p, idx) => (
         <div
           key={p.id}
-          className="overflow-hidden cursor-pointer bg-white"
+          className="overflow-hidden cursor-pointer bg-white product-card-animate"
+          style={{ animationDelay: `${Math.min(idx, 8) * 40}ms` }}
           onClick={() => onSelect(p)}
         >
           <div className="relative">
@@ -57,15 +76,16 @@ export default function ProductsGrid({ isLoading, products, discount, onSelect }
           <div className="py-3 grid gap-1">
             <p className="text-sm font-medium line-clamp-2">{p.title}</p>
             <div className="flex items-center gap-2 text-sm">
-              <span className="font-semibold">?{p.price}</span>
-              <span className="text-xs text-red-400 line-through">?{p.mrp}</span>
+              <span className="font-semibold">&#8377;{p.price}</span>
+              <span className="text-xs text-red-400 line-through">&#8377;{p.mrp}</span>
               {discount(p.price, p.mrp) > 0 && (
                 <span className="text-xs font-semibold text-green-700">{discount(p.price, p.mrp)}% off</span>
               )}
             </div>
           </div>
         </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </>
   );
 }

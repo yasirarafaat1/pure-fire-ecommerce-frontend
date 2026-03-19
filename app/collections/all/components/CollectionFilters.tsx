@@ -92,7 +92,7 @@ export default function CollectionFilters({
             />
             <div className="flex items-center gap-2 text-sm">
               <div className="flex-1 border border-black/20 rounded-[5px] px-3 py-2 flex items-center gap-2">
-                <span>?</span>
+                <span>&#8377;</span>
                 <input
                   className="w-full outline-none"
                   type="number"
@@ -102,7 +102,7 @@ export default function CollectionFilters({
               </div>
               <span>to</span>
               <div className="flex-1 border border-black/20 rounded-[5px] px-3 py-2 flex items-center gap-2">
-                <span>?</span>
+                <span>&#8377;</span>
                 <input
                   className="w-full outline-none"
                   type="number"

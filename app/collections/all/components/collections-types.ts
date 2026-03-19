@@ -12,6 +12,8 @@ export type CardProduct = {
   colors: string[];
   sizes: string[];
   fabric?: string;
+  searchText?: string;
+  contentText?: string;
   inStock: boolean;
   createdAt?: number;
   orderCount?: number;

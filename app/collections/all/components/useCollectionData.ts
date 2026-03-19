@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AvailableFilters, CardProduct } from "./collections-types";
-import { dedupe, getFabricValue, resolveCreatedAt, toNum } from "./collections-helpers";
+import { buildContentText, buildSearchText, dedupe, getFabricValue, resolveCreatedAt, toNum } from "./collections-helpers";
 
 const API_PRODUCTS = "/api/user/show-product?page=1&limit=100";
 const API_CATEGORIES = "/api/user/get-categories";
@@ -106,6 +106,8 @@ export function useCollectionData() {
             ? p.catagory_id.ancestors.map((a: any) => String(a?.name || "")).filter(Boolean)
             : [];
           const categoryPath = dedupe([...(meta?.ancestors || []), ...productAncestors, categoryName].filter(Boolean));
+          const searchText = buildSearchText(p, categoryName, categoryPath);
+          const contentText = buildContentText(p);
 
           return {
             id: p.product_id || p._id,
@@ -121,6 +123,8 @@ export function useCollectionData() {
             colors: colorList,
             sizes: sizeList,
             fabric: getFabricValue(p) || "",
+            searchText,
+            contentText,
             inStock,
             createdAt: resolveCreatedAt(p),
             orderCount,

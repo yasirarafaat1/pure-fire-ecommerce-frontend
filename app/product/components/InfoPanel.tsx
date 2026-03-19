@@ -223,7 +223,7 @@ export default function InfoPanel({
 
       <div className="hidden md:flex flex-wrap gap-4">
         <button
-          className="flex-1 min-w-[200px] cursor-pointer bg-[#222] text-white font-extrabold uppercase tracking-wide py-3 rounded-[10px] border border-[#222] flex items-center justify-center gap-2 text-sm"
+          className="flex-1 min-w-[200px] cursor-pointer bg-[#222] text-white font-extrabold uppercase tracking-wide py-3 rounded-[10px] border border-[#222] flex items-center justify-center gap-2 text-sm transition-all duration-200 hover:bg-black hover:border-black hover:-translate-y-[1px] hover:shadow-[0_10px_24px_rgba(0,0,0,0.18)]"
           onClick={() => {
             if (addedToCart) {
               onGoToCart?.();
@@ -239,7 +239,7 @@ export default function InfoPanel({
           <FaShoppingCart /> {addedToCart ? "Go to Cart" : "Add to Cart"}
         </button>
         <button
-          className="flex-1 min-w-[200px] cursor-pointer text-black font-extrabold uppercase tracking-wide py-3 rounded-[10px] border border-gray-600 flex items-center justify-center text-sm"
+          className="flex-1 min-w-[200px] cursor-pointer text-black font-extrabold uppercase tracking-wide py-3 rounded-[10px] border border-gray-600 flex items-center justify-center text-sm transition-all duration-200 hover:bg-black hover:text-white hover:border-black hover:-translate-y-[1px] hover:shadow-[0_10px_24px_rgba(0,0,0,0.18)]"
           onClick={() => {
             if (!selectedColor || !selectedSize) {
               setSelectionError("Please select color and size.");
@@ -257,7 +257,7 @@ export default function InfoPanel({
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 border-t border-black/10 px-4 py-3 shadow-md">
         <div className="flex gap-3">
           <button
-            className="flex-1 min-w-[150px] cursor-pointer bg-[#222] text-white font-extrabold uppercase tracking-wide py-3 rounded-[10px] border border-[#222] flex items-center justify-center gap-2 text-sm"
+            className="flex-1 min-w-[150px] cursor-pointer bg-[#222] text-white font-extrabold uppercase tracking-wide py-3 rounded-[10px] border border-[#222] flex items-center justify-center gap-2 text-sm transition-all duration-200 hover:bg-black hover:border-black hover:-translate-y-[1px] hover:shadow-[0_10px_24px_rgba(0,0,0,0.18)]"
             onClick={() => {
               if (addedToCart) {
                 onGoToCart?.();
@@ -273,7 +273,7 @@ export default function InfoPanel({
             <FaShoppingCart /> {addedToCart ? "Go to Cart" : "Add to Cart"}
           </button>
           <button
-            className="flex-1 min-w-[150px] cursor-pointer text-black font-extrabold uppercase tracking-wide py-3 rounded-[10px] border border-gray-600 flex items-center justify-center text-sm"
+            className="flex-1 min-w-[150px] cursor-pointer text-black font-extrabold uppercase tracking-wide py-3 rounded-[10px] border border-gray-600 flex items-center justify-center text-sm transition-all duration-200 hover:bg-black hover:text-white hover:border-black hover:-translate-y-[1px] hover:shadow-[0_10px_24px_rgba(0,0,0,0.18)]"
             onClick={() => {
               if (!selectedColor || !selectedSize) {
                 setSelectionError("Please select color and size.");

@@ -3,8 +3,9 @@
 import { usePathname, useRouter } from "next/navigation";
 import { FiZap, FiStar, FiUser, FiFeather, FiSun, FiGift } from "react-icons/fi";
 import { PiTShirtLight, PiShirtFoldedLight, PiPantsDuotone } from "react-icons/pi";
-import { MdWoman } from "react-icons/md";
 import { BsStars } from "react-icons/bs";
+import { GrUserFemale } from "react-icons/gr";
+import { GiShirt } from "react-icons/gi";
 
 const iconBase = "w-6 h-6 sm:w-7 sm:h-7";
 
@@ -12,8 +13,9 @@ const items = [
   { label: "New Arrivals", slug: "new-arrival", Icon: FiZap, drift: "right" },
   { label: "Best Sellers", slug: "best-seller", Icon: FiStar, drift: "left" },
   { label: "Men", slug: "men", Icon: FiUser, drift: "up" },
-  { label: "Women", slug: "women", Icon: MdWoman, drift: "down" },
+  { label: "Women", slug: "women", Icon: GrUserFemale , drift: "down" },
   { label: "Shirts", slug: "shirts", Icon: PiShirtFoldedLight, drift: "down" },
+  { label: "Kurta", slug: "kurta", Icon: GiShirt, drift: "left" },
   { label: "Cotton", slug: "cotton", Icon: FiFeather, drift: "right" },
   { label: "High Rated", slug: "high-rated", Icon: BsStars, drift: "up" },
   { label: "Summer", slug: "summer", Icon: FiSun, drift: "up" },
@@ -80,10 +82,10 @@ export default function CategoryStrip() {
           border-radius: 999px;
         }
       `}</style>
-      <div className="relative max-w-6xl mx-auto px-4 py-3">
+      <div className="relative max-w-6xl mx-auto px-4 my-auto">
         <div className="pointer-events-none absolute left-0 top-0 h-full w-6 bg-gradient-to-r from-white to-transparent" aria-hidden />
         <div className="pointer-events-none absolute right-0 top-0 h-full w-6 bg-gradient-to-l from-white to-transparent" aria-hidden />
-        <div className="strip-scroll flex items-center md:justify-center pb-3 z-9 gap-4 min-w-full overflow-x-auto snap-x snap-mandatory scroll-smooth">
+        <div className="strip-scroll flex items-center md:justify-center pb-3 pt-4 z-9 gap-4 min-w-full overflow-x-auto snap-x snap-mandatory scroll-smooth">
           {items.map(({ label, slug, Icon, drift }) => {
             const active = slug === activeSlug;
             return (
