@@ -23,7 +23,7 @@ export default function AddressList({
   return (
     <div className="grid gap-3">
       {items.map((addr) => (
-        <div key={addr.address_id} className="border border-black/15 rounded-[5px] p-4 grid gap-2">
+        <div key={addr.address_id} className="border-b border-t border-black/15 rounded-[5px] p-4 grid gap-2">
           <div className="flex items-center justify-between">
             <div className="text-sm font-semibold">{addr.FullName}</div>
             <div className="flex gap-2">

@@ -1,14 +1,12 @@
 "use client";
-
 import { useEffect, useMemo, useState } from "react";
 import { IoIosClose } from "react-icons/io";
 import { IoChevronBack, IoChevronForward } from "react-icons/io5";
 import { FaStar, FaRegStar } from "react-icons/fa6";
-import { title } from "process";
 
 type Review = { user: string; rating: number; date: string; text: string; images?: string[] };
-type Props = { title: string };
 type SubmitPayload = { rating: number; text: string; images: File[]; video?: File | null };
+
 export default function Reviews({
   title,
   reviews,
@@ -18,16 +16,10 @@ export default function Reviews({
   reviews: Review[];
   onSubmit: (payload: SubmitPayload) => Promise<{ ok: boolean; message?: string }>;
 }) {
-
   const media = useMemo(
-    () =>
-      reviews.flatMap((r, rIndex) =>
-        (r.images || []).map((src, mIndex) => ({ src, review: r, idx: `${rIndex}-${mIndex}` }))
-      ),
-    [reviews]
+    () => reviews.flatMap((r, rIndex) => (r.images || []).map((src, mIndex) => ({ src, review: r, idx: `${rIndex}-${mIndex}` }))),
+    [reviews],
   );
-
-
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<"recent" | "high" | "low">("recent");
   const [formOpen, setFormOpen] = useState(false);
@@ -38,6 +30,11 @@ export default function Reviews({
   const [formMsg, setFormMsg] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [limit, setLimit] = useState(10);
+  const [canWrite, setCanWrite] = useState(false);
+  const maxReviewChars = 90;
+  const trimText = (text: string, max = 90) => (text && text.length > max ? `${text.slice(0, max).trim()}...` : text);
+
+  useEffect(() => setCanWrite(!!localStorage.getItem("user_token")), []);
   useEffect(() => {
     const isMobile = window.matchMedia("(max-width: 767px)").matches;
     setLimit(isMobile ? 5 : 10);
@@ -57,16 +54,8 @@ export default function Reviews({
     return copy;
   }, [reviews, sortBy]);
   const visibleReviews = sortedReviews.slice(0, limit);
-
-  const avgRating = reviews.length
-    ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
-    : "0.0";
-
-  const go = (dir: 1 | -1) => {
-    if (openIdx === null) return;
-    const next = (openIdx + dir + media.length) % media.length;
-    setOpenIdx(next);
-  };
+  const avgRating = reviews.length ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1) : "0.0";
+  const go = (dir: 1 | -1) => openIdx !== null && setOpenIdx((openIdx + dir + media.length) % media.length);
 
   return (
     <section className="grid p-4 md:p-4 gap-4">
@@ -76,18 +65,17 @@ export default function Reviews({
       <div className="flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-1 text-[#f59e0b] text-lg">
           {Array.from({ length: 5 }).map((_, i) =>
-            i < Math.round(Number(avgRating)) ? <FaStar key={i} /> : <FaRegStar key={i} />
-           )}
+            i < Math.round(Number(avgRating)) ? <FaStar key={i} /> : <FaRegStar key={i} />,
+          )}
         </div>
         <div className="text-base font-semibold">{reviews.length} reviews</div>
-        <div className="flex gap-2 ml-auto">
-          <button
-            className="px-4 py-2 rounded-[8px] bg-[#000000] font-semibold text-white text-sm cursor-pointer"
-            onClick={() => setFormOpen(true)}
-          >
-            Write a Review
-          </button>
-        </div>
+        {canWrite && (
+          <div className="flex gap-2 ml-auto">
+            <button className="px-4 py-2 rounded-[8px] bg-[#000000] font-semibold text-white text-sm cursor-pointer" onClick={() => setFormOpen(true)}>
+              Write a Review
+            </button>
+          </div>
+        )}
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as any)}
@@ -102,11 +90,7 @@ export default function Reviews({
       {media.length > 0 && (
         <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-hide">
           {media.map((m, i) => (
-            <button
-              key={m.idx}
-              className="w-24 h-24 cursor-pointer rounded-[5px] overflow-hidden border border-black/20 flex-shrink-0"
-              onClick={() => setOpenIdx(i)}
-            >
+            <button key={m.idx} className="w-24 h-24 cursor-pointer rounded-[5px] overflow-hidden border border-black/20 flex-shrink-0" onClick={() => setOpenIdx(i)}>
               <img src={m.src} alt="review media" className="w-full h-full object-cover" />
             </button>
           ))}
@@ -118,18 +102,12 @@ export default function Reviews({
           {visibleReviews.map((r, i) => {
             const hasImage = !!r.images?.length;
             return (
-              <div
-                key={i}
-                className={`border border-black/20 rounded-[6px] p-4 bg-white ${hasImage ? "md:row-span-2" : ""
-                  }`}
-              >
+              <div key={i} className={`border border-black/20 rounded-[6px] p-4 bg-white ${hasImage ? "md:row-span-2" : ""}`}>
                 <div className="flex items-center justify-between text-sm font-medium">
                   <span>{r.user}</span>
-                  <span className="px-2 py-1 rounded-[5px] border border-black bg-black text-white text-xs">
-                    {r.rating.toFixed(1)}
-                  </span>
+                  <span className="px-2 py-1 rounded-[5px] border border-black bg-black text-white text-xs">{r.rating.toFixed(1)}</span>
                 </div>
-                <p className="text-sm leading-6 mt-2 text-[var(--ink)]">{r.text}</p>
+                <p className="text-sm leading-6 mt-2 text-[var(--ink)] break-words">{trimText(r.text || "")}</p>
                 {r.images?.length ? (
                   <div className="mt-3">
                     <button
@@ -154,6 +132,7 @@ export default function Reviews({
           No reviews yet. Be the first to share your experience.
         </div>
       )}
+
       {sortedReviews.length > visibleReviews.length && (
         <div className="flex justify-center">
           <button
@@ -170,32 +149,15 @@ export default function Reviews({
 
       {openIdx !== null && media[openIdx] && (
         <div className="fixed inset-0 z-50 bg-white flex items-center justify-center p-6 animate-backdrop" onClick={() => setOpenIdx(null)}>
-          <button
-            className="absolute cursor-pointer top-6 right-6 w-11 h-11 rounded-full bg-white shadow border flex items-center justify-center"
-            onClick={() => setOpenIdx(null)}
-          >
+          <button className="absolute cursor-pointer top-6 right-6 w-11 h-11 rounded-full bg-white shadow border flex items-center justify-center" onClick={() => setOpenIdx(null)}>
             <IoIosClose size={28} />
           </button>
-
-          <button
-            className="absolute cursor-pointer left-6 w-11 h-11 rounded-full bg-white/90 shadow border flex items-center justify-center"
-            onClick={(e) => {
-              e.stopPropagation();
-              go(-1);
-            }}
-          >
+          <button className="absolute cursor-pointer left-6 w-11 h-11 rounded-full bg-white/90 shadow border flex items-center justify-center" onClick={(e) => { e.stopPropagation(); go(-1); }}>
             <IoChevronBack size={22} />
           </button>
-          <button
-            className="absolute cursor-pointer right-6 w-11 h-11 rounded-full bg-white/90 shadow border flex items-center justify-center"
-            onClick={(e) => {
-              e.stopPropagation();
-              go(1);
-            }}
-          >
+          <button className="absolute cursor-pointer right-6 w-11 h-11 rounded-full bg-white/90 shadow border flex items-center justify-center" onClick={(e) => { e.stopPropagation(); go(1); }}>
             <IoChevronForward size={22} />
           </button>
-
           <div className="max-w-5xl w-full grid md:grid-cols-[1.1fr_0.9fr] gap-6 items-center animate-pop" onClick={(e) => e.stopPropagation()}>
             <div className="bg-white cursor-pointer rounded-[5px] overflow-hidden max-h-[80vh]">
               <img src={media[openIdx].src} alt="review media" className="w-full h-full object-contain max-h-[80vh]" />
@@ -220,61 +182,45 @@ export default function Reviews({
                 <IoIosClose size={20} />
               </button>
             </div>
-
             <div className="grid gap-4">
               <div className="grid gap-2">
                 <span className="text-sm font-medium">How was your experience? (required)</span>
                 <div className="flex gap-2">
                   {[1, 2, 3, 4, 5].map((n) => (
-                    <button
-                      key={n}
-                      className={`w-10 h-10 rounded-full border ${formRating === n ? "bg-black text-white" : "bg-white"} flex items-center justify-center`}
-                      onClick={() => setFormRating(n)}
-                    >
+                    <button key={n} className={`w-10 h-10 rounded-full border ${formRating === n ? "bg-black text-white" : "bg-white"} flex items-center justify-center`} onClick={() => setFormRating(n)}>
                       {n}
                     </button>
                   ))}
                 </div>
               </div>
-
               <div className="grid gap-2">
                 <span className="text-sm font-medium">Your review (required)</span>
                 <textarea
                   className="input h-28 resize-none"
                   placeholder="Share details about fit, fabric, quality..."
                   value={formText}
+                  maxLength={maxReviewChars}
                   onChange={(e) => setFormText(e.target.value)}
                 />
+                <p className="text-xs text-[var(--muted)]">{formText.length}/{maxReviewChars} characters</p>
               </div>
-
               <div className="grid gap-2">
                 <span className="text-sm font-medium">Photos (max 2, optional)</span>
                 <input
                   type="file"
                   accept="image/*"
                   multiple
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files || []).slice(0, 2);
-                    setImgFiles(files);
-                  }}
+                  onChange={(e) => setImgFiles(Array.from(e.target.files || []).slice(0, 2))}
                   className="input"
                 />
                 <p className="text-xs text-[var(--muted)]">{imgFiles.length}/2 selected</p>
               </div>
-
               <div className="grid gap-2">
                 <span className="text-sm font-medium">Video (1, optional)</span>
-                <input
-                  type="file"
-                  accept="video/*"
-                  onChange={(e) => setVidFile(e.target.files?.[0] || null)}
-                  className="input"
-                />
+                <input type="file" accept="video/*" onChange={(e) => setVidFile(e.target.files?.[0] || null)} className="input" />
                 <p className="text-xs text-[var(--muted)]">{vidFile ? vidFile.name : "No video selected"}</p>
               </div>
-
               {formMsg && <p className="text-sm text-red-600">{formMsg}</p>}
-
               <div className="flex justify-end gap-3">
                 <button className="btn btn-ghost" onClick={() => setFormOpen(false)}>
                   Cancel
@@ -292,12 +238,7 @@ export default function Reviews({
                       return;
                     }
                     setSubmitting(true);
-                    const res = await onSubmit({
-                      rating: formRating,
-                      text: formText.trim(),
-                      images: imgFiles,
-                      video: vidFile,
-                    });
+                    const res = await onSubmit({ rating: formRating, text: formText.trim(), images: imgFiles, video: vidFile });
                     setSubmitting(false);
                     if (!res.ok) {
                       setFormMsg(res.message || "Failed to submit review.");

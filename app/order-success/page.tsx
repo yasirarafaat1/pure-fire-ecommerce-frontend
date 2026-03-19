@@ -1,10 +1,17 @@
-﻿"use client";
+"use client";
 
 import { useSearchParams } from "next/navigation";
 
+const formatOrderId = (value: string | null) => {
+  if (!value) return "";
+  if (/^\d+$/.test(value)) return value.padStart(6, "0");
+  return value;
+};
+
 export default function OrderSuccessPage() {
   const params = useSearchParams();
-  const orderId = params.get("order_id");
+  const orderIdRaw = params.get("order_id");
+  const orderId = formatOrderId(orderIdRaw);
 
   return (
     <main className="min-h-[70vh] flex items-center justify-center bg-white text-black px-4 py-10">
@@ -20,9 +27,14 @@ export default function OrderSuccessPage() {
         )}
         <div className="grid gap-2 mt-2">
           <a href="/" className="btn btn-primary">Continue shopping</a>
-          <a href="/profile" className="btn btn-ghost">View orders</a>
+          <a href={`/orders/${orderIdRaw || ""}`} className="btn btn-ghost">View order</a>
         </div>
       </div>
     </main>
   );
 }
+
+
+
+
+

@@ -39,6 +39,18 @@ a {
   border-radius: 5px;
 }
 
+.profile-section {
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  border-radius: 5px;
+}
+
+@media (max-width: 767px) {
+  .profile-section {
+    border: none;
+    border-radius: 0;
+  }
+}
+
 .pill {
   padding: 6px 10px;
   border-radius: 4px;
@@ -101,6 +113,21 @@ a {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+.fade-in {
+  animation: fade-in 0.2s ease;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

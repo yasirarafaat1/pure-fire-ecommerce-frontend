@@ -7,7 +7,7 @@ import Gallery from "./components/Gallery";
 import InfoPanel from "./components/InfoPanel";
 import ProductRail from "./components/ProductRail";
 import Reviews from "./components/Reviews";
-import { getUserToken } from "../utils/auth";
+import { getUserEmail, getUserToken } from "../utils/auth";
 
 const API_BASE = "/api/user";
 const getToken = () => getUserToken();
@@ -217,6 +217,17 @@ export default function ProductPage() {
     load();
   }, [productId, colorParam, sizeParam]);
 
+  useEffect(() => {
+    if (!product?.product_id) return;
+    const token = getToken();
+    if (!token) return;
+    fetch(`${API_BASE}/activity/view`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-user-token": token },
+      body: JSON.stringify({ product_id: product.product_id }),
+    }).catch(() => { });
+  }, [product?.product_id]);
+
   const breadcrumbs =
     product?.breadcrumbs ||
     [
@@ -424,22 +435,22 @@ export default function ProductPage() {
       <div className="grid md:grid-cols-[1.2fr_1fr] gap-2 md:gap-8 items-start">
         <div ref={leftRef} className={`${stick === "left" ? "md:sticky md:top-4" : ""}`}>
           {product && (
-              <Gallery
-                title={product.name}
-                images={displayImages}
-                video={displayVideo}
-                rating={avgRating || 0}
-                reviews={reviewCount}
-                highlights={product.key_highlights || []}
-                selectedColor={selectedColor}
-                selectedSize={selectedSize}
-                wishlisted={wishlistIds.has(String(product.product_id))}
-                onToggleWishlist={toggleWishlist}
-                similarItems={similarProducts.map((p) => ({
-                  title: p.name,
-                  price: p.price,
-                  image: p.images?.[0] || "",
-                  badge: p.discount ? `${p.discount}% OFF` : undefined,
+            <Gallery
+              title={product.name}
+              images={displayImages}
+              video={displayVideo}
+              rating={avgRating || 0}
+              reviews={reviewCount}
+              highlights={product.key_highlights || []}
+              selectedColor={selectedColor}
+              selectedSize={selectedSize}
+              wishlisted={wishlistIds.has(String(product.product_id))}
+              onToggleWishlist={toggleWishlist}
+              similarItems={similarProducts.map((p) => ({
+                title: p.name,
+                price: p.price,
+                image: p.images?.[0] || "",
+                badge: p.discount ? `${p.discount}% OFF` : undefined,
               }))}
             />
           )}
@@ -473,7 +484,7 @@ export default function ProductPage() {
               onGoToCart={() => (window.location.href = "/cart")}
               onBuyNow={async (payload) => {
                 await addToCart(payload);
-                window.location.href = "/cart";
+                window.location.href = "/checkout";
               }}
             />
           )}
@@ -519,6 +530,8 @@ export default function ProductPage() {
           fd.append("product_id", String(product.product_id));
           fd.append("review_rate", String(rating));
           fd.append("review_text", text);
+          const email = getUserEmail();
+          if (email) fd.append("user_email", email);
           if (images?.[0]) fd.append("reviewImage", images[0]);
           try {
             const res = await fetch(`${API_BASE}/product-reviews`, { method: "POST", body: fd });
@@ -534,3 +547,5 @@ export default function ProductPage() {
     </main>
   );
 }
+
+

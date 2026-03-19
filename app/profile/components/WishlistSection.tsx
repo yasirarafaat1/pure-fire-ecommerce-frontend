@@ -183,7 +183,7 @@ export default function WishlistSection({ email }: { email: string }) {
         const href = `/product?${params.toString()}`;
         const inCart = cartItems.some((i: any) => String(i.product_id) === String(id));
         return (
-          <div key={String(id)} className="flex items-center justify-between">
+          <div key={String(id)} className="flex items-center justify-between gap-5">
             <div className="flex items-center gap-3">
               <a href={href} className="block">
                 <div className="w-25 h-25 border border-black/10 rounded-[3px] bg-black/5 overflow-hidden">
@@ -207,14 +207,14 @@ export default function WishlistSection({ email }: { email: string }) {
                 ) : null}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap md:flex-nowrap">
               <button
-                className="btn btn-ghost flex-1"
+                className="btn btn-ghost flex-1 md:flex-none"
                 onClick={() => (inCart ? (window.location.href = "/cart") : addToCart(p))}
               >
                 {inCart ? "Go to cart" : "Add to cart"}
               </button>
-              <button className="btn btn-primary text-sm" onClick={() => removeWishlist(id)}>
+              <button className="btn btn-primary text-sm flex-1 md:flex-none" onClick={() => removeWishlist(id)}>
                 Remove
               </button>
             </div>

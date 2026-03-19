@@ -264,7 +264,7 @@ export default function CartPage() {
 
   return (
     <main className="max-w-6xl mx-auto p-4 md:p-6 grid gap-6 relative">
-      {(loadingCart || loadingRecent) && (
+     {(loadingCart || loadingRecent) && (
         <div className="fixed inset-0 z-50 bg-white flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 rounded-full border-2 border-black/20 border-t-black animate-spin" />
@@ -288,7 +288,7 @@ export default function CartPage() {
         )}
       </header>
 
-      <div className={`grid gap-6 ab items-start ${items.length ? "md:grid-cols-[1.5fr_0.5fr]" : ""}`}>
+      <div className={`grid gap-6 items-start ${items.length ? "md:grid-cols-[1.5fr_0.5fr]" : ""}`}>
         <section className="bg-white">
           {items.length === 0 ? (
             <div className="grid gap-10 text-sm text-[var(--muted)] place-items-center text-center py-10">
@@ -326,7 +326,8 @@ export default function CartPage() {
                     </div>
                     {item.mrp && item.mrp > item.price && (
                       <div className="text-xs text-[var(--muted)]">
-                        You Save <span className="text-[#1AC417]">₹{(item.mrp - item.price).toFixed(2)}</span>
+                        You Save{" "}
+                        <span className="text-[#1AC417]">₹{(item.mrp - item.price).toFixed(2)}</span>
                       </div>
                     )}
                     <div className="flex flex-wrap gap-4 text-xs text-[var(--muted)]">
@@ -379,7 +380,9 @@ export default function CartPage() {
             </div>
             <div className="flex items-center justify-between text-sm">
               <span>Discount</span>
-              <span className="text-green-700">- ₹{(totals.mrpTotal - totals.subtotal).toLocaleString("en-IN")}</span>
+              <span className="text-green-700">
+                - ₹{(totals.mrpTotal - totals.subtotal).toLocaleString("en-IN")}
+              </span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <span>Shipping</span>
@@ -393,6 +396,7 @@ export default function CartPage() {
               className="btn btn-primary w-full"
               onClick={() => {
                 if (!requireAuth()) return;
+                router.push("/checkout");
               }}
             >
               Proceed to Checkout

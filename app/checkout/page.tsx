@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AddressList from "./components/AddressList";
-import OrderSummary from "./components/OrderSummary";
+import CheckoutPayment from "./components/CheckoutPayment";
+import AddressPanel from "../profile/components/addresses/AddressPanel";
+import { AddressPayload } from "../profile/components/addresses/types";
 import { getUserEmail, getUserToken } from "../utils/auth";
 
 const API_BASE = "/api/user";
@@ -37,17 +39,6 @@ type CartItem = {
   size?: string;
 };
 
-const loadRazorpay = () =>
-  new Promise<boolean>((resolve) => {
-    if (typeof window === "undefined") return resolve(false);
-    if ((window as any).Razorpay) return resolve(true);
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-
 export default function CheckoutPage() {
   const router = useRouter();
   const [authReady, setAuthReady] = useState(false);
@@ -55,8 +46,10 @@ export default function CheckoutPage() {
   const [selectedAddress, setSelectedAddress] = useState<string | number | null>(null);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [panelMode, setPanelMode] = useState<"add" | "edit">("add");
+  const [panelAddress, setPanelAddress] = useState<Address | null>(null);
 
   useEffect(() => {
     const token = getUserToken();
@@ -105,95 +98,72 @@ export default function CheckoutPage() {
     load();
   }, [authReady]);
 
-  const handlePay = async () => {
-    if (!selectedAddress) {
-      setError("Please select an address.");
-      return;
-    }
-    if (!cartItems.length) {
-      setError("Your cart is empty.");
-      return;
-    }
-    setPaying(true);
-    setError("");
+  const refreshAddresses = async () => {
+    const addrRes = await fetch(`${API_BASE}/get-user-addresess`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-user-token": getUserToken(),
+      },
+      body: JSON.stringify({ email: getUserEmail() }),
+    });
+    const addrJson = addrRes.ok ? await addrRes.json() : { addresses: [] };
+    const addrList = addrJson.addresses || addrJson.data || [];
+    setAddresses(addrList);
+    return addrList;
+  };
+
+  const handleSaveAddress = async (payload: AddressPayload, id?: string | number | null) => {
     try {
-      const itemsPayload = cartItems.map((i) => ({
-        product_id: i.product_id,
-        quantity: i.qty || i.quantity || 1,
-      }));
-      const orderRes = await fetch(`${API_BASE}/create-order`, {
-        method: "POST",
+      const url = id ? `${API_BASE}/update-user-address` : `${API_BASE}/create-newAddress`;
+      const method = id ? "PATCH" : "POST";
+      const res = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
           "x-user-token": getUserToken(),
         },
-        body: JSON.stringify({
-          items: itemsPayload,
-          address_id: selectedAddress,
-          email: getUserEmail(),
-        }),
+        body: JSON.stringify({ ...payload, address_id: id, email: getUserEmail() }),
       });
-      const orderJson = await orderRes.json();
-      if (!orderRes.ok || !orderJson.status) {
-        throw new Error(orderJson.message || "Failed to create order");
+      const data = await res.json();
+      if (!res.ok || !data.status) {
+        return { ok: false, message: data.message || "Failed to save address" };
       }
-
-      const ready = await loadRazorpay();
-      if (!ready) throw new Error("Razorpay SDK failed to load");
-
-      const options = {
-        key: orderJson.key,
-        amount: orderJson.amount,
-        currency: orderJson.currency,
-        name: "Pure Fire",
-        description: "Order भुगतान",
-        order_id: orderJson.order?.id,
-        prefill: { email: getUserEmail() },
-        handler: async (response: any) => {
-          const verifyRes = await fetch(`${API_BASE}/payment-success`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-            }),
-          });
-          const verifyJson = await verifyRes.json();
-          if (verifyJson?.status) {
-            const cartId = localStorage.getItem("cart_id") || "";
-            if (cartId) {
-              await fetch(`${API_BASE}/clear-cart`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ cart_id: cartId }),
-              });
-            }
-            router.replace(`/order-success?order_id=${verifyJson.order_id || orderJson.local_order_id}`);
-          } else {
-            setError("Payment verification failed.");
-            setPaying(false);
-          }
-        },
-        modal: {
-          ondismiss: () => setPaying(false),
-        },
-        theme: { color: "#000000" },
-      } as any;
-
-      const rzp = new (window as any).Razorpay(options);
-      rzp.open();
+      const list = await refreshAddresses();
+      const savedId = data.address?.address_id || data.data?.address_id || payload?.address_id;
+      if (savedId) setSelectedAddress(savedId);
+      if (!savedId && list.length) {
+        setSelectedAddress(list[0].address_id || list[0].id);
+      }
+      return { ok: true };
     } catch (err: any) {
-      setError(err.message || "Payment failed");
-      setPaying(false);
+      return { ok: false, message: err.message || "Failed to save address" };
     }
+  };
+
+  const openAdd = () => {
+    setPanelMode("add");
+    setPanelAddress(null);
+    setPanelOpen(true);
+  };
+
+  const openEdit = () => {
+    if (!selectedAddress) return;
+    const hit = addresses.find((a) => String(a.address_id || a.id) === String(selectedAddress));
+    if (!hit) return;
+    setPanelMode("edit");
+    setPanelAddress(hit);
+    setPanelOpen(true);
   };
 
   if (!authReady || loading) {
     return (
       <main className="max-w-6xl mx-auto p-4 md:p-6">
-        <div className="flex items-center justify-center py-16 text-sm text-[var(--muted)]">
-          Loading...
+             <div className="fixed inset-0 z-50 bg-white flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-14 h-14 rounded-full border-2 border-black/20 border-t-black animate-spin" />
+            <div className="text-xs uppercase tracking-[0.3em] text-black/70">Loading Checkout...</div>
+          </div>
         </div>
       </main>
     );
@@ -218,23 +188,38 @@ export default function CheckoutPage() {
             <h1 className="text-xl font-semibold">Checkout</h1>
             <p className="text-sm text-[var(--muted)]">Select a delivery address.</p>
           </div>
+          <div className="flex gap-2">
+            <button className="btn btn-ghost" type="button" onClick={openAdd}>
+              + Add New
+            </button>
+          </div>
           {error && <div className="text-sm text-red-600">{error}</div>}
           <AddressList
             addresses={addresses}
             selectedId={selectedAddress}
             onSelect={setSelectedAddress}
+            onEdit={openEdit}
           />
         </section>
 
         <aside className="md:sticky md:top-24">
-          <OrderSummary
+          <CheckoutPayment
             items={cartItems}
-            onPay={handlePay}
-            paying={paying}
-            disabled={!selectedAddress}
+            selectedAddress={selectedAddress}
+            onError={setError}
+            onSuccess={(orderId) => router.replace(`/order-success?order_id=${orderId}`)}
           />
         </aside>
       </div>
+
+      <AddressPanel
+        open={panelOpen}
+        mode={panelMode}
+        address={panelAddress as any}
+        email={getUserEmail()}
+        onClose={() => setPanelOpen(false)}
+        onSave={handleSaveAddress}
+      />
     </main>
   );
 }

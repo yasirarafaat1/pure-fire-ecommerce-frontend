@@ -11,6 +11,13 @@ type Crumb = { label: string; href?: string };
 type Highlight = { key: string; value: string };
 type Color = { name: string; swatch: string };
 
+const formatEta = (date: Date) => {
+  const dd = date.getDate();
+  const mm = date.getMonth() + 1;
+  const yyyy = date.getFullYear();
+  return `${dd}-${mm}-${yyyy}`;
+};
+
 type Props = {
   breadcrumbs: Crumb[];
   name: string;
@@ -101,6 +108,29 @@ export default function InfoPanel({
   }, [selectedColor, selectedSize]);
   const policyLines = returnPolicyText.split("\n").map((l) => l.trim()).filter(Boolean);
   const policyHeading = policyLines.shift() || "Returns, Exchange & Refund Policy";
+  const handleCheckDelivery = () => {
+    if (!/^\d{6}$/.test(pin)) {
+      setPinError("Enter a valid 6-digit pincode.");
+      return;
+    }
+    setPinError(null);
+    setEta("Checking...");
+    fetch(`/api/user/delivery-estimate?pin=${pin}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.status && d?.eta) {
+          setEta(d.eta);
+          setPinError(null);
+          return;
+        }
+        setEta("");
+        setPinError(d?.message || "Delivery estimate unavailable.");
+      })
+      .catch(() => {
+        setEta("");
+        setPinError("Delivery estimate unavailable.");
+      });
+  };
 
   return (
     <section className="grid p-3 md:pl-10 gap-4">
@@ -267,25 +297,19 @@ export default function InfoPanel({
               const onlyDigits = e.target.value.replace(/\D/g, "").slice(0, 6);
               setPin(onlyDigits);
               setPinError(null);
+              if (onlyDigits.length < 6) setEta("");
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleCheckDelivery();
+              }
             }}
             placeholder="Enter pincode"
           />
           <button
             className="px-5 py-3 text-center cursor-pointer bg-black text-white font-semibold"
-            onClick={() => {
-              if (!/^\d{6}$/.test(pin)) {
-                setPinError("Enter a valid 6-digit pincode.");
-                return;
-              }
-              const days = (parseInt(pin[5], 10) % 4) + 2;
-              const base = new Date();
-              base.setDate(base.getDate() + days);
-              const dd = base.getDate();
-              const mm = base.getMonth() + 1;
-              const yyyy = base.getFullYear();
-              setEta(`${dd}-${mm}-${yyyy}`);
-              setPinError(null);
-            }}
+            onClick={handleCheckDelivery}
           >
             Check
           </button>
@@ -293,7 +317,7 @@ export default function InfoPanel({
         {pinError && <p className="text-sm text-red-600">{pinError}</p>}
         <div className="text-base font-semibold flex items-center gap-2">
           <span>Delivery by</span>
-          <span className="text-green-600">{eta}</span>
+          <span className="text-green-600">{eta || "--"}</span>
         </div>
         <div className="grid gap-3 text-base text-[#555]">
           <div className="flex items-center gap-2">

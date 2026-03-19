@@ -9,11 +9,16 @@ const links = [
   { href: "/admin/add-category", label: "Categories" },
   { href: "/admin/upload-product", label: "Upload Product" },
   { href: "/admin/inventory", label: "Inventory" },
+  { href: "/admin/orders", label: "Orders" },
 ];
 
 export default function AdminNavbar() {
   const pathname = usePathname();
   const router = useRouter();
+
+  if (pathname?.startsWith("/admin/login")) {
+    return null;
+  }
 
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -26,7 +31,7 @@ export default function AdminNavbar() {
       <div className="max-w-6xl mx-auto px-5 py-3 flex items-center justify-between gap-4">
         <Link href="/admin/dashboard" className="flex items-center gap-2">
           {/* <div className="pill">Admin</div> */}
-          <div className="font-semibold tracking-tight">PureFire Panel</div>
+          <div className="font-semibold tracking-tight">PureFire Admin Panel</div>
         </Link>
         <nav className="flex items-center gap-3 text-sm">
           {links.map((link) => {

@@ -118,6 +118,12 @@ export default function AdminBannersPage() {
             placeholder="https://..."
             value={form.targetUrl}
             onChange={(e) => setForm({ ...form, targetUrl: e.target.value })}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                onSubmit();
+              }
+            }}
           />
         </label>
         <label className="flex items-center gap-2 text-sm">
@@ -179,3 +185,5 @@ export default function AdminBannersPage() {
     </div>
   );
 }
+
+

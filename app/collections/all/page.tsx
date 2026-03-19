@@ -32,6 +32,7 @@ type CardProduct = {
   fabric?: string;
   inStock: boolean;
   createdAt?: number;
+  orderCount?: number;
 };
 
 type FiltersState = {
@@ -168,6 +169,7 @@ export default function CollectionsPage() {
           const inStock = inStockVariants || toNum(p.quantity) > 0;
 
           const rating = p?.avgRating ?? p?.rating;
+          const orderCount = toNum(p?.orderedQty ?? p?.orders ?? p?.totalOrders ?? p?.orderCount ?? 0);
           const reviews = p?.reviewCount ?? p?.reviews;
 
           const categoryId =
@@ -198,6 +200,7 @@ export default function CollectionsPage() {
             fabric: getFabricValue(p) || "",
             inStock,
             createdAt: p.createdAt ? new Date(p.createdAt).getTime() : undefined,
+            orderCount,
           };
         };
 
@@ -405,13 +408,30 @@ export default function CollectionsPage() {
       );
     };
 
+    const getPathText = (p: CardProduct) =>
+      [p.category, ...(p.categoryPath || [])].filter(Boolean).join(" ").toLowerCase();
+    const hasCategory = (p: CardProduct, keys: string[]) =>
+      keys.some((k) => getPathText(p).includes(k));
+    const isTshirt = (p: CardProduct) => hasCategory(p, ["t-shirt", "tshirt"]);
+    const isShirt = (p: CardProduct) => hasCategory(p, ["shirt"]) && !isTshirt(p);
+    const isCotton = (p: CardProduct) => (p.fabric || "").toLowerCase().includes("cotton");
+    const isHalfSleeve = (p: CardProduct) => {
+      const t = p.title.toLowerCase();
+      return (
+        t.includes("half sleeve") ||
+        t.includes("half sleeves") ||
+        t.includes("half-sleeve") ||
+        t.includes("half-sleeves")
+      );
+    };
+
     let filtered = base;
 
     if (parts.includes("men") || parts.includes("menwear") || parts.includes("mens")) {
-      filtered = filtered.filter((p) => matchesGender(p, "men"));
+      filtered = filtered.filter((p) => matchesGender(p, "men") && !matchesGender(p, "women"));
     }
     if (parts.includes("women") || parts.includes("womens")) {
-      filtered = filtered.filter((p) => matchesGender(p, "women"));
+      filtered = filtered.filter((p) => matchesGender(p, "women") && !matchesGender(p, "men"));
     }
 
     if (parts.includes("top")) {
@@ -422,19 +442,20 @@ export default function CollectionsPage() {
     }
 
     if (lower === "shirts") {
-      filtered = filtered.filter((p) => matchesKeyword(p, "shirt"));
+      filtered = filtered.filter((p) => isShirt(p));
     }
     if (lower === "t-shirts" || lower === "tshirt" || lower === "tshirts") {
-      filtered = filtered.filter((p) => matchesKeyword(p, "t-shirt") || matchesKeyword(p, "tshirt"));
+      filtered = filtered.filter((p) => isTshirt(p));
     }
     if (lower === "jeans") {
       filtered = filtered.filter((p) => matchesKeyword(p, "jean"));
     }
     if (lower === "cotton") {
-      filtered = filtered.filter((p) => matchesKeyword(p, "cotton"));
+      filtered = filtered.filter((p) => isCotton(p));
     }
     if (lower === "summer") {
-      filtered = filtered.filter((p) => matchesKeyword(p, "summer"));
+      const summerMatch = filtered.filter((p) => isTshirt(p) && isCotton(p) && isHalfSleeve(p));
+      filtered = summerMatch.length ? summerMatch : filtered.filter((p) => isTshirt(p) && isCotton(p));
     }
     if (lower === "high-rated") {
       filtered = filtered.filter((p) => (p.rating || 0) >= 4.2);
@@ -506,14 +527,18 @@ export default function CollectionsPage() {
     } else if (activeSort === "Newest First") {
       next.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     } else if (activeSort === "Popularity") {
-      next.sort((a, b) => {
-        const scoreA = (a.rating || 0) * (Number(a.reviews) || 0);
-        const scoreB = (b.rating || 0) * (Number(b.reviews) || 0);
-        return scoreB - scoreA;
-      });
+      if (slugKey === "best-seller") {
+        next.sort((a, b) => (b.orderCount || 0) - (a.orderCount || 0));
+      } else {
+        next.sort((a, b) => {
+          const scoreA = (a.rating || 0) * (Number(a.reviews) || 0);
+          const scoreB = (b.rating || 0) * (Number(b.reviews) || 0);
+          return scoreB - scoreA;
+        });
+      }
     }
     return next;
-  }, [filteredProducts, activeSort]);
+  }, [filteredProducts, activeSort, slugKey]);
 
   const FilterContent = (
     <>
@@ -816,6 +841,8 @@ export default function CollectionsPage() {
     </div>
   );
 }
+
+
 
 
 

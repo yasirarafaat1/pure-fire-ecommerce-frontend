@@ -30,23 +30,21 @@ export default function OrderSummary({ items, onPay, paying, disabled }: Props) 
   const savings = Math.max(mrpTotal - subtotal, 0);
 
   return (
-    <div className="border border-black/20 rounded-[5px] p-4 grid gap-3">
+    <div className="border-b border-t border-black/20 p-4 grid gap-3">
       <div className="text-sm font-semibold">Order Summary</div>
       <div className="grid gap-2 text-sm">
-        <div className="flex items-center justify-between">
-          <span>Subtotal</span>
-          <span>{"\u20B9"}{subtotal.toFixed(0)}</span>
-        </div>
         <div className="flex items-center justify-between text-[var(--muted)]">
           <span>MRP</span>
           <span>{"\u20B9"}{mrpTotal.toFixed(0)}</span>
         </div>
-        {savings > 0 && (
-          <div className="flex items-center justify-between text-green-700">
-            <span>You Save</span>
-            <span>{"\u20B9"}{savings.toFixed(0)}</span>
-          </div>
-        )}
+        <div className="flex items-center justify-between text-sm">
+          <span>Discount</span>
+          <span className="text-green-700">- ₹{(mrpTotal - subtotal).toLocaleString("en-IN")}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span>Subtotal</span>
+          <span>{"\u20B9"}{subtotal.toFixed(0)}</span>
+        </div>
       </div>
       <button
         type="button"
@@ -57,7 +55,7 @@ export default function OrderSummary({ items, onPay, paying, disabled }: Props) 
         {paying ? "Processing..." : "Pay Now"}
       </button>
       <p className="text-[11px] text-[var(--muted)]">
-        Secure payments powered by Razorpay.
+        Secure payments powered by <b>Razorpay</b>
       </p>
     </div>
   );

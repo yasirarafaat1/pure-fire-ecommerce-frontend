@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import SearchBar from "./components/SearchBar";
 import Suggestions from "./components/Suggestions";
 import ResultsGrid from "./components/ResultsGrid";
+import { getUserToken } from "../utils/auth";
 
 type Product = {
   product_id: number;
@@ -18,7 +19,7 @@ type Product = {
 };
 
 const API_BASE = "/api/user";
-
+const getToken = () => getUserToken();
 export default function SearchPage() {
   const router = useRouter();
   const [allProducts, setAllProducts] = useState<Product[]>([]);
@@ -127,6 +128,14 @@ export default function SearchPage() {
       setHasSearched(false);
       return;
     }
+    const token = getToken();
+    if (token) {
+      fetch(`${API_BASE}/activity/search`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-user-token": token },
+        body: JSON.stringify({ query: q }),
+      }).catch(() => { });
+    }
     setHasSearched(true);
     setLoading(true);
     (async () => {
@@ -201,7 +210,7 @@ export default function SearchPage() {
       <main className="max-w-6xl mx-auto px-4 py-6">
         {hasQuery ? (
           <>
-           {relatedKeywords.length > 0 && (
+            {relatedKeywords.length > 0 && (
               <div className="mb-2">
                 <h3 className="font-semibold text-sm mb-2">Related keywords</h3>
                 <Suggestions items={relatedKeywords} onSelect={handleSelectSuggestion} />
@@ -216,7 +225,7 @@ export default function SearchPage() {
               emptyMessage={query ? "No products found. Try another keyword." : "Start typing to search products."}
               columns={gridCols}
             />
-           
+
           </>
         ) : (
           defaultShowcase.length > 0 && (
@@ -233,3 +242,5 @@ export default function SearchPage() {
     </div>
   );
 }
+
+

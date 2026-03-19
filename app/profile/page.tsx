@@ -2,16 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { FiUser, FiShoppingBag, FiHeart, FiMapPin, FiSettings, FiLogOut } from "react-icons/fi";
+import { FiUser, FiShoppingBag, FiHeart, FiMapPin, FiSettings } from "react-icons/fi";
 import ProfileForm from "./components/ProfileForm";
 import OrdersSection from "./components/OrdersSection";
 import WishlistSection from "./components/WishlistSection";
 import AddressesSection from "./components/AddressesSection";
 import SettingsSection from "./components/SettingsSection";
-import LogoutSection from "./components/LogoutSection";
 import { getUserEmail, getUserToken } from "../utils/auth";
 
-type SectionKey = "profile" | "orders" | "wishlist" | "addresses" | "settings" | "logout";
+type SectionKey = "profile" | "orders" | "wishlist" | "addresses" | "settings";
 
 const sections: { key: SectionKey; label: string; icon: JSX.Element }[] = [
   { key: "profile", label: "Profile", icon: <FiUser /> },
@@ -19,7 +18,6 @@ const sections: { key: SectionKey; label: string; icon: JSX.Element }[] = [
   { key: "wishlist", label: "Wishlist", icon: <FiHeart /> },
   { key: "addresses", label: "Addresses", icon: <FiMapPin /> },
   { key: "settings", label: "Settings", icon: <FiSettings /> },
-  { key: "logout", label: "Logout", icon: <FiLogOut /> },
 ];
 
 export default function ProfilePage() {
@@ -89,47 +87,66 @@ export default function ProfilePage() {
   }
 
   return (
-    <main className="max-w-6xl mx-auto px-4 py-6">
-      <div className="grid gap-6 md:grid-cols-[260px_1fr] items-start">
-        <aside className="card p-3 md:sticky md:top-24">
-          <div className="text-sm font-semibold px-2 pb-2 border-b border-black/10">Account</div>
-          <div className="grid gap-1 pt-2">
-            {sections.map((s) => {
-              const selected = active === s.key;
-              return (
-                <button
-                  key={s.key}
-                  type="button"
-                  className={`flex items-center gap-2 px-3 py-2 rounded-[5px] border text-sm cursor-pointer ${
-                    selected ? "bg-black text-white border-black" : "bg-white text-black border-black/20"
-                  }`}
-                  onClick={() => setActive(s.key)}
-                >
-                  <span className="text-base">{s.icon}</span>
-                  <span>{s.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </aside>
+    <>
+      <main className="max-w-6xl mx-auto px-4 py-6 pb-20 md:pb-6">
+        <div className="grid gap-6 md:grid-cols-[260px_1fr] items-start">
+          <aside className="card p-3 md:sticky md:top-24 hidden md:block">
+            <div className="text-sm font-semibold px-2 pb-2 border-b border-black/10">Account</div>
+            <div className="grid gap-1 pt-2">
+              {sections.map((s) => {
+                const selected = active === s.key;
+                return (
+                  <button
+                    key={s.key}
+                    type="button"
+                    className={`flex items-center gap-2 px-3 py-2 rounded-[5px] border text-sm cursor-pointer ${
+                      selected ? "bg-black text-white border-black" : "bg-white text-black border-black/20"
+                    }`}
+                    onClick={() => setActive(s.key)}
+                  >
+                    <span className="text-base">{s.icon}</span>
+                    <span>{s.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </aside>
 
-        <section className="card p-5 min-h-[480px]">
-          <h1 className="text-lg font-semibold mb-4">{heading}</h1>
-          {active === "profile" && <ProfileForm email={userEmail} />}
-          {active === "orders" && <OrdersSection />}
-          {active === "wishlist" && <WishlistSection email={userEmail} />}
-          {active === "addresses" && <AddressesSection email={userEmail} />}
-          {active === "settings" && <SettingsSection />}
-          {active === "logout" && <LogoutSection onCancel={() => setActive("profile")} />}
-        </section>
-      </div>
-    </main>
+          <section className="card profile-section p-1 md:p-5 min-h-[480px]">
+            <div key={active} className="fade-in">
+              <h1 className="text-lg font-semibold mb-4">{heading}</h1>
+              {active === "profile" && <ProfileForm email={userEmail} />}
+              {active === "orders" && <OrdersSection email={userEmail} />}
+              {active === "wishlist" && <WishlistSection email={userEmail} />}
+              {active === "addresses" && <AddressesSection email={userEmail} />}
+              {active === "settings" && <SettingsSection email={userEmail} />}
+            </div>
+          </section>
+        </div>
+      </main>
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-black/10 md:hidden">
+        <div className="flex items-center justify-between px-2 py-2">
+          {sections.map((s) => {
+            const selected = active === s.key;
+            return (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => setActive(s.key)}
+                aria-label={s.label}
+                className={`flex items-center justify-center w-11 h-11 rounded-[8px] ${
+                  selected ? "bg-black text-white" : "text-black"
+                }`}
+              >
+                <span className="text-xl">{s.icon}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    </>
   );
 }
-
-
-
-
 
 
 

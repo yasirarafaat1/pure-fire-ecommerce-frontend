@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getUserToken } from "../../utils/auth";
-
+const siteName = process.env.NEXT_PUBLIC_SITE_NAME || "Pure Fire";
 const IconArrowLeft = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M15 18l-6-6 6-6" />
@@ -220,7 +220,7 @@ export default function HomeNavbar() {
 
         {/* Center logo / search */}
         {!searchMode ? (
-          <a className="text-lg font-semibold tracking-tight" href="/">Pure Fire</a>
+          <a className="text-lg font-semibold tracking-tight" href="/">{siteName}</a>
         ) : (
           <div className="flex-1 flex max-w-md w-full items-center gap-2">
             <input
@@ -281,7 +281,7 @@ export default function HomeNavbar() {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between gap-3 border-b border-black/10 p-4 pb-2 font-semibold">
-            <h3>Pure Fire</h3>
+            <h3>{siteName}</h3>
             <button className="cursor-pointer !p-2" aria-label="Close menu" onClick={() => setMenuOpen(false)}>
               <IconClose />
             </button>
@@ -366,3 +366,5 @@ export default function HomeNavbar() {
     </header>
   );
 }
+
+

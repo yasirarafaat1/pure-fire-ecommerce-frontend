@@ -26,7 +26,8 @@ async function proxy(req: NextRequest, params: { path?: string[] }) {
 
   if (req.method !== "GET" && req.method !== "HEAD") {
     const body = await req.arrayBuffer();
-    init.body = body;`n    init.duplex = "half";
+    init.body = body;
+    init.duplex = "half";
   }
 
   try {
@@ -57,6 +58,10 @@ export async function POST(req: NextRequest, { params }: { params: { path?: stri
   const resolved = await Promise.resolve(params);
   return proxy(req, resolved);
 }
+export async function PUT(req: NextRequest, { params }: { params: { path?: string[] } }) {
+  const resolved = await Promise.resolve(params);
+  return proxy(req, resolved);
+}
 export async function PATCH(req: NextRequest, { params }: { params: { path?: string[] } }) {
   const resolved = await Promise.resolve(params);
   return proxy(req, resolved);
@@ -65,4 +70,3 @@ export async function DELETE(req: NextRequest, { params }: { params: { path?: st
   const resolved = await Promise.resolve(params);
   return proxy(req, resolved);
 }
-

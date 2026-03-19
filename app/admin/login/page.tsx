@@ -15,6 +15,7 @@ export default function AdminLoginPage() {
   const redirect = search.get("redirect") || "/admin/dashboard";
 
   const login = async () => {
+    if (!username || !password || loading) return;
     setLoading(true);
     setMessage("");
     try {
@@ -36,7 +37,7 @@ export default function AdminLoginPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-white text-black">
-      <div className="card w-full max-w-md p-8 space-y-6 shadow-lg">
+      <div className="card w-full max-w-md p-8 space-y-6">
         <div>
           <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Admin</p>
           <h1 className="text-2xl font-semibold">Sign in</h1>
@@ -48,6 +49,9 @@ export default function AdminLoginPage() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="admin"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") login();
+            }}
           />
         </label>
         <label className="grid gap-2">
@@ -58,6 +62,9 @@ export default function AdminLoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") login();
+            }}
           />
         </label>
         <div className="flex gap-2 justify-end">
@@ -74,4 +81,3 @@ export default function AdminLoginPage() {
     </main>
   );
 }
-
