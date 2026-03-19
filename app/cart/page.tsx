@@ -107,12 +107,12 @@ export default function CartPage() {
           body: JSON.stringify({ email }),
         });
         const data = await res.json();
-        const ids = new Set(
+        const ids = new Set<string>(
           (data?.products || []).map((p: any) => String(p.product_id || p._id || "")),
         );
         setWishlistIds(ids);
       } catch {
-        setWishlistIds(new Set());
+        setWishlistIds(new Set<string>());
       }
     };
     loadWishlist();
@@ -252,7 +252,7 @@ export default function CartPage() {
         body: JSON.stringify({ email, product_id: item.id }),
       });
       const data = await res.json();
-      const ids = new Set(
+      const ids = new Set<string>(
         (data?.products || []).map((p: any) => String(p.product_id || p._id || "")),
       );
       setWishlistIds(ids);
@@ -283,7 +283,7 @@ export default function CartPage() {
             onClick={clearCart}
             disabled={clearingCart}
           >
-            {clearingCart ? "Clearing..." : "Clear"}
+            {clearingCart ? "Clearing cart..." : "Clear cart"}
           </button>
         )}
       </header>
@@ -396,6 +396,7 @@ export default function CartPage() {
               className="btn btn-primary w-full"
               onClick={() => {
                 if (!requireAuth()) return;
+                localStorage.removeItem("buy_now_item");
                 router.push("/checkout");
               }}
             >

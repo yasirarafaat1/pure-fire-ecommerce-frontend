@@ -1,6 +1,6 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const formatOrderId = (value: string | null) => {
   if (!value) return "";
@@ -9,8 +9,14 @@ const formatOrderId = (value: string | null) => {
 };
 
 export default function OrderSuccessPage() {
-  const params = useSearchParams();
-  const orderIdRaw = params.get("order_id");
+  const [orderIdRaw, setOrderIdRaw] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    setOrderIdRaw(params.get("order_id"));
+  }, []);
+
   const orderId = formatOrderId(orderIdRaw);
 
   return (

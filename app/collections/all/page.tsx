@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useMemo, useState, useEffect, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { FaStar } from "react-icons/fa";
 import { IoChevronDown, IoChevronUp } from "react-icons/io5";
 import CategoryStrip from "../../home/components/category-strip";
@@ -59,10 +59,10 @@ const getFabricValue = (item: any) => {
   return hit?.value ? String(hit.value) : "";
 };
 
-export default function CollectionsPage() {
-  const searchParams = useSearchParams();
+function CollectionsPage() {
   const router = useRouter();
   const pathname = usePathname() || "";
+  const [query, setQuery] = useState({ category: "", sub: "", child: "", collection: "" });
   const [activeSort, setActiveSort] = useState(sortOptions[0]);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -103,6 +103,17 @@ export default function CollectionsPage() {
   const [appliedFilters, setAppliedFilters] = useState<FiltersState>(pendingFilters);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    setQuery({
+      category: (params.get("category") || "").trim(),
+      sub: (params.get("sub") || "").trim(),
+      child: (params.get("child") || "").trim(),
+      collection: (params.get("collection") || "").trim(),
+    });
+  }, [pathname]);
+
+  useEffect(() => {
     let active = true;
 
     const load = async () => {
@@ -128,7 +139,7 @@ export default function CollectionsPage() {
             const rawAncestors = Array.isArray(node?.ancestors)
               ? node.ancestors.map((a: any) => String(a?.name || "")).filter(Boolean)
               : parentAncestors;
-            const ancestors = dedupe(rawAncestors);
+            const ancestors = dedupe(rawAncestors as string[]);
 
             categoryMap.set(String(node._id), name);
             categoryInfoMap.set(String(node._id), { name, ancestors });
@@ -331,9 +342,9 @@ export default function CollectionsPage() {
 
   const slugParts = useMemo(() => slugKey.toLowerCase().split("-").filter(Boolean), [slugKey]);
 
-  const selectedCategory = (searchParams.get("category") || "").trim();
-  const selectedSub = (searchParams.get("sub") || "").trim();
-  const selectedChild = (searchParams.get("child") || "").trim();
+  const selectedCategory = query.category;
+  const selectedSub = query.sub;
+  const selectedChild = query.child;
 
   const normalizeName = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "").trim();
   const buildVariants = (value: string) => {
@@ -345,10 +356,10 @@ export default function CollectionsPage() {
 
   const collectionTitle = useMemo(() => {
     const parts = ["Collection"];
-    const collection = searchParams.get("collection");
-    const category = searchParams.get("category");
-    const sub = searchParams.get("sub");
-    const child = searchParams.get("child");
+    const collection = query.collection;
+    const category = query.category;
+    const sub = query.sub;
+    const child = query.child;
     if (category || sub || child) {
       [category, sub, child].forEach((p) => {
         if (p) parts.push(p);
@@ -368,7 +379,7 @@ export default function CollectionsPage() {
       parts.push(pretty);
     }
     return parts.join(" / ");
-  }, [searchParams, slugKey]);
+  }, [query, slugKey]);
 
   useEffect(() => {
     if (slugKey === "new-arrival") {
@@ -839,6 +850,14 @@ export default function CollectionsPage() {
         </aside>
       </div>
     </div>
+  );
+}
+
+export default function CollectionsPageWrapper() {
+  return (
+    <Suspense fallback={null}>
+      <CollectionsPage />
+    </Suspense>
   );
 }
 

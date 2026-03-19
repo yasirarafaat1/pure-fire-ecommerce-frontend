@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 const API_BASE = "/api/auth";
 
@@ -11,8 +11,14 @@ export default function AdminLoginPage() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const search = useSearchParams();
-  const redirect = search.get("redirect") || "/admin/dashboard";
+  const [redirect, setRedirect] = useState("/admin/dashboard");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get("redirect");
+    if (next) setRedirect(next);
+  }, []);
 
   const login = async () => {
     if (!username || !password || loading) return;

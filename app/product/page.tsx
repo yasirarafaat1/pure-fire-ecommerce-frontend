@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import namer from "color-namer";
 import Gallery from "./components/Gallery";
 import InfoPanel from "./components/InfoPanel";
@@ -15,16 +15,30 @@ const getToken = () => getUserToken();
 export default function ProductPage() {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const productId = searchParams.get("id") || undefined;
-  const colorParam = searchParams.get("color");
-  const sizeParam = searchParams.get("size");
-  const queryString = searchParams.toString();
-  const nextUrl = queryString ? `${pathname}?${queryString}` : pathname;
+  const [productId, setProductId] = useState<string | undefined>(undefined);
+  const [colorParam, setColorParam] = useState<string | null>(null);
+  const [sizeParam, setSizeParam] = useState<string | null>(null);
+  const [queryString, setQueryString] = useState("");
+  const lastSearchRef = useRef("");
+  const nextUrl = useMemo(
+    () => (queryString ? `${pathname}?${queryString}` : pathname),
+    [pathname, queryString],
+  );
 
   const leftRef = useRef<HTMLDivElement | null>(null);
   const rightRef = useRef<HTMLDivElement | null>(null);
   const [stick, setStick] = useState<"left" | "right" | null>(null);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const search = window.location.search || "";
+    if (search === lastSearchRef.current) return;
+    lastSearchRef.current = search;
+    const params = new URLSearchParams(search);
+    setProductId(params.get("id") || undefined);
+    setColorParam(params.get("color"));
+    setSizeParam(params.get("size"));
+    setQueryString(params.toString());
+  });
 
   const [product, setProduct] = useState<any | null>(null);
   const [similarProducts, setSimilarProducts] = useState<any[]>([]);
@@ -201,12 +215,12 @@ export default function ProductPage() {
             body: JSON.stringify({ email }),
           });
           const wishData = await wishRes.json();
-          const ids = new Set(
+          const ids = new Set<string>(
             (wishData?.products || []).map((p: any) => String(p.product_id || p._id || "")),
           );
           setWishlistIds(ids);
         } else {
-          setWishlistIds(new Set());
+          setWishlistIds(new Set<string>());
         }
       } catch (err) {
         console.error("product fetch error", err);
@@ -363,6 +377,21 @@ export default function ProductPage() {
     window.dispatchEvent(new Event("cart:updated"));
   };
 
+  const saveBuyNowItem = (color: string, size: string) => {
+    if (!product?.product_id) return;
+    const payload = {
+      product_id: product.product_id,
+      title: product.name,
+      qty: 1,
+      price: displayPrice,
+      mrp: displayMrp,
+      image: displayImages?.[0] || "",
+      color,
+      size,
+    };
+    localStorage.setItem("buy_now_item", JSON.stringify(payload));
+  };
+
   const toggleWishlist = async () => {
     if (!requireAuth()) return;
     if (!product?.product_id) return;
@@ -377,7 +406,7 @@ export default function ProductPage() {
         body: JSON.stringify({ email, product_id: product.product_id }),
       });
       const data = await res.json();
-      const ids = new Set(
+      const ids = new Set<string>(
         (data?.products || []).map((p: any) => String(p.product_id || p._id || "")),
       );
       setWishlistIds(ids);
@@ -483,7 +512,7 @@ export default function ProductPage() {
               addedToCart={addedToCart}
               onGoToCart={() => (window.location.href = "/cart")}
               onBuyNow={async (payload) => {
-                await addToCart(payload);
+                saveBuyNowItem(payload.color, payload.size);
                 window.location.href = "/checkout";
               }}
             />

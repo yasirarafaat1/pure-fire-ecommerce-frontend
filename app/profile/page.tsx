@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { ReactElement } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { FiUser, FiShoppingBag, FiHeart, FiMapPin, FiSettings } from "react-icons/fi";
 import ProfileForm from "./components/ProfileForm";
@@ -12,7 +13,7 @@ import { getUserEmail, getUserToken } from "../utils/auth";
 
 type SectionKey = "profile" | "orders" | "wishlist" | "addresses" | "settings";
 
-const sections: { key: SectionKey; label: string; icon: JSX.Element }[] = [
+const sections: { key: SectionKey; label: string; icon: ReactElement }[] = [
   { key: "profile", label: "Profile", icon: <FiUser /> },
   { key: "orders", label: "Orders", icon: <FiShoppingBag /> },
   { key: "wishlist", label: "Wishlist", icon: <FiHeart /> },

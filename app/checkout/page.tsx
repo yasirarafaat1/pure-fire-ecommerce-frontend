@@ -47,6 +47,7 @@ export default function CheckoutPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isBuyNow, setIsBuyNow] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelMode, setPanelMode] = useState<"add" | "edit">("add");
   const [panelAddress, setPanelAddress] = useState<Address | null>(null);
@@ -66,6 +67,16 @@ export default function CheckoutPage() {
       setLoading(true);
       setError("");
       try {
+        const rawBuyNow = localStorage.getItem("buy_now_item");
+        let buyNowItem: CartItem | null = null;
+        if (rawBuyNow) {
+          try {
+            const parsed = JSON.parse(rawBuyNow);
+            if (parsed?.product_id) buyNowItem = parsed;
+          } catch {
+            buyNowItem = null;
+          }
+        }
         const [addrRes, cartRes] = await Promise.all([
           fetch(`${API_BASE}/get-user-addresess`, {
             method: "POST",
@@ -88,7 +99,13 @@ export default function CheckoutPage() {
         if (addrList.length && !selectedAddress) {
           setSelectedAddress(addrList[0].address_id || addrList[0].id);
         }
-        setCartItems(cartJson.items || []);
+        if (buyNowItem) {
+          setIsBuyNow(true);
+          setCartItems([buyNowItem]);
+        } else {
+          setIsBuyNow(false);
+          setCartItems(cartJson.items || []);
+        }
       } catch (e: any) {
         setError(e?.message || "Failed to load checkout data");
       } finally {
@@ -130,7 +147,7 @@ export default function CheckoutPage() {
         return { ok: false, message: data.message || "Failed to save address" };
       }
       const list = await refreshAddresses();
-      const savedId = data.address?.address_id || data.data?.address_id || payload?.address_id;
+      const savedId = data.address?.address_id || data.data?.address_id || id;
       if (savedId) setSelectedAddress(savedId);
       if (!savedId && list.length) {
         setSelectedAddress(list[0].address_id || list[0].id);
@@ -208,6 +225,7 @@ export default function CheckoutPage() {
             selectedAddress={selectedAddress}
             onError={setError}
             onSuccess={(orderId) => router.replace(`/order-success?order_id=${orderId}`)}
+            mode={isBuyNow ? "buy_now" : "cart"}
           />
         </aside>
       </div>

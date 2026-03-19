@@ -23,6 +23,7 @@ type Props = {
   selectedAddress: string | number | null;
   onSuccess: (orderId: string | number) => void;
   onError: (message: string) => void;
+  mode?: "cart" | "buy_now";
 };
 
 const loadRazorpay = () =>
@@ -36,7 +37,7 @@ const loadRazorpay = () =>
     document.body.appendChild(script);
   });
 
-export default function CheckoutPayment({ items, selectedAddress, onSuccess, onError }: Props) {
+export default function CheckoutPayment({ items, selectedAddress, onSuccess, onError, mode = "cart" }: Props) {
   const [paying, setPaying] = useState(false);
 
   const handlePay = async () => {
@@ -97,13 +98,17 @@ export default function CheckoutPayment({ items, selectedAddress, onSuccess, onE
           });
           const verifyJson = await verifyRes.json();
           if (verifyJson?.status) {
-            const cartId = localStorage.getItem("cart_id") || "";
-            if (cartId) {
-              await fetch(`${API_BASE}/clear-cart`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ cart_id: cartId }),
-              });
+            if (mode === "cart") {
+              const cartId = localStorage.getItem("cart_id") || "";
+              if (cartId) {
+                await fetch(`${API_BASE}/clear-cart`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ cart_id: cartId }),
+                });
+              }
+            } else {
+              localStorage.removeItem("buy_now_item");
             }
             onSuccess(verifyJson.order_id || orderJson.local_order_id);
           } else {

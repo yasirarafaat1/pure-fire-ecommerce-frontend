@@ -49,7 +49,7 @@ export function useCollectionData() {
             const rawAncestors = Array.isArray(node?.ancestors)
               ? node.ancestors.map((a: any) => String(a?.name || "")).filter(Boolean)
               : parentAncestors;
-            const ancestors = dedupe(rawAncestors);
+            const ancestors = dedupe(rawAncestors as string[]);
 
             categoryMap.set(String(node._id), name);
             categoryInfoMap.set(String(node._id), { name, ancestors });

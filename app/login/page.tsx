@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { getUserToken, setUserAuth } from "../utils/auth";
 
 type Step = "email" | "otp";
 
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -16,6 +15,11 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [cooldown, setCooldown] = useState(0);
+  const [nextPath, setNextPath] = useState("/profile");
+  const authBase =
+    process.env.NEXT_PUBLIC_API_URL?.trim()
+      ? `${process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, "")}/api/auth`
+      : "/api/auth";
 
   useEffect(() => {
     if (!cooldown) return;
@@ -24,6 +28,12 @@ export default function LoginPage() {
     }, 1000);
     return () => clearInterval(id);
   }, [cooldown]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const next = new URLSearchParams(window.location.search).get("next");
+    if (next) setNextPath(next);
+  }, []);
 
   useEffect(() => {
     const token = getUserToken();
@@ -42,7 +52,7 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/user/send-otp", {
+      const res = await fetch(`${authBase}/user/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: emailVal }),
@@ -71,7 +81,7 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/user/verify-otp", {
+      const res = await fetch(`${authBase}/user/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: emailVal, otp: otp.trim() }),
@@ -83,8 +93,7 @@ export default function LoginPage() {
       setUserAuth(data.token || "", data.email || emailVal);
       window.dispatchEvent(new Event("auth:changed"));
       setInfo("Login successful.");
-      const next = searchParams.get("next") || "/profile";
-      router.replace(next);
+      router.replace(nextPath || "/profile");
     } catch (err: any) {
       setError(err.message || "OTP verification failed");
     } finally {
