@@ -18,8 +18,9 @@ const buildHeaders = (res: Response) => {
   return headers;
 };
 
-async function proxy(req: NextRequest, params: { path?: string[] }) {
-  const joined = (params.path || []).join("/");
+async function proxy(req: NextRequest, context: { params: Promise<{ path: string[] }> }) {
+  const { path = [] } = await context.params;
+  const joined = path.join("/");
   const url = `${targetBase}/${joined}`;
   const init: RequestInit & { duplex?: "half" } = {
     method: req.method,
@@ -48,12 +49,16 @@ async function proxy(req: NextRequest, params: { path?: string[] }) {
   }
 }
 
-export async function POST(req: NextRequest, { params }: { params: { path?: string[] } }) {
-  const resolved = await Promise.resolve(params);
-  return proxy(req, resolved);
+export async function POST(
+  req: NextRequest,
+  ctx: { params: Promise<{ path: string[] }> },
+) {
+  return proxy(req, ctx);
 }
 
-export async function GET(req: NextRequest, { params }: { params: { path?: string[] } }) {
-  const resolved = await Promise.resolve(params);
-  return proxy(req, resolved);
+export async function GET(
+  req: NextRequest,
+  ctx: { params: Promise<{ path: string[] }> },
+) {
+  return proxy(req, ctx);
 }
