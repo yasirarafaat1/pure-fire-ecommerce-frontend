@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { cachedFetch } from "../../utils/cachedFetch";
 import { usePathname, useRouter } from "next/navigation";
 import { getUserToken } from "../../utils/auth";
 const siteName = process.env.NEXT_PUBLIC_SITE_NAME || "Pure Fire";
@@ -150,8 +151,8 @@ export default function HomeNavbar() {
     const loadCategories = async () => {
       try {
         const [treeRes, productsRes] = await Promise.all([
-          fetch("/api/admin/categories/tree", { cache: "no-store" }),
-          fetch("/api/admin/get-products", { cache: "no-store" }),
+          cachedFetch("/api/admin/categories/tree"),
+          cachedFetch("/api/admin/get-products"),
         ]);
         const treeData = await treeRes.json();
         const productsData = await productsRes.json();

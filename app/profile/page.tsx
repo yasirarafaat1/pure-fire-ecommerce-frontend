@@ -114,7 +114,23 @@ export default function ProfilePage() {
           </aside>
 
           <section className="card profile-section p-1 md:p-5 min-h-[480px]">
-            <div key={active} className="fade-in">
+            <style jsx>{`
+              .profile-switch {
+                animation: profileSwitch 780ms cubic-bezier(0.22, 1, 0.36, 1) both;
+                will-change: transform, opacity;
+              }
+              @keyframes profileSwitch {
+                from {
+                  opacity: 0;
+                  transform: translateY(6px);
+                }
+                to {
+                  opacity: 1;
+                  transform: translateY(0);
+                }
+              }
+            `}</style>
+            <div key={active} className="profile-switch">
               <h1 className="text-lg font-semibold mb-4">{heading}</h1>
               {active === "profile" && <ProfileForm email={userEmail} />}
               {active === "orders" && <OrdersSection email={userEmail} />}

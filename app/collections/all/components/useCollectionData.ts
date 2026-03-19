@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AvailableFilters, CardProduct } from "./collections-types";
+import { cachedFetch } from "../../../utils/cachedFetch";
 import { buildContentText, buildSearchText, dedupe, getFabricValue, resolveCreatedAt, toNum } from "./collections-helpers";
 
 const API_PRODUCTS = "/api/user/show-product?page=1&limit=100";
@@ -30,9 +31,9 @@ export function useCollectionData() {
       setIsLoading(true);
       try {
         const [prodRes, catRes, topRes] = await Promise.all([
-          fetch(API_PRODUCTS),
-          fetch(API_CATEGORIES),
-          fetch(API_TOP),
+          cachedFetch(API_PRODUCTS),
+          cachedFetch(API_CATEGORIES),
+          cachedFetch(API_TOP),
         ]);
 
         const prodJson = prodRes.ok ? await prodRes.json() : { products: [] };

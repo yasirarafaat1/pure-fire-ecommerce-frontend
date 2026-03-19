@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { cachedFetch } from "../../utils/cachedFetch";
 
 type Product = {
   product_id: number;
@@ -28,8 +29,8 @@ export default function TopProducts() {
       setLoading(true);
       try {
         const [prodRes, catRes] = await Promise.all([
-          fetch("/api/admin/top-products", { cache: "no-store" }),
-          fetch("/api/user/get-categories", { cache: "no-store" }),
+          cachedFetch("/api/admin/top-products"),
+          cachedFetch("/api/user/get-categories"),
         ]);
         const data = await prodRes.json();
         const catData = catRes.ok ? await catRes.json() : { categories: [] };

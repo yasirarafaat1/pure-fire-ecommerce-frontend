@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { cachedFetch } from "../../utils/cachedFetch";
 import HoverImage from "../../components/HoverImage";
 import { BiRightArrowAlt } from "react-icons/bi";
 
@@ -28,7 +29,7 @@ export default function BestSellers() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await fetch("/api/user/top-products", { cache: "no-store" });
+        const res = await cachedFetch("/api/user/top-products");
         const data = await res.json();
         const list = Array.isArray(data?.products) ? data.products : [];
         const sorted = [...list].sort((a: any, b: any) => (b.orderedQty || 0) - (a.orderedQty || 0));

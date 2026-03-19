@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { cachedFetch } from "../../utils/cachedFetch";
 
 type Slide = { src: string; alt: string; href: string };
 
@@ -49,7 +50,7 @@ export default function BannerCarousel() {
     }
     const load = async () => {
       try {
-        const res = await fetch("/api/admin/banners/public", { cache: "no-store" });
+        const res = await cachedFetch("/api/admin/banners/public");
         if (!res.ok) throw new Error("fail");
         const data = await res.json();
         const banners = (data?.banners || [])

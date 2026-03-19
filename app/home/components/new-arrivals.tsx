@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { cachedFetch } from "../../utils/cachedFetch";
 import HoverImage from "../../components/HoverImage";
 import { BiRightArrowAlt } from "react-icons/bi";
 
@@ -28,7 +29,7 @@ export default function NewArrivals() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await fetch("/api/user/show-product?limit=12", { cache: "no-store" });
+        const res = await cachedFetch("/api/user/show-product?limit=12");
         const data = await res.json();
         const list = Array.isArray(data?.products) ? data.products : [];
         const published = list.filter((p: any) => !p?.status || p.status === "published");

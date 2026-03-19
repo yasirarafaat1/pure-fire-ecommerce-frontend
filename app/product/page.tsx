@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import ProductPageClient from "./ProductPageClient";
 
+export const dynamic = "force-dynamic";
+
 const normalizeBase = (raw: string) => {
   const trimmed = raw.trim();
   if (!trimmed) return trimmed;
@@ -26,6 +28,14 @@ const pickImage = (product: any) => {
       ? raw.split(/[\s,]+/).filter(Boolean)
       : [];
   return list.find(Boolean) || "";
+};
+
+const resolveImageUrl = (raw: string, base: string) => {
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (raw.startsWith("//")) return `https:${raw}`;
+  if (raw.startsWith("/")) return `${base.replace(/\/$/, "")}${raw}`;
+  return raw;
 };
 
 export async function generateMetadata({
@@ -61,7 +71,7 @@ export async function generateMetadata({
     const title = product?.title || product?.name || "Product";
     const descriptionSource = product?.meta_description || product?.description || "";
     const description = stripHtml(descriptionSource).slice(0, 160) || "Shop premium everyday wear at Pure Fire.";
-    const image = pickImage(product);
+    const image = resolveImageUrl(pickImage(product), baseUrl);
     const url = siteUrl ? `${siteUrl.replace(/\/$/, "")}/product?id=${id}` : undefined;
 
     return {

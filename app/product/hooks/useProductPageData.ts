@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { normalizeProduct } from "../utils/productHelpers";
+import { cachedFetch } from "../../utils/cachedFetch";
 import { getUserToken } from "../../utils/auth";
 
 const API_BASE = "/api/user";
@@ -32,14 +33,14 @@ export const useProductPageData = ({
     const load = async () => {
       setLoading(true);
       try {
-        const listRes = await fetch(`${API_BASE}/show-product`);
+        const listRes = await cachedFetch(`${API_BASE}/show-product`);
         const listData = await listRes.json();
         const list = listData?.products || listData?.data || [];
         const first = list?.[0];
         if (!first) return;
         const id = productId || first._id || first.product_id;
 
-        const detailRes = await fetch(`${API_BASE}/get-product-byid/${id}`);
+        const detailRes = await cachedFetch(`${API_BASE}/get-product-byid/${id}`);
         const detailData = await detailRes.json();
         const detail = detailData?.data?.[0] || detailData?.product || detailData?.data;
         const prod = normalizeProduct(detail || first);
@@ -50,7 +51,7 @@ export const useProductPageData = ({
         setRecentlyViewed((list || []).slice(0, 8).map(normalizeProduct));
 
         if (prod?.category) {
-          const simRes = await fetch(`${API_BASE}/get-product-byCategory/${prod.category}`);
+          const simRes = await cachedFetch(`${API_BASE}/get-product-byCategory/${prod.category}`);
           const simData = await simRes.json();
           const simList = simData?.data || simData?.products || [];
           setSimilarProducts(
@@ -61,7 +62,7 @@ export const useProductPageData = ({
           );
         }
 
-        const revRes = await fetch(`${API_BASE}/get-product-reviews/${id}`);
+        const revRes = await cachedFetch(`${API_BASE}/get-product-reviews/${id}`);
         const revData = await revRes.json();
         setReviews(revData?.reviews || revData?.data || []);
 

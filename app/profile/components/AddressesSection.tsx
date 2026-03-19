@@ -85,7 +85,16 @@ export default function AddressesSection({ email }: { email: string }) {
       </div>
 
       {loading ? (
-        <div className="text-sm text-[var(--muted)]">Loading addresses...</div>
+        <div className="grid gap-3">
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <div key={idx} className="border border-black/10 rounded-[8px] p-4 bg-white">
+              <div className="h-3 w-1/3 bg-black/5 border border-black/10 rounded-[4px] animate-pulse" />
+              <div className="mt-3 h-4 w-2/3 bg-black/5 border border-black/10 rounded-[4px] animate-pulse" />
+              <div className="mt-2 h-3 w-1/2 bg-black/5 border border-black/10 rounded-[4px] animate-pulse" />
+              <div className="mt-4 h-6 w-20 bg-black/5 border border-black/10 rounded-[6px] animate-pulse" />
+            </div>
+          ))}
+        </div>
       ) : (
         <>
           {error && <div className="text-sm text-red-600">{error}</div>}
