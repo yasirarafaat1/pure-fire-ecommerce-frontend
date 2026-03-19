@@ -60,9 +60,16 @@ export default function ProfileForm({ email }: { email: string }) {
     return <FaUser />;
   }, [profile.gender]);
 
+  const normalizedName = draft.name.trim();
+  const hasChanges = normalizedName !== profile.name || draft.gender !== profile.gender;
+
   const saveProfile = async () => {
     if (!profile.email) {
       setError("Email missing. Please login again.");
+      return;
+    }
+    if (!hasChanges) {
+      setInfo("No changes to save.");
       return;
     }
     setSaving(true);
@@ -72,11 +79,7 @@ export default function ProfileForm({ email }: { email: string }) {
       const res = await fetch("/api/user/update-user-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-user-token": getToken() },
-        body: JSON.stringify({
-          email: profile.email,
-          name: draft.name.trim(),
-          gender: draft.gender,
-        }),
+        body: JSON.stringify({ email: profile.email, name: normalizedName, gender: draft.gender }),
       });
       const data = await res.json();
       if (!res.ok || !data.status) throw new Error(data.message || "Failed to save");
@@ -101,7 +104,7 @@ export default function ProfileForm({ email }: { email: string }) {
       className="grid gap-4"
       onSubmit={(e) => {
         e.preventDefault();
-        if (editing) saveProfile();
+        if (editing && hasChanges && !saving) saveProfile();
       }}
     >
       <div className="flex items-center gap-4">
@@ -161,7 +164,7 @@ export default function ProfileForm({ email }: { email: string }) {
       <div className="flex gap-2">
         {editing ? (
           <>
-            <button className="btn btn-primary" type="submit" disabled={saving}>
+            <button className="btn btn-primary" type="submit" disabled={saving || !hasChanges}>
               {saving ? "Saving..." : "Save Changes"}
             </button>
             <button
@@ -178,7 +181,16 @@ export default function ProfileForm({ email }: { email: string }) {
             </button>
           </>
         ) : (
-          <button className="btn btn-primary" type="button" onClick={() => setEditing(true)}>
+          <button
+            className="btn btn-primary"
+            type="button"
+            onClick={() => {
+              setDraft({ name: profile.name, gender: profile.gender });
+              setEditing(true);
+              setError("");
+              setInfo("");
+            }}
+          >
             Edit Profile
           </button>
         )}

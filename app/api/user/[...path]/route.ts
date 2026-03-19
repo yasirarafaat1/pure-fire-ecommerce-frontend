@@ -1,6 +1,16 @@
 import { NextRequest } from "next/server";
 
-const targetBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const rawBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
+const normalizeBase = (raw: string) => {
+  const trimmed = raw.trim();
+  if (!trimmed) return trimmed;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (/^(localhost|127\.0\.0\.1|0\.0\.0\.0)/i.test(trimmed)) return `http://${trimmed}`;
+  return `https://${trimmed}`;
+};
+
+const targetBase = normalizeBase(rawBase).replace(/\/$/, "");
 
 const buildHeaders = (res: Response) => {
   const headers = new Headers();
