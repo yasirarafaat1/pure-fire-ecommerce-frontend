@@ -24,8 +24,12 @@ export default function BannerCarousel() {
   const [index, setIndex] = useState(0);
   const [transition, setTransition] = useState(true);
   const [hovering, setHovering] = useState(false);
+  const [isCoarse, setIsCoarse] = useState(false);
 
   const trackRef = useRef<HTMLDivElement>(null);
+  const wheelLockRef = useRef(false);
+  const dragStartXRef = useRef<number | null>(null);
+  const dragMovedRef = useRef(false);
 
   // mount & breakpoints
   useEffect(() => {
@@ -34,6 +38,19 @@ export default function BannerCarousel() {
     apply();
     window.addEventListener("resize", apply);
     return () => window.removeEventListener("resize", apply);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(pointer: coarse)");
+    const update = () => setIsCoarse(mq.matches);
+    update();
+    if (mq.addEventListener) mq.addEventListener("change", update);
+    else mq.addListener(update);
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener("change", update);
+      else mq.removeListener(update);
+    };
   }, []);
 
   // fetch banners on client
@@ -78,6 +95,15 @@ export default function BannerCarousel() {
     return [...baseSlides, ...clones];
   }, [baseSlides, visible]);
 
+  const step = (dir: 1 | -1) => {
+    if (!baseSlides.length) return;
+    setTransition(true);
+    setIndex((prev) => {
+      const next = (prev + dir + baseSlides.length) % baseSlides.length;
+      return next;
+    });
+  };
+
   // auto-advance with snapback
   useEffect(() => {
     if (!mounted || !baseSlides.length) return;
@@ -110,6 +136,42 @@ export default function BannerCarousel() {
     setIndex(i);
   };
 
+  const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (Math.abs(e.deltaX) < 10 && Math.abs(e.deltaY) < 10) return;
+    if (wheelLockRef.current) return;
+    wheelLockRef.current = true;
+    const dir = e.deltaY > 0 || e.deltaX > 0 ? 1 : -1;
+    step(dir);
+    setTimeout(() => {
+      wheelLockRef.current = false;
+    }, 350);
+  };
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    dragStartXRef.current = e.clientX;
+    dragMovedRef.current = false;
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (dragStartXRef.current === null) return;
+    const delta = e.clientX - dragStartXRef.current;
+    if (Math.abs(delta) > 12) dragMovedRef.current = true;
+  };
+
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    const startX = dragStartXRef.current;
+    if (startX === null) return;
+    const delta = e.clientX - startX;
+    dragStartXRef.current = null;
+    if (Math.abs(delta) < 40) return;
+    step(delta < 0 ? 1 : -1);
+  };
+
+  const onPointerCancel = () => {
+    dragStartXRef.current = null;
+  };
+
   if (!mounted) {
     return <div className="max-w-6xl h-[240px] animate-pulse" />;
   }
@@ -120,6 +182,12 @@ export default function BannerCarousel() {
         className="relative overflow-hidden"
         onMouseEnter={() => setHovering(true)}
         onMouseLeave={() => setHovering(false)}
+        onWheel={onWheel}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
+        style={{ touchAction: "pan-y" }}
       >
         <div
           ref={trackRef}
@@ -136,7 +204,15 @@ export default function BannerCarousel() {
                 className="w-full h-[227px] w-[400px] sm:w-[300px] md:w-[500px] sm:h-[220px] md:h-[240px] gap-20 py-5 px-2 lg:p-0 cursor-pointer rounded-[5px] border border-black/10 overflow-hidden"
                 role="button"
                 tabIndex={0}
-                onClick={() => slide?.href && window.open(slide.href, "_self")}
+                onClick={() => {
+                  if (dragMovedRef.current) {
+                    dragMovedRef.current = false;
+                    return;
+                  }
+                  if (!isCoarse) return;
+                  slide?.href && window.open(slide.href, "_self");
+                }}
+                onDoubleClick={() => slide?.href && window.open(slide.href, "_self")}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && slide?.href) window.open(slide.href, "_self");
                 }}
