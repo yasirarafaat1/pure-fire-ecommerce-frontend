@@ -98,8 +98,6 @@ const slugify = (value: string) =>
 
 export default function HomeNavbar() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [searchMode, setSearchMode] = useState(false);
-  const [searchText, setSearchText] = useState("");
   const [cartCount, setCartCount] = useState(0);
   const [categoryTree, setCategoryTree] = useState<CategoryNode[]>([]);
   const [expandedRoot, setExpandedRoot] = useState<string | null>(null);
@@ -108,14 +106,7 @@ export default function HomeNavbar() {
   const pathname = usePathname();
 
 
-  useEffect(() => {
-    if (pathname.startsWith("/search")) {
-      setSearchMode(true);
-    } else {
-      setSearchMode(false);
-      setSearchText("");
-    }
-  }, [pathname]);
+  const searchMode = useMemo(() => pathname.startsWith("/search"), [pathname]);
 
   useEffect(() => {
     const loadCartCount = async () => {
@@ -151,8 +142,8 @@ export default function HomeNavbar() {
     const loadCategories = async () => {
       try {
         const [treeRes, productsRes] = await Promise.all([
-          cachedFetch("/api/admin/categories/tree"),
-          cachedFetch("/api/admin/get-products"),
+          cachedFetch("/api/admin/categories/tree", undefined, 600000, true),
+          cachedFetch("/api/admin/get-products", undefined, 600000, true),
         ]);
         const treeData = await treeRes.json();
         const productsData = await productsRes.json();
@@ -186,14 +177,11 @@ export default function HomeNavbar() {
   const toggleMenu = () => setMenuOpen((v) => !v);
 
   const startSearch = () => {
-    setSearchMode(true);
     setMenuOpen(false);
     router.push("/search");
   };
 
   const backFromSearch = () => {
-    setSearchMode(false);
-    setSearchText("");
     router.back();
   };
 
@@ -223,23 +211,7 @@ export default function HomeNavbar() {
         {!searchMode ? (
           <a className="text-lg font-semibold tracking-tight" href="/">{siteName}</a>
         ) : (
-          <div className="flex-1 flex max-w-md w-full items-center gap-2">
-            <input
-              autoFocus
-              className="input w-full"
-              placeholder="Search products..."
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") router.push(`/search?q=${encodeURIComponent(searchText || (e.target as HTMLInputElement).value)}`);
-              }}
-            />
-            {searchText && (
-              <button className="btn btn-ghost !p-2" aria-label="Clear search" onClick={() => setSearchText("")}>
-                <IconClose />
-              </button>
-            )}
-          </div>
+          <div className="flex-1" aria-hidden />
         )}
 
         {/* Right cluster */}

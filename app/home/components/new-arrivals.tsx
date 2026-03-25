@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { cachedFetch } from "../../utils/cachedFetch";
+import { useEffect, useRef, useState } from "react";
+import { cachedFetch, getCachedJson } from "../../utils/cachedFetch";
 import HoverImage from "../../components/HoverImage";
 import { BiRightArrowAlt } from "react-icons/bi";
 
@@ -23,13 +23,22 @@ const placeholders: Product[] = Array.from({ length: 4 }, (_, i) => ({
 
 export default function NewArrivals() {
   const [items, setItems] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const seededRef = useRef(false);
 
   useEffect(() => {
     const load = async () => {
-      setLoading(true);
+      if (!seededRef.current) setLoading(true);
       try {
-        const res = await cachedFetch("/api/user/show-product?limit=12");
+        const cached = getCachedJson("/api/user/show-product?limit=12");
+        const cachedList = Array.isArray(cached?.data?.products) ? cached?.data?.products : [];
+        const cachedPublished = cachedList.filter((p: any) => !p?.status || p.status === "published");
+        if (cachedPublished.length) {
+          setItems(cachedPublished.slice(0, 8));
+          setLoading(false);
+          seededRef.current = true;
+        }
+        const res = await cachedFetch("/api/user/show-product?limit=12", undefined, 600000, true);
         const data = await res.json();
         const list = Array.isArray(data?.products) ? data.products : [];
         const published = list.filter((p: any) => !p?.status || p.status === "published");

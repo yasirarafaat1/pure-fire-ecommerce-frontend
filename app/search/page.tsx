@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import SearchBar from "./components/SearchBar";
 import Suggestions from "./components/Suggestions";
+import SuggestionsLoader from "./components/SuggestionsLoader";
 import ResultsGrid from "./components/ResultsGrid";
 import { getUserToken } from "../utils/auth";
 
@@ -23,6 +24,7 @@ const getToken = () => getUserToken();
 export default function SearchPage() {
   const router = useRouter();
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [allLoading, setAllLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -33,6 +35,7 @@ export default function SearchPage() {
 
   useEffect(() => {
     const load = async () => {
+      setAllLoading(true);
       try {
         const res = await fetch(`${API_BASE}/show-product?limit=200`, { cache: "no-store" });
         const data = await res.json();
@@ -40,6 +43,8 @@ export default function SearchPage() {
         setAllProducts(data.products || []);
       } catch {
         setMessage("Could not load products for search.");
+      } finally {
+        setAllLoading(false);
       }
     };
     load();
@@ -62,7 +67,6 @@ export default function SearchPage() {
         seen.add(cat);
       }
     });
-    // Shuffle to keep it dynamic on every open
     for (let i = built.length - 1; i > 0; i -= 1) {
       const j = Math.floor(Math.random() * (i + 1));
       [built[i], built[j]] = [built[j], built[i]];
@@ -134,7 +138,7 @@ export default function SearchPage() {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-user-token": token },
         body: JSON.stringify({ query: q }),
-      }).catch(() => { });
+      }).catch(() => {});
     }
     setHasSearched(true);
     setLoading(true);
@@ -192,28 +196,26 @@ export default function SearchPage() {
     <div className="min-h-screen bg-white text-black">
       <header className="sticky top-0 z-10 bg-white border-b border-black/10">
         <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col gap-3">
-          <SearchBar
-            value={query}
-            onChange={setQuery}
-            onSubmit={runSearch}
-            onBack={() => router.back()}
-          />
+          <SearchBar value={query} onChange={setQuery} onSubmit={runSearch} onBack={() => router.back()} />
           {!hasSearched && (
-            <div>
-              {suggestLoading && <span className="text-xs text-[var(--muted)]">Searching suggestions…</span>}
-              <Suggestions items={suggestions} onSelect={handleSelectSuggestion} />
+            <div className="search-fade">
+              {suggestLoading ? (
+                <SuggestionsLoader />
+              ) : (
+                <Suggestions items={suggestions} onSelect={handleSelectSuggestion} />
+              )}
             </div>
           )}
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-6">
-        {hasQuery ? (
+        {hasSearched ? (
           <>
             {relatedKeywords.length > 0 && (
-              <div className="mb-2">
+              <div className="mb-2 search-fade">
                 <h3 className="font-semibold text-sm mb-2">Related keywords</h3>
-                <Suggestions items={relatedKeywords} onSelect={handleSelectSuggestion} />
+                {loading ? <SuggestionsLoader rows={6} /> : <Suggestions items={relatedKeywords} onSelect={handleSelectSuggestion} />}
               </div>
             )}
             <div className="flex items-center justify-between mb-3">
@@ -225,15 +227,15 @@ export default function SearchPage() {
               emptyMessage={query ? "No products found. Try another keyword." : "Start typing to search products."}
               columns={gridCols}
             />
-
           </>
         ) : (
-          defaultShowcase.length > 0 && (
+          !hasQuery &&
+          (allLoading || defaultShowcase.length > 0) && (
             <section className="mt-1">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-semibold text-lg">Popular picks</h2>
               </div>
-              <ResultsGrid products={defaultShowcase} loading={false} emptyMessage="No products to show." columns={gridCols} />
+              <ResultsGrid products={defaultShowcase} loading={allLoading} emptyMessage="No products to show." columns={gridCols} />
             </section>
           )
         )}
@@ -242,5 +244,3 @@ export default function SearchPage() {
     </div>
   );
 }
-
-

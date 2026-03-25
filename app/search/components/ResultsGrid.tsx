@@ -49,22 +49,33 @@ const colorEquals = (a?: string, b?: string) => {
 
 export default function ResultsGrid({ products, loading, emptyMessage, columns = 3 }: Props) {
   const router = useRouter();
-  if (loading) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-[var(--muted)]">
-        <span className="spinner" /> Searching…
-      </div>
-    );
-  }
-  if (!products.length) {
-    return <p className="text-sm text-[var(--muted)]">{emptyMessage || "No products found."}</p>;
-  }
   const gridClass =
     columns === 4
       ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
       : columns === 6
         ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
         : "grid-cols-2 md:grid-cols-3";
+
+  if (loading) {
+    const count = columns === 4 ? 8 : columns === 6 ? 12 : 6;
+    return (
+      <div className={`grid gap-4 ${gridClass}`}>
+        {Array.from({ length: count }).map((_, i) => (
+          <div key={i} className="bg-white w-full flex gap-3 md:flex-col">
+            <div className="w-28 sm:w-32 md:w-full md:aspect-[3/4] bg-black/5 overflow-hidden rounded-[3px] animate-pulse" />
+            <div className="flex-1 pt-1 md:pt-3 grid gap-2">
+              <div className="h-3 w-4/5 bg-black/10 rounded-[3px] animate-pulse" />
+              <div className="h-3 w-2/5 bg-black/10 rounded-[3px] animate-pulse" />
+              <div className="h-3 w-3/5 bg-black/10 rounded-[3px] animate-pulse" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (!products.length) {
+    return <p className="text-sm text-[var(--muted)]">{emptyMessage || "No products found."}</p>;
+  }
 
   return (
     <div className={`grid gap-4 ${gridClass}`}>
@@ -97,7 +108,11 @@ export default function ResultsGrid({ products, loading, emptyMessage, columns =
             <div className="w-28 sm:w-32 md:w-full md:aspect-[3/4] bg-[rgba(0,0,0,0.04)] overflow-hidden rounded-[3px]">
               {images?.length ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <HoverImage images={images} alt={p.title || p.name || "product"} className="w-full h-full aspect-[3/4] rounded-[3px] bg-black/5" />
+                <HoverImage
+                  images={images}
+                  alt={p.title || p.name || "product"}
+                  className="w-full h-full aspect-[3/4] rounded-[3px] bg-black/5"
+                />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-xs text-[var(--muted)]">No image</div>
               )}
@@ -117,6 +132,3 @@ export default function ResultsGrid({ products, loading, emptyMessage, columns =
     </div>
   );
 }
-
-
-

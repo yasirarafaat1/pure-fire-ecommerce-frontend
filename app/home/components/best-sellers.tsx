@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { cachedFetch } from "../../utils/cachedFetch";
+import { useEffect, useRef, useState } from "react";
+import { cachedFetch, getCachedJson } from "../../utils/cachedFetch";
 import HoverImage from "../../components/HoverImage";
 import { BiRightArrowAlt } from "react-icons/bi";
 
@@ -23,13 +23,22 @@ const placeholders: Product[] = Array.from({ length: 4 }, (_, i) => ({
 
 export default function BestSellers() {
   const [items, setItems] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const seededRef = useRef(false);
 
   useEffect(() => {
     const load = async () => {
-      setLoading(true);
+      if (!seededRef.current) setLoading(true);
       try {
-        const res = await cachedFetch("/api/user/top-products");
+        const cached = getCachedJson("/api/user/top-products");
+        const cachedList = Array.isArray(cached?.data?.products) ? cached?.data?.products : [];
+        const cachedSorted = [...cachedList].sort((a: any, b: any) => (b.orderedQty || 0) - (a.orderedQty || 0));
+        if (cachedSorted.length) {
+          setItems(cachedSorted.slice(0, 8));
+          setLoading(false);
+          seededRef.current = true;
+        }
+        const res = await cachedFetch("/api/user/top-products", undefined, 600000, true);
         const data = await res.json();
         const list = Array.isArray(data?.products) ? data.products : [];
         const sorted = [...list].sort((a: any, b: any) => (b.orderedQty || 0) - (a.orderedQty || 0));

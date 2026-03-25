@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { cachedFetch } from "../../utils/cachedFetch";
+import { useEffect, useRef, useState } from "react";
+import { cachedFetch, getCachedJson } from "../../utils/cachedFetch";
 
 type Product = {
   product_id: number;
@@ -21,16 +21,37 @@ const placeholders: Product[] = Array.from({ length: 5 }, (_, i) => ({
 
 export default function TopProducts() {
   const [items, setItems] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
+  const seededRef = useRef(false);
 
   useEffect(() => {
     const load = async () => {
-      setLoading(true);
+      if (!seededRef.current) setLoading(true);
       try {
+        const cachedProducts = getCachedJson("/api/admin/top-products");
+        const cachedCategories = getCachedJson("/api/user/get-categories");
+        const initialItems = Array.isArray(cachedProducts?.data?.products)
+          ? cachedProducts?.data?.products
+          : [];
+        const initialCategoryMap =
+          (cachedCategories?.data?.categories || []).reduce((acc: Record<string, string>, c: any) => {
+            const id = String(c?._id || c?.id || "");
+            if (id) acc[id] = c?.name || "";
+            return acc;
+          }, {}) || {};
+        if (initialItems.length) {
+          setItems(initialItems);
+          setLoading(false);
+          seededRef.current = true;
+        }
+        if (Object.keys(initialCategoryMap).length) {
+          setCategoryMap(initialCategoryMap);
+        }
+
         const [prodRes, catRes] = await Promise.all([
-          cachedFetch("/api/admin/top-products"),
-          cachedFetch("/api/user/get-categories"),
+          cachedFetch("/api/admin/top-products", undefined, 600000, true),
+          cachedFetch("/api/user/get-categories", undefined, 600000, true),
         ]);
         const data = await prodRes.json();
         const catData = catRes.ok ? await catRes.json() : { categories: [] };
@@ -39,7 +60,7 @@ export default function TopProducts() {
           const id = String(c?._id || c?.id || "");
           if (id) map[id] = c?.name || "";
         });
-        setCategoryMap(map);
+        if (Object.keys(map).length) setCategoryMap(map);
         if (Array.isArray(data?.products) && data.products.length) {
           setItems(data.products);
         }

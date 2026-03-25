@@ -34,7 +34,7 @@ export default function QualityMarquee() {
   const loop = [...marqueeItems, ...marqueeItems];
 
   return (
-    <section className="border-t border-black/10 mt-6 py-10">
+    <section className="border-t border-black/10 mt-6 py-5">
       <div className="min-h-[200px] max-w-6xl mx-auto px-4 py-12 ">
         <div className="flex flex-col items-center text-center gap-3 py-5">
           <div className="flex items-center gap-1 text-black">

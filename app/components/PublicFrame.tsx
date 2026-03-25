@@ -25,7 +25,11 @@ export default function PublicFrame({ children }: { children: React.ReactNode })
   return (
     <>
       <Navbar />
-      <div className="mt-4">{children}</div>
+      <div className="mt-4">
+        <div key={pathname} className="page-transition">
+          {children}
+        </div>
+      </div>
       {showFooter && <Footer />}
     </>
   );

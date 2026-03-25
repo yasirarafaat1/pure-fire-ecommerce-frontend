@@ -50,7 +50,7 @@ export default function BannerCarousel() {
     }
     const load = async () => {
       try {
-        const res = await cachedFetch("/api/admin/banners/public");
+        const res = await cachedFetch("/api/admin/banners/public", undefined, 600000, true);
         if (!res.ok) throw new Error("fail");
         const data = await res.json();
         const banners = (data?.banners || [])

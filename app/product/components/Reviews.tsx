@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { IoIosClose } from "react-icons/io";
 import { IoChevronBack, IoChevronForward } from "react-icons/io5";
 import { FaStar, FaRegStar } from "react-icons/fa6";
@@ -29,22 +29,42 @@ export default function Reviews({
   const [vidFile, setVidFile] = useState<File | null>(null);
   const [formMsg, setFormMsg] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [limit, setLimit] = useState(10);
-  const [canWrite, setCanWrite] = useState(false);
+  const [page, setPage] = useState(1);
+  const canWrite = useSyncExternalStore(
+    (onStoreChange) => {
+      if (typeof window === "undefined") return () => {};
+      const handler = () => onStoreChange();
+      window.addEventListener("storage", handler);
+      window.addEventListener("auth:updated", handler as EventListener);
+      return () => {
+        window.removeEventListener("storage", handler);
+        window.removeEventListener("auth:updated", handler as EventListener);
+      };
+    },
+    () => (typeof window !== "undefined" ? !!localStorage.getItem("user_token") : false),
+    () => false,
+  );
   const maxReviewChars = 90;
   const trimText = (text: string, max = 90) => (text && text.length > max ? `${text.slice(0, max).trim()}...` : text);
 
-  useEffect(() => setCanWrite(!!localStorage.getItem("user_token")), []);
-  useEffect(() => {
-    const isMobile = window.matchMedia("(max-width: 767px)").matches;
-    setLimit(isMobile ? 5 : 10);
-    const onResize = () => {
-      const mobile = window.matchMedia("(max-width: 767px)").matches;
-      setLimit((prev) => (prev <= 5 ? (mobile ? 5 : 10) : prev));
-    };
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
+  const isMobile = useSyncExternalStore(
+    (onStoreChange) => {
+      if (typeof window === "undefined") return () => {};
+      const mq = window.matchMedia("(max-width: 767px)");
+      const handler = () => onStoreChange();
+      if (mq.addEventListener) mq.addEventListener("change", handler);
+      else mq.addListener(handler);
+      return () => {
+        if (mq.removeEventListener) mq.removeEventListener("change", handler);
+        else mq.removeListener(handler);
+      };
+    },
+    () => (typeof window !== "undefined" ? window.matchMedia("(max-width: 767px)").matches : false),
+    () => false,
+  );
+
+  const baseLimit = isMobile ? 5 : 10;
+  const limit = baseLimit * page;
 
   const sortedReviews = useMemo(() => {
     const copy = [...reviews];
@@ -138,8 +158,7 @@ export default function Reviews({
           <button
             className="btn btn-ghost"
             onClick={() => {
-              const isMobile = window.matchMedia("(max-width: 767px)").matches;
-              setLimit((prev) => prev + (isMobile ? 5 : 10));
+              setPage((prev) => prev + 1);
             }}
           >
             Show more

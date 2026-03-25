@@ -191,3 +191,25 @@ a {
 .animate-pop-rev {
   animation: fadepop 520ms cubic-bezier(0.22, 0.61, 0.36, 1) reverse;
 }
+
+@keyframes pagefade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.page-transition {
+  animation: pagefade 220ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-transition {
+    animation: none;
+  }
+}
+
+.search-fade {
+  animation: pagefade 180ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .search-fade {
+    animation: none;
+  }
+}
