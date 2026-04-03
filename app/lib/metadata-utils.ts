@@ -166,6 +166,10 @@ export function generateProductMetadata(input: MetadataInput & { price?: number;
 export function formatMetaDescription(text: string, maxLength = 160): string {
     if (!text) return "";
     const cleaned = text
+        .replace(/&nbsp;/gi, " ")
+        .replace(/&amp;/gi, "&")
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;/gi, "'")
         .replace(/<[^>]*>/g, " ")
         .replace(/\s+/g, " ")
         .trim();

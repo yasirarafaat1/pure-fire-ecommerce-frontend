@@ -12,7 +12,7 @@ export async function generateMetadata({
     params: ProductSlugParams | Promise<ProductSlugParams>;
 }): Promise<Metadata> {
     const resolvedParams = await Promise.resolve(params);
-    return buildProductMetadataById(resolvedParams?.id || "");
+    return buildProductMetadataById(resolvedParams?.id || "", resolvedParams?.slug || "");
 }
 
 export default function ProductSlugPage() {

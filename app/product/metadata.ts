@@ -57,7 +57,7 @@ const defaultMetadata: Metadata = {
     description: "Shop premium everyday wear at Pure Fire.",
 };
 
-export async function buildProductMetadataById(id: string): Promise<Metadata> {
+export async function buildProductMetadataById(id: string, slug?: string): Promise<Metadata> {
     if (!id) return defaultMetadata;
 
     const siteUrl = normalizeBase(
@@ -69,7 +69,7 @@ export async function buildProductMetadataById(id: string): Promise<Metadata> {
     const baseUrl = normalizeBase(process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || "").replace(
         /\/$/, "",
     );
-    const productPath = buildProductPath({ id, slug: "product" });
+    const productPath = buildProductPath({ id, slug: slug || "product" });
     const canonicalUrl = `${siteUrl}${productPath}`;
 
     try {
@@ -107,7 +107,7 @@ export async function buildProductMetadataById(id: string): Promise<Metadata> {
             });
         }
 
-        const title = product.title || product.name || "Product";
+        const title = (product.title || product.name || "Product").replace(/\s+/g, " ").trim();
         const rawDescription = product.meta_description || product.description || "";
         const description = formatMetaDescription(rawDescription) || defaultMetadata.description || "";
         const imageBase = baseUrl || siteUrl;
