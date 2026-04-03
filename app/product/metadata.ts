@@ -80,14 +80,14 @@ export async function buildProductMetadataById(id: string): Promise<Metadata> {
         const image = resolveImageUrl(pickImage(product), baseUrl);
         const path = buildProductPath({ id, name: title });
         const url = siteUrl ? `${siteUrl}${path}` : undefined;
-        
+
         // Price information
         const price = product.selling_price || product.price || 0;
         const mrp = product.mrp || product.price || 0;
-        
+
         // Category tag
-        const categoryName = typeof product.catagory_id === "object" 
-            ? product.catagory_id?.name 
+        const categoryName = typeof product.catagory_id === "object"
+            ? product.catagory_id?.name
             : "clothing";
 
         return generateProductMetadata({
