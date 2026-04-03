@@ -1,6 +1,19 @@
 import type { MetadataRoute } from "next";
 
-const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
+const resolveSiteUrl = () => {
+  const envSite = (process.env.NEXT_PUBLIC_SITE_URL || "").trim();
+  if (envSite) return envSite;
+
+  const vercelUrl = (process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL || "").trim();
+  if (vercelUrl) {
+    return /^https?:\/\//i.test(vercelUrl) ? vercelUrl : `https://${vercelUrl}`;
+  }
+
+  // Final fallback keeps sitemap valid even when env vars are missing.
+  return "https://pure-fire.vercel.app";
+};
+
+const baseUrl = resolveSiteUrl();
 const apiBase = process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || "";
 
 const normalizeBase = (raw: string) => {
@@ -14,6 +27,12 @@ const normalizeBase = (raw: string) => {
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const site = baseUrl.replace(/\/$/, "");
   const api = normalizeBase(apiBase).replace(/\/$/, "");
+  type ProductSitemapItem = {
+    product_id?: string;
+    _id?: string;
+    updatedAt?: string;
+    createdAt?: string;
+  };
   const entries: MetadataRoute.Sitemap = [
     {
       url: site || "",
@@ -30,8 +49,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       next: { revalidate: 300 },
     });
     const data = await res.json();
-    const products = data?.products || data?.data || [];
-    products.forEach((p: any) => {
+    const products = (data?.products || data?.data || []) as ProductSitemapItem[];
+    products.forEach((p) => {
       const id = p?.product_id || p?._id;
       if (!id) return;
       entries.push({
