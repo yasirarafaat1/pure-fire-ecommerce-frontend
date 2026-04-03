@@ -95,10 +95,8 @@ export function generatePageMetadata(input: MetadataInput): Metadata {
         title,
         description,
         url = siteConfig.url,
-        type = "website",
         tags = [],
         authors = [],
-        image,
     } = input;
 
     const ogMetadata = buildOpenGraphMetadata(input);
