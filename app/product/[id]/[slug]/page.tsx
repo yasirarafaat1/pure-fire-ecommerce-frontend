@@ -4,12 +4,15 @@ import { buildProductMetadataById } from "../../metadata";
 
 export const dynamic = "force-dynamic";
 
+type ProductSlugParams = { id: string; slug: string };
+
 export async function generateMetadata({
     params,
 }: {
-    params: { id: string; slug: string };
+    params: ProductSlugParams | Promise<ProductSlugParams>;
 }): Promise<Metadata> {
-    return buildProductMetadataById(params?.id || "");
+    const resolvedParams = await Promise.resolve(params);
+    return buildProductMetadataById(resolvedParams?.id || "");
 }
 
 export default function ProductSlugPage() {

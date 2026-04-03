@@ -6,25 +6,29 @@ import { buildProductPath } from "../utils/productUrl";
 
 export const dynamic = "force-dynamic";
 
+type ProductSearchParams = { id?: string; color?: string; size?: string };
+
 export async function generateMetadata({
   searchParams,
 }: {
-  searchParams: { id?: string };
+  searchParams: ProductSearchParams | Promise<ProductSearchParams>;
 }): Promise<Metadata> {
-  const id = searchParams?.id || "";
+  const resolvedSearchParams = await Promise.resolve(searchParams);
+  const id = resolvedSearchParams?.id || "";
   return buildProductMetadataById(id);
 }
 
-export default function ProductPage({
+export default async function ProductPage({
   searchParams,
 }: {
-  searchParams: { id?: string; color?: string; size?: string };
+  searchParams: ProductSearchParams | Promise<ProductSearchParams>;
 }) {
-  const id = searchParams?.id?.trim();
+  const resolvedSearchParams = await Promise.resolve(searchParams);
+  const id = resolvedSearchParams?.id?.trim();
   if (id) {
     const params = new URLSearchParams();
-    if (searchParams?.color) params.set("color", searchParams.color);
-    if (searchParams?.size) params.set("size", searchParams.size);
+    if (resolvedSearchParams?.color) params.set("color", resolvedSearchParams.color);
+    if (resolvedSearchParams?.size) params.set("size", resolvedSearchParams.size);
     const query = params.toString();
     const path = buildProductPath({ id, slug: "product" });
     redirect(query ? `${path}?${query}` : path);
