@@ -11,7 +11,7 @@ export const siteConfig = {
     url: process.env.NEXT_PUBLIC_SITE_URL || "https://pure-fire.vercel.app",
     ogImage: "/og-image.png", // 1200x630px recommended
     logoImage: "/logo.png",
-    twitterHandle: "@purefire", // Without @, optional
+    twitterHandle: "purefire", // Without @, optional
     author: "Pure Fire",
     keywords: [
         "clothing",

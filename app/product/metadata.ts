@@ -60,26 +60,58 @@ const defaultMetadata: Metadata = {
 export async function buildProductMetadataById(id: string): Promise<Metadata> {
     if (!id) return defaultMetadata;
 
-    const siteUrl = normalizeBase(process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
-    const baseUrl = normalizeBase(
-        process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || "http://localhost:8080",
+    const siteUrl = normalizeBase(
+        process.env.NEXT_PUBLIC_SITE_URL ||
+        process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+        process.env.VERCEL_URL ||
+        "https://pure-fire.vercel.app",
     ).replace(/\/$/, "");
+    const baseUrl = normalizeBase(process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || "").replace(
+        /\/$/, "",
+    );
+    const productPath = buildProductPath({ id, slug: "product" });
+    const canonicalUrl = `${siteUrl}${productPath}`;
 
     try {
-        const res = await fetch(`${baseUrl}/user/get-product-byid/${id}`, {
-            next: { revalidate: 60 },
-        });
+        const endpoints = [
+            baseUrl ? `${baseUrl}/user/get-product-byid/${id}` : "",
+            `${siteUrl}/api/user/get-product-byid/${id}`,
+        ].filter(Boolean);
 
-        if (!res.ok) return defaultMetadata;
+        let product: ProductShape | null = null;
+        for (const endpoint of endpoints) {
+            try {
+                const res = await fetch(endpoint, {
+                    next: { revalidate: 60 },
+                });
+                if (!res.ok) continue;
+                const data = await res.json();
+                const candidate = (data?.data?.[0] || data?.product || data?.data || null) as ProductShape | null;
+                if (candidate && (candidate.title || candidate.name)) {
+                    product = candidate;
+                    break;
+                }
+            } catch {
+                // Try next endpoint
+            }
+        }
 
-        const data = await res.json();
-        const product = (data?.data?.[0] || data?.product || data?.data || {}) as ProductShape;
+        if (!product) {
+            return generateProductMetadata({
+                title: "Product",
+                description: defaultMetadata.description || "Shop premium everyday wear at Pure Fire.",
+                url: canonicalUrl,
+                image: `${siteUrl}/og-image.png`,
+                imageAlt: "Pure Fire",
+                tags: ["clothing", "everyday wear", "quality apparel"],
+            });
+        }
+
         const title = product.title || product.name || "Product";
         const rawDescription = product.meta_description || product.description || "";
-        const description = formatMetaDescription(rawDescription);
-        const image = resolveImageUrl(pickImage(product), baseUrl);
-        const path = buildProductPath({ id, name: title });
-        const url = siteUrl ? `${siteUrl}${path}` : undefined;
+        const description = formatMetaDescription(rawDescription) || defaultMetadata.description || "";
+        const imageBase = baseUrl || siteUrl;
+        const image = resolveImageUrl(pickImage(product), imageBase) || `${siteUrl}/og-image.png`;
 
         // Price information
         const price = product.selling_price || product.price || 0;
@@ -95,7 +127,7 @@ export async function buildProductMetadataById(id: string): Promise<Metadata> {
             description,
             image,
             imageAlt: title,
-            url,
+            url: canonicalUrl,
             price,
             originalPrice: mrp,
             tags: [categoryName || "clothing", "everyday wear", "quality apparel"],
