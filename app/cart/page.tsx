@@ -265,7 +265,7 @@ export default function CartPage() {
 
   return (
     <main className="max-w-6xl mx-auto p-4 md:p-6 grid gap-6 relative">
-     {(loadingCart || loadingRecent) && (
+      {(loadingCart || loadingRecent) && (
         <div className="fixed inset-0 z-50 bg-white flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 rounded-full border-2 border-black/20 border-t-black animate-spin" />

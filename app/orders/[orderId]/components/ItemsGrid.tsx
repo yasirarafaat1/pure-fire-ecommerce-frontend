@@ -73,9 +73,8 @@ export default function ItemsGrid({ items, formatMoney }: Props) {
           return (
             <div
               key={`${it.product_id || idx}-${idx}`}
-              className={`border-b border-t border-black/10 py-3 grid gap-2 grid-cols-[72px_1fr] items-center ${
-                spanAll ? "col-span-2 md:col-span-2 gap-5" : ""
-              }`}
+              className={`border-b border-t border-black/10 py-3 grid gap-2 grid-cols-[72px_1fr] items-center ${spanAll ? "col-span-2 md:col-span-2 gap-5" : ""
+                }`}
             >
               <a href={productLink} className="block">
                 <div className="w-full h-20 bg-black/5 rounded-[5px] overflow-hidden">
