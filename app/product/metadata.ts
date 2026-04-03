@@ -1,5 +1,22 @@
 import type { Metadata } from "next";
+import { generateProductMetadata, formatMetaDescription, normalizeUrl } from "@/app/lib/metadata-utils";
 import { buildProductPath } from "../utils/productUrl";
+
+type ProductShape = {
+    title?: string;
+    name?: string;
+    meta_description?: string;
+    description?: string;
+    price?: number;
+    selling_price?: number;
+    mrp?: number;
+    images?: string[] | string;
+    product_image?: string[] | string;
+    image?: string;
+    imageUrl?: string;
+    catagory_id?: { name?: string } | string;
+    colorVariants?: Array<{ images?: string[] | string }>;
+};
 
 const normalizeBase = (raw: string) => {
     const trimmed = raw.trim();
@@ -7,21 +24,6 @@ const normalizeBase = (raw: string) => {
     if (/^https?:\/\//i.test(trimmed)) return trimmed;
     if (/^(localhost|127\.0\.0\.1|0\.0\.0\.0)/i.test(trimmed)) return `http://${trimmed}`;
     return `https://${trimmed}`;
-};
-
-const stripHtml = (value: string) =>
-    value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-
-type ProductShape = {
-    title?: string;
-    name?: string;
-    meta_description?: string;
-    description?: string;
-    images?: string[] | string;
-    product_image?: string[] | string;
-    image?: string;
-    imageUrl?: string;
-    colorVariants?: Array<{ images?: string[] | string }>;
 };
 
 const toArray = (value: string[] | string | undefined) => {
@@ -73,31 +75,33 @@ export async function buildProductMetadataById(id: string): Promise<Metadata> {
         const data = await res.json();
         const product = (data?.data?.[0] || data?.product || data?.data || {}) as ProductShape;
         const title = product.title || product.name || "Product";
-        const descriptionSource = product.meta_description || product.description || "";
-        const description = stripHtml(descriptionSource).slice(0, 160) || defaultMetadata.description || "";
+        const rawDescription = product.meta_description || product.description || "";
+        const description = formatMetaDescription(rawDescription);
         const image = resolveImageUrl(pickImage(product), baseUrl);
         const path = buildProductPath({ id, name: title });
         const url = siteUrl ? `${siteUrl}${path}` : undefined;
+        
+        // Price information
+        const price = product.selling_price || product.price || 0;
+        const mrp = product.mrp || product.price || 0;
+        
+        // Category tag
+        const categoryName = typeof product.catagory_id === "object" 
+            ? product.catagory_id?.name 
+            : "clothing";
 
-        return {
+        return generateProductMetadata({
             title,
             description,
-            alternates: url ? { canonical: url } : undefined,
-            openGraph: {
-                title,
-                description,
-                type: "website",
-                url,
-                images: image ? [{ url: image, alt: title }] : [],
-            },
-            twitter: {
-                card: image ? "summary_large_image" : "summary",
-                title,
-                description,
-                images: image ? [image] : [],
-            },
-        };
-    } catch {
+            image,
+            imageAlt: title,
+            url,
+            price,
+            originalPrice: mrp,
+            tags: [categoryName || "clothing", "everyday wear", "quality apparel"],
+        });
+    } catch (error) {
+        console.error("Error fetching product metadata:", error);
         return defaultMetadata;
     }
 }
