@@ -33,14 +33,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     updatedAt?: string;
     createdAt?: string;
   };
-  const entries: MetadataRoute.Sitemap = [
-    {
-      url: site || "",
-      lastModified: new Date(),
-      changeFrequency: "daily",
-      priority: 1,
-    },
+  const now = new Date();
+  const staticRoutes: Array<{ path: string; changeFrequency: "daily" | "weekly" | "monthly"; priority: number }> = [
+    { path: "/", changeFrequency: "daily", priority: 1 },
+    { path: "/collections", changeFrequency: "daily", priority: 0.9 },
+    { path: "/collections/all", changeFrequency: "daily", priority: 0.9 },
+    { path: "/search", changeFrequency: "daily", priority: 0.8 },
+    { path: "/cart", changeFrequency: "daily", priority: 0.7 },
+    { path: "/wishlist", changeFrequency: "daily", priority: 0.7 },
+    { path: "/shipping-info", changeFrequency: "monthly", priority: 0.6 },
+    { path: "/return-policy", changeFrequency: "monthly", priority: 0.6 },
+    { path: "/privacy-policy", changeFrequency: "monthly", priority: 0.6 },
+    { path: "/terms-and-conditions", changeFrequency: "monthly", priority: 0.6 },
+    { path: "/faqs", changeFrequency: "monthly", priority: 0.6 },
+    { path: "/contact", changeFrequency: "monthly", priority: 0.6 },
+    { path: "/support", changeFrequency: "weekly", priority: 0.6 },
+    { path: "/login", changeFrequency: "monthly", priority: 0.3 },
   ];
+
+  const entries: MetadataRoute.Sitemap = staticRoutes.map((route) => ({
+    url: `${site}${route.path}`,
+    lastModified: now,
+    changeFrequency: route.changeFrequency,
+    priority: route.priority,
+  }));
 
   if (!site || !api) return entries;
 
@@ -64,5 +80,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // ignore sitemap fetch errors
   }
 
-  return entries;
+  const dedupedByUrl = new Map<string, MetadataRoute.Sitemap[number]>();
+  entries.forEach((entry) => {
+    dedupedByUrl.set(entry.url, entry);
+  });
+
+  return Array.from(dedupedByUrl.values());
 }
