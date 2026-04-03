@@ -18,6 +18,9 @@ const siteDescription =
   process.env.NEXT_PUBLIC_SITE_DESCRIPTION ||
   "Quality-first everyday wear. Minimal, comfortable, and made to last.";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
+const googleSiteVerification =
+  process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ||
+  "H3pkJNBCr2v5oVYDPQfzNSs5moXG5MQ3cvovTuoifTE";
 
 export const metadata: Metadata = {
   metadataBase: siteUrl ? new URL(siteUrl) : undefined,
@@ -26,6 +29,9 @@ export const metadata: Metadata = {
     template: `%s | ${siteName}`,
   },
   description: siteDescription,
+  verification: {
+    google: googleSiteVerification,
+  },
   alternates: siteUrl ? { canonical: siteUrl } : undefined,
   icons: {
     icon: "/favicon.ico",
