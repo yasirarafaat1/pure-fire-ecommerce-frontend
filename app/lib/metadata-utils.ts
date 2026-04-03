@@ -14,7 +14,7 @@ type MetadataInput = {
     imageWidth?: number;
     imageHeight?: number;
     url?: string;
-    type?: "website" | "product" | "article";
+    type?: "website" | "article";
     publishedTime?: Date;
     authors?: string[];
     tags?: string[];
@@ -56,7 +56,7 @@ export function buildOpenGraphMetadata(input: MetadataInput) {
         locale: "en_US",
     };
 
-    if (publishedTime && (type === "article" || type === "product")) {
+    if (publishedTime && type === "article") {
         ogData.publishedTime = publishedTime.toISOString();
         ogData.modifiedTime = publishedTime.toISOString();
     }
@@ -131,7 +131,8 @@ export function generatePageMetadata(input: MetadataInput): Metadata {
 export function generateProductMetadata(input: MetadataInput & { price?: number; originalPrice?: number }): Metadata {
     const ogMetadata = buildOpenGraphMetadata({
         ...input,
-        type: "product",
+        // Next.js metadata API does not support OpenGraph type "product".
+        type: "website",
     });
 
     const twitterMetadata = buildTwitterMetadata(input);
