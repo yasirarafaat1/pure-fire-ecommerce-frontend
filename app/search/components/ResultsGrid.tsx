@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import HoverImage from "../../components/HoverImage";
+import { buildProductHref } from "../../utils/productUrl";
 
 type Product = {
   product_id: number;
@@ -98,11 +99,14 @@ export default function ResultsGrid({ products, loading, emptyMessage, columns =
             key={p.product_id}
             className="bg-white w-full flex gap-3 md:flex-col cursor-pointer"
             onClick={() => {
-              const params = new URLSearchParams();
-              params.set("id", String(p.product_id));
-              if (selectedColor) params.set("color", selectedColor);
-              if (selectedSize) params.set("size", selectedSize);
-              router.push(`/product?${params.toString()}`);
+              router.push(
+                buildProductHref({
+                  id: p.product_id,
+                  name: p.name || p.title || "product",
+                  color: selectedColor,
+                  size: selectedSize,
+                }),
+              );
             }}
           >
             <div className="w-28 sm:w-32 md:w-full md:aspect-[3/4] bg-[rgba(0,0,0,0.04)] overflow-hidden rounded-[3px]">

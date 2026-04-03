@@ -1,5 +1,7 @@
 "use client";
 
+import { buildProductHref } from "../../utils/productUrl";
+
 type Item = {
   id?: string | number;
   productId?: string | number;
@@ -24,7 +26,11 @@ export default function ProductRail({ title, items }: Props) {
         {items.map((item, i) => (
           <a
             key={i}
-            href={`/product?id=${item.productId ?? item.id ?? ""}${item.color ? `&color=${encodeURIComponent(item.color)}` : ""}`}
+            href={buildProductHref({
+              id: item.productId ?? item.id ?? "",
+              name: item.title,
+              color: item.color,
+            })}
             className="group flex-shrink-0 cursor-pointer w-[calc((100vw-48px)/3)]"
             style={{ width: "calc((100vw - 48px)/3.2)", maxWidth: "200px" }}
           >

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { cachedFetch, getCachedJson } from "../../utils/cachedFetch";
 import HoverImage from "../../components/HoverImage";
 import { BiRightArrowAlt } from "react-icons/bi";
+import { buildProductHref } from "../../utils/productUrl";
 
 type Product = {
   product_id: number;
@@ -82,7 +83,11 @@ export default function NewArrivals() {
             const mrp = p.price ?? p.selling_price ?? 0;
             const images = Array.isArray(p.product_image) ? p.product_image : [];
             return (
-              <a key={p.product_id} href={`/product?id=${p.product_id}`} className="block bg-white">
+              <a
+                key={p.product_id}
+                href={buildProductHref({ id: p.product_id, name })}
+                className="block bg-white"
+              >
                 <div className="relative w-full aspect-square md:aspect-[3/4] bg-black/5 overflow-hidden rounded-[5px]">
                   <HoverImage images={images} alt={name} className="w-full h-full" />
                   <span className="absolute top-2 right-2 bg-black text-white text-[10px] px-2 py-1 rounded-[3px]">

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import namer from "color-namer";
 import ProductRail from "../product/components/ProductRail";
 import { getUserToken } from "../utils/auth";
+import { buildProductHref } from "../utils/productUrl";
 
 const API_BASE = "/api/user";
 const getToken = () => getUserToken();
@@ -302,9 +303,12 @@ export default function CartPage() {
               {items.map((item) => (
                 <div key={`${item.id}-${item.color}-${item.size}`} className="flex gap-4 border-b border-black/20 pb-4">
                   <a
-                    href={`/product?id=${item.id}${item.color ? `&color=${encodeURIComponent(item.color)}` : ""}${
-                      item.size ? `&size=${encodeURIComponent(item.size)}` : ""
-                    }`}
+                    href={buildProductHref({
+                      id: item.id,
+                      name: item.title,
+                      color: item.color,
+                      size: item.size,
+                    })}
                   >
                     <img src={item.image} alt={item.title} className="w-24 h-32 object-cover rounded-[5px]" />
                   </a>

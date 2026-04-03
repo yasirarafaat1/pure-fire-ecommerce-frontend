@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import { extractProductIdFromPathname } from "../../utils/productUrl";
 
 export type ProductQuery = {
   productId?: string;
@@ -16,10 +17,10 @@ type QueryState = {
   queryString: string;
 };
 
-const parseSearch = (search: string): QueryState => {
+const parseSearch = (search: string, pathname: string): QueryState => {
   const params = new URLSearchParams(search || "");
   return {
-    productId: params.get("id") || undefined,
+    productId: params.get("id") || extractProductIdFromPathname(pathname) || undefined,
     colorParam: params.get("color"),
     sizeParam: params.get("size"),
     queryString: params.toString(),
@@ -28,12 +29,12 @@ const parseSearch = (search: string): QueryState => {
 
 export const useProductQuery = (): ProductQuery => {
   const pathname = usePathname();
-  const lastSearchRef = useRef("");
+  const lastLocationRef = useRef("");
   const [state, setState] = useState<QueryState>(() => {
     if (typeof window === "undefined") {
       return { productId: undefined, colorParam: null, sizeParam: null, queryString: "" };
     }
-    return parseSearch(window.location.search || "");
+    return parseSearch(window.location.search || "", window.location.pathname || pathname || "");
   });
 
   useEffect(() => {
@@ -41,10 +42,14 @@ export const useProductQuery = (): ProductQuery => {
 
     const update = () => {
       const search = window.location.search || "";
-      if (search === lastSearchRef.current) return;
-      lastSearchRef.current = search;
-      const next = parseSearch(search);
-      setState((prev) => (prev.queryString === next.queryString ? prev : next));
+      const currentPath = window.location.pathname || pathname || "";
+      const locationKey = `${currentPath}${search}`;
+      if (locationKey === lastLocationRef.current) return;
+      lastLocationRef.current = locationKey;
+      const next = parseSearch(search, currentPath);
+      setState((prev) =>
+        prev.queryString === next.queryString && prev.productId === next.productId ? prev : next,
+      );
     };
 
     const originalPush = history.pushState;
@@ -63,6 +68,7 @@ export const useProductQuery = (): ProductQuery => {
 
     window.addEventListener("popstate", update);
     window.addEventListener("locationchange", update);
+    update();
 
     return () => {
       history.pushState = originalPush;
@@ -70,7 +76,7 @@ export const useProductQuery = (): ProductQuery => {
       window.removeEventListener("popstate", update);
       window.removeEventListener("locationchange", update);
     };
-  }, []);
+  }, [pathname]);
 
   const nextUrl = useMemo(
     () => (state.queryString ? `${pathname}?${state.queryString}` : pathname),

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cachedFetch, getCachedJson } from "../../utils/cachedFetch";
+import { buildProductHref } from "../../utils/productUrl";
 
 type Product = {
   product_id: number;
@@ -123,7 +124,11 @@ export default function TopProducts() {
               </div>
             );
             return hasReal ? (
-              <a key={p.product_id} href={`/product?id=${p.product_id}`} className="block">
+              <a
+                key={p.product_id}
+                href={buildProductHref({ id: p.product_id, name: p.name || p.title || "product" })}
+                className="block"
+              >
                 {card}
               </a>
             ) : (

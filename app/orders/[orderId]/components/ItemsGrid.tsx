@@ -1,6 +1,7 @@
 "use client";
 
 import namer from "color-namer";
+import { buildProductHref } from "../../../utils/productUrl";
 
 type Item = {
   product_id?: number;
@@ -63,9 +64,12 @@ export default function ItemsGrid({ items, formatMoney }: Props) {
           const image = inlineImage || variantImage || fallbackVariantImage || productImage || "";
           const isLast = idx === items.length - 1;
           const spanAll = items.length % 2 === 1 && isLast;
-          const productLink = `/product?id=${it.product_id}${
-            it.color ? `&color=${encodeURIComponent(it.color)}` : ""
-          }${it.size ? `&size=${encodeURIComponent(it.size)}` : ""}`;
+          const productLink = buildProductHref({
+            id: it.product_id || idx,
+            name: title,
+            color: it.color,
+            size: it.size,
+          });
           return (
             <div
               key={`${it.product_id || idx}-${idx}`}

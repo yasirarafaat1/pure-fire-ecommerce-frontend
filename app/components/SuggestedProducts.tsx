@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { FaStar } from "react-icons/fa6";
 import { getUserToken } from "../utils/auth";
 import HoverImage from "./HoverImage";
+import { buildProductHref } from "../utils/productUrl";
 
 type Product = {
   product_id: number;
@@ -81,7 +82,11 @@ export default function SuggestedProducts({ items }: { items?: Product[] }) {
             const hasMrp = mrp !== undefined && mrp !== null;
             const images = Array.isArray(p.product_image) ? p.product_image : [];
             return (
-              <a key={p.product_id} href={`/product?id=${p.product_id}`} className="block bg-white">
+              <a
+                key={p.product_id}
+                href={buildProductHref({ id: p.product_id, name: p.name || p.title || "product" })}
+                className="block bg-white"
+              >
                 <div className="relative w-full aspect-square md:aspect-[3/4] bg-black/5 overflow-hidden rounded-[5px]">
                   <HoverImage images={images} alt={p.name || p.title || "product"} className="w-full h-full" />
                   {showRating && (

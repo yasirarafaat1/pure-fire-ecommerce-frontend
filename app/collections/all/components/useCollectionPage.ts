@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCollectionData } from "./useCollectionData";
 import { buildVariants, dedupe, isCotton, isHalfSleeve, isJeansProduct, isKurtaProduct, isShirt, isSummerProduct, isTshirt, normalizeName } from "./collections-helpers";
 import { CardProduct, FiltersState } from "./collections-types";
+import { buildProductHref } from "../../../utils/productUrl";
 const sortOptions = ["Popularity", "Price -- Low to High", "Price -- High to Low", "Newest First"];
 const emptyFilters: FiltersState = {
   categories: [],
@@ -277,11 +278,14 @@ export function useCollectionPage() {
   const handleSelectProduct = (product: CardProduct) => {
     const selectedColor = appliedFilters.colors.find((c) => product.colors.includes(c)) || product.colors[0] || "";
     const selectedSize = appliedFilters.sizes.find((s) => product.sizes.includes(s)) || product.sizes[0] || "";
-    const params = new URLSearchParams();
-    params.set("id", String(product.id));
-    if (selectedColor) params.set("color", selectedColor);
-    if (selectedSize) params.set("size", selectedSize);
-    router.push(`/product?${params.toString()}`);
+    router.push(
+      buildProductHref({
+        id: product.id,
+        name: product.title || product.name || `product-${product.id}`,
+        color: selectedColor,
+        size: selectedSize,
+      }),
+    );
   };
 
   return {

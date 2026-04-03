@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getUserToken } from "../../utils/auth";
+import { buildProductHref } from "../../utils/productUrl";
 
 const API_BASE = "/api/user";
 const getToken = () => getUserToken();
@@ -176,11 +177,7 @@ export default function WishlistSection({ email }: { email: string }) {
         const mrp = p.mrp ?? 0;
         const image = p.images?.[0] || p.product_image?.[0] || "";
         const { color, size } = pickDefaultVariant(p);
-        const params = new URLSearchParams();
-        params.set("id", String(id));
-        if (color) params.set("color", color);
-        if (size) params.set("size", size);
-        const href = `/product?${params.toString()}`;
+        const href = buildProductHref({ id: String(id), name: title, color, size });
         const inCart = cartItems.some((i: any) => String(i.product_id) === String(id));
         return (
           <div key={String(id)} className="flex items-center justify-between gap-5">

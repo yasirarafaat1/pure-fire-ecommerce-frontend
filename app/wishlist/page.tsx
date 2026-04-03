@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import HoverImage from "../components/HoverImage";
 import { getUserEmail, getUserToken } from "../utils/auth";
+import { buildProductHref } from "../utils/productUrl";
 
 const API_BASE = "/api/user";
 
@@ -187,7 +188,7 @@ export default function WishlistPage() {
             const inCart = cartItems.some((i: any) => String(i.product_id) === String(id));
             return (
               <div key={String(id)} className="border border-black/20 rounded-[6px] overflow-hidden bg-white grid">
-                <a href={`/product?id=${id}`} className="block">
+                <a href={buildProductHref({ id: String(id), name: title })} className="block">
                   <HoverImage
                     images={images}
                     alt={title}
