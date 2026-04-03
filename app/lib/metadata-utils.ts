@@ -165,11 +165,18 @@ export function generateProductMetadata(input: MetadataInput & { price?: number;
  */
 export function formatMetaDescription(text: string, maxLength = 160): string {
     if (!text) return "";
-    const cleaned = text
-        .replace(/&nbsp;/gi, " ")
+    // Decode entities first (including nested forms like &amp;nbsp;)
+    const decodeEntities = (value: string) => value
         .replace(/&amp;/gi, "&")
+        .replace(/&nbsp;|&#160;/gi, " ")
         .replace(/&quot;/gi, '"')
-        .replace(/&#39;/gi, "'")
+        .replace(/&#39;|&apos;/gi, "'")
+        .replace(/&lt;/gi, "<")
+        .replace(/&gt;/gi, ">")
+        .replace(/&ndash;|&#8211;/gi, "-")
+        .replace(/&mdash;|&#8212;/gi, "-");
+
+    const cleaned = decodeEntities(decodeEntities(text))
         .replace(/<[^>]*>/g, " ")
         .replace(/\s+/g, " ")
         .trim();
