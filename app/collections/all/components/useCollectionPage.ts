@@ -281,7 +281,7 @@ export function useCollectionPage() {
     router.push(
       buildProductHref({
         id: product.id,
-        name: product.title || product.name || `product-${product.id}`,
+        name: product.title || `product-${product.id}`,
         color: selectedColor,
         size: selectedSize,
       }),
