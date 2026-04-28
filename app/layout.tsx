@@ -32,9 +32,15 @@ export const metadata: Metadata = {
     email: true,
   },
   verification: {
-    google:
-      process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ??
-      "uni4iST7WXBBAu_BYMDgeO12xKGt8NYS4DD6gRb1Xt0",
+    google: (() => {
+      const codes = [
+        process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+        process.env.NEXT_PUBLIC_GOOGLE_MERCHANT_VERIFICATION ??
+          "uni4iST7WXBBAu_BYMDgeO12xKGt8NYS4DD6gRb1Xt0",
+      ].filter(Boolean) as string[];
+
+      return codes.length === 1 ? codes[0] : codes;
+    })(),
   },
 };
 
