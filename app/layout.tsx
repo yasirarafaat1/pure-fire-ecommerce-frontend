@@ -32,7 +32,9 @@ export const metadata: Metadata = {
     email: true,
   },
   verification: {
-    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+    google:
+      process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ??
+      "uni4iST7WXBBAu_BYMDgeO12xKGt8NYS4DD6gRb1Xt0",
   },
 };
 
