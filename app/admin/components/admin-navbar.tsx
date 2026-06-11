@@ -46,11 +46,10 @@ export default function AdminNavbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`px-3 py-2 rounded-[5px] transition-colors duration-200 ease-out ${
-                  active
+                className={`px-3 py-2 rounded-[5px] transition-colors duration-200 ease-out ${active
                     ? "bg-[var(--accent)] !text-white border border-black/60"
                     : "text-[var(--muted)] border border-transparent hover:text-[var(--ink)] hover:border-black/30"
-                }`}
+                  }`}
               >
                 {link.label}
               </Link>
