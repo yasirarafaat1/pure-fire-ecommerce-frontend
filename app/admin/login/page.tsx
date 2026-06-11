@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { setAdminAuth, isAdminAuthenticated } from "@/app/utils/adminAuth";
 
 const API_BASE = "/api/auth";
 
@@ -14,24 +15,31 @@ export default function AdminLoginPage() {
   const [redirect, setRedirect] = useState("/admin/dashboard");
 
   useEffect(() => {
+    // Redirect if already authenticated
+    if (isAdminAuthenticated()) {
+      router.replace("/admin/dashboard");
+      return;
+    }
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const next = params.get("redirect");
     if (next) setRedirect(next);
-  }, []);
+  }, [router]);
 
   const login = async () => {
     if (!username || !password || loading) return;
     setLoading(true);
     setMessage("");
     try {
-      const res = await fetch(`${API_BASE}/login`, {
+      const res = await fetch(`${API_BASE}/admin-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
       const data = await res.json();
       if (!res.ok || !data.status) throw new Error(data.message || "Invalid credentials");
+      // Store auth token
+      setAdminAuth(data.token, data.username);
       router.replace(redirect);
       router.refresh();
     } catch (err: any) {

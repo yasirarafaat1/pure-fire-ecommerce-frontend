@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { clearAdminAuth } from "@/app/utils/adminAuth";
 
 const links = [
   { href: "/admin/dashboard", label: "Dashboard" },
@@ -21,7 +22,12 @@ export default function AdminNavbar() {
   }
 
   const logout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
+    try {
+      await fetch("/api/auth/admin-logout", { method: "POST" });
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+    clearAdminAuth();
     router.replace("/admin/login");
     router.refresh();
   };
