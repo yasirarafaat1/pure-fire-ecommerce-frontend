@@ -21,7 +21,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   ...defaultMetadata,
   metadataBase: siteConfig.url ? new URL(siteConfig.url) : undefined,
-  manifest: "/site.webmanifest",
+  manifest: "/favicon_io/site.webmanifest",
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon-32x32.png",

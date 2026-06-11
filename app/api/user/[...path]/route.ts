@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 
-const rawBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const rawBase = process.env.NEXT_PUBLIC_API_URL || "https://purefire-backend.onrender.com";
 
 const normalizeBase = (raw: string) => {
   const trimmed = raw.trim();

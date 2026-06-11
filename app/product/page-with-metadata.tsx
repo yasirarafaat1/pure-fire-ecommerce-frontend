@@ -12,7 +12,7 @@ import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || "http://localhost:8080";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || "https://purefire-backend.onrender.com";
 
 interface ProductPageProps {
     searchParams?: {
