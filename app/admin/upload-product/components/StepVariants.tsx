@@ -212,6 +212,7 @@ export default function StepVariants({ variants, setVariants, sku, setSku }: Pro
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {(v.imagePreviews || []).map((url, i) => (
                     <div key={i} className="relative group">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={url} alt="preview" className="w-full aspect-[4/3] object-cover rounded" />
                       <button
                         type="button"

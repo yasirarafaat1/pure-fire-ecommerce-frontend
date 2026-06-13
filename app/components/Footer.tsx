@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+import { useEffect, useState } from "react";
 import {
   FiInstagram,
   FiFacebook,
@@ -9,19 +11,9 @@ import {
   FiPhone,
   FiMapPin,
 } from "react-icons/fi";
+import { defaultPublicSettings, fetchPublicSettings } from "../utils/public-settings";
 
-const siteName = process.env.NEXT_PUBLIC_SITE_NAME || "Pure Fire";
 const siteDescription = process.env.NEXT_PUBLIC_SITE_DESCRIPTION || "Your one-stop shop for all your needs.";
-const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@purefire.com";
-const supportPhone = process.env.NEXT_PUBLIC_SUPPORT_PHONE || "+91 79053 25078";
-const supportLocation = process.env.NEXT_PUBLIC_SUPPORT_LOCATION || "India";
-
-const social = {
-  instagram: process.env.NEXT_PUBLIC_SOCIAL_INSTAGRAM || "#",
-  facebook: process.env.NEXT_PUBLIC_SOCIAL_FACEBOOK || "#",
-  youtube: process.env.NEXT_PUBLIC_SOCIAL_YOUTUBE || "#",
-  twitter: process.env.NEXT_PUBLIC_SOCIAL_TWITTER || "#",
-};
 
 const links = {
   shop: [
@@ -48,27 +40,45 @@ const headingClass = "text-xs font-semibold tracking-[0.2em] uppercase";
 const linkClass = "hover:underline underline-offset-4 transition-colors hover:text-black/70";
 
 export default function Footer() {
+  const [settings, setSettings] = useState(defaultPublicSettings);
+  const social = settings.socialLinks || {};
+
+  useEffect(() => {
+    fetchPublicSettings()
+      .then(setSettings)
+      .catch(() => undefined);
+  }, []);
+
   return (
     <footer className="mt-12 border-t border-black/10 bg-white">
       <div className="max-w-6xl mx-auto px-4 py-2">
         <div className="grid grid-cols-2 gap-10 lg:grid-cols-5 py-5">
           <div className="flex flex-col gap-3 col-span-2 lg:col-span-1 space-y-4">
-            <div className="text-xl font-semibold tracking-tight">{siteName}</div>
+            <div className="flex items-center gap-2 text-xl font-semibold tracking-tight">
+              <Image
+                src="/favicon.png"
+                alt=""
+                width={32}
+                height={32}
+                className="h-8 w-8 rounded-full object-cover"
+              />
+              <span>{settings.storeName}</span>
+            </div>
             <p className="text-sm text-[var(--muted)] max-w-xs">
               {siteDescription}
             </p>
             <div className="flex flex-col gap-2 space-y-2 text-sm">
               <div className="flex items-center gap-2">
                 <FiMail className="text-black" />
-                <a href={`mailto:${supportEmail}`} className="underline-offset-4 hover:underline transition-colors hover:text-black/70">{supportEmail}</a>
+                <a href={`mailto:${settings.supportEmail}`} className="underline-offset-4 hover:underline transition-colors hover:text-black/70">{settings.supportEmail}</a>
               </div>
               <div className="flex items-center gap-2">
                 <FiPhone className="text-black" />
-                <a href={`tel:${supportPhone}`} className="underline-offset-4 hover:underline transition-colors hover:text-black/70">{supportPhone}</a>
+                <a href={`tel:${settings.supportPhone}`} className="underline-offset-4 hover:underline transition-colors hover:text-black/70">{settings.supportPhone}</a>
               </div>
               <div className="flex items-center gap-2">
                 <FiMapPin className="text-black" />
-                <span>{supportLocation}</span>
+                <span>{settings.address}</span>
               </div>
             </div>
             <div className="flex items-center gap-3 pt-2">
@@ -128,7 +138,7 @@ export default function Footer() {
         </div>
 
         <div className="py-4 border-t border-black/10 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-[var(--muted)]">
-          <span>Copyright (c) {new Date().getFullYear()} {siteName}. All rights reserved.</span>
+          <span>Copyright (c) {new Date().getFullYear()} {settings.storeName}. All rights reserved.</span>
           <div className="flex items-center gap-4">
             <span>Secure payments</span>
             <span>Fast shipping</span>

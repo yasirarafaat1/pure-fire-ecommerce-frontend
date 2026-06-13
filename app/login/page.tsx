@@ -100,89 +100,99 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen bg-white text-black flex items-center justify-center px-4 py-10">
-      <form
-        className="w-full max-w-md border border-black/20 rounded-[5px] p-6"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (step === "email") sendOtp();
-          else verifyOtp();
-        }}
-      >
-        <h1 className="text-xl font-semibold">Login / Register</h1>
-        <p className="text-sm text-[var(--muted)] mt-1">
-          Enter your email to receive 4-digit OTP.
-        </p>
-
-        <div className="grid gap-4 mt-5">
-          <div>
-            <label className="label">Email</label>
-            <input
-              className="input"
-              placeholder="you@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={step === "otp"}
-            />
+      <div className="w-full max-w-6xl flex items-center justify-center gap-12">
+        {/* Left-side shopping SVG (provided) - hidden on small screens */}
+        <div className="hidden md:flex md:w-2/5 lg:w-2/5 items-center justify-center">
+          <div className="p-6">
+            <img src="/Shopping.svg" alt="Shopping illustration" className="w-64 h-64 object-contain" aria-hidden="true" />
           </div>
+        </div>
 
-          {step === "otp" && (
+        <form
+          className="w-full max-w-md md:w-1/2 border border-black/20 rounded-[5px] p-6"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (step === "email") sendOtp();
+            else verifyOtp();
+          }}
+        >
+          <h1 className="text-xl font-semibold">Login / Register</h1>
+          <p className="text-sm text-[var(--muted)] mt-1">
+            Enter your email to receive 4-digit OTP.
+          </p>
+
+          <div className="grid gap-4 mt-5">
             <div>
-              <label className="label">OTP</label>
+              <label className="label">Email</label>
               <input
-                className="input tracking-[6px] text-center"
-                placeholder="1234"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                maxLength={4}
-                inputMode="numeric"
+                className="input"
+                placeholder="you@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={step === "otp"}
               />
             </div>
-          )}
 
-          {error && <div className="text-sm text-red-600">{error}</div>}
-          {info && <div className="text-sm text-green-700">{info}</div>}
+            {step === "otp" && (
+              <div>
+                <label className="label">OTP</label>
+                <input
+                  className="input tracking-[6px] text-center"
+                  placeholder="1234"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  maxLength={4}
+                  inputMode="numeric"
+                />
+              </div>
+            )}
 
-          {step === "email" ? (
-            <div className="grid gap-2">
-              <button className="btn btn-primary w-full" type="submit" disabled={loading}>
-                {loading ? "Sending..." : "Send OTP"}
-              </button>
-              <a href="/" className="btn btn-ghost w-full">
-                Back to home
-              </a>
-            </div>
-          ) : (
-            <div className="grid gap-2">
-              <button className="btn btn-primary w-full" type="submit" disabled={loading}>
-                {loading ? "Verifying..." : "Verify & Login"}
-              </button>
-              <button
-                className="btn btn-ghost w-full"
-                onClick={sendOtp}
-                disabled={loading || cooldown > 0}
-                type="button"
-              >
-                {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend OTP"}
-              </button>
-              <button
-                className="btn w-full"
-                onClick={() => {
-                  setStep("email");
-                  setOtp("");
-                  setError("");
-                  setInfo("");
-                }}
-                type="button"
-              >
-                Change Email
-              </button>
-              <a href="/" className="btn btn-ghost w-full">
-                Back to home
-              </a>
-            </div>
-          )}
-        </div>
-      </form>
+            {error && <div className="text-sm text-red-600">{error}</div>}
+            {info && <div className="text-sm text-green-700">{info}</div>}
+
+            {step === "email" ? (
+              <div className="grid gap-2">
+                <button className="btn btn-primary w-full" type="submit" disabled={loading}>
+                  {loading ? "Sending..." : "Send OTP"}
+                </button>
+                <a href="/" className="btn btn-ghost w-full">
+                  Back to home
+                </a>
+              </div>
+            ) : (
+              <div className="grid gap-2">
+                <button className="btn btn-primary w-full" type="submit" disabled={loading}>
+                  {loading ? "Verifying..." : "Verify & Login"}
+                </button>
+                <button
+                  className="btn btn-ghost w-full"
+                  onClick={sendOtp}
+                  disabled={loading || cooldown > 0}
+                  type="button"
+                >
+                  {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend OTP"}
+                </button>
+                <button
+                  className="btn w-full"
+                  onClick={() => {
+                    setStep("email");
+                    setOtp("");
+                    setError("");
+                    setInfo("");
+                  }}
+                  type="button"
+                >
+                  Change Email
+                </button>
+                <a href="/" className="btn btn-ghost w-full">
+                  Back to home
+                </a>
+              </div>
+            )}
+          </div>
+        </form>
+
+      </div>
     </main>
   );
 }

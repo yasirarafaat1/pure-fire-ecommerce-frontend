@@ -53,7 +53,7 @@ export default function StepDetails({
         <div className="flex items-center justify-between mb-3">
           <div>
             <p className="label m-0">Key highlights (key & value, {min}-{max})</p>
-            <p className="text-xs text-[var(--muted)]">Example: Key "Fabric", Value "100% Cotton".</p>
+            <p className="text-xs text-[var(--muted)]">Example: Key &quot;Fabric&quot;, Value &quot;100% Cotton&quot;.</p>
           </div>
           <button className="btn btn-primary" onClick={addRow} disabled={keyHighlights.length >= max}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

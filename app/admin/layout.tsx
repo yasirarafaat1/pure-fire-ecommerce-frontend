@@ -1,7 +1,7 @@
-import AdminNavbar from "./components/admin-navbar";
+import AdminShell from "./components/AdminShell";
 
 export const metadata = {
-  title: "Admin | PureFire",
+  title: "Admin",
   description: "Admin panel",
 };
 
@@ -11,9 +11,6 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--ink)]">
-      <AdminNavbar />
-      <main className="max-w-6xl mx-auto px-5 py-8">{children}</main>
-    </div>
+    <AdminShell>{children}</AdminShell>
   );
 }

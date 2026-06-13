@@ -2,85 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { cachedFetch } from "../../utils/cachedFetch";
+import Image from "next/image";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getUserToken } from "../../utils/auth";
-const siteName = process.env.NEXT_PUBLIC_SITE_NAME || "Pure Fire";
-const IconArrowLeft = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M15 18l-6-6 6-6" />
-  </svg>
-);
-
-const IconMenu = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="3" y1="6" x2="21" y2="6" />
-    <line x1="3" y1="12" x2="21" y2="12" />
-    <line x1="3" y1="18" x2="21" y2="18" />
-  </svg>
-);
-
-const IconClose = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18" />
-    <line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
-);
-
-const IconSearch = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="7" />
-    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-  </svg>
-);
-
-const IconCart = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="9" cy="21" r="1" />
-    <circle cx="20" cy="21" r="1" />
-    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61H19a2 2 0 0 0 2-1.61L22 6H6" />
-  </svg>
-);
-
-const IconUser = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-    <circle cx="12" cy="7" r="4" />
-  </svg>
-);
-
-const IconSupport = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    {/* Headset shell */}
-    <path d="M5 12.5V11a7 7 0 0 1 14 0v1.5" />
-    <rect x="3.5" y="11" width="3" height="6" rx="1.2" />
-    <rect x="17.5" y="11" width="3" height="6" rx="1.2" />
-    {/* Mic boom */}
-    <path d="M17 17.5c0 1.4-1.1 2.5-2.5 2.5H13" />
-    <circle cx="12" cy="6.5" r="0.6" fill="currentColor" />
-    {/* Tiny 24/7 badge */}
-    <g transform="translate(12.5 12)">
-      <circle cx="4.5" cy="4.5" r="4.5" fill="currentColor" opacity="0.12" />
-      <path d="M5.4 4.5h-2c0-1 .9-1.1 2-2.2v0" strokeWidth="1.2" />
-      <path d="M3.4 6.3h2.2" strokeWidth="1.2" />
-    </g>
-  </svg>
-);
-
-const IconChevron = ({ open }: { open: boolean }) => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={`transition-transform ${open ? "rotate-180" : "rotate-0"}`}
-  >
-    <path d="M6 9l6 6 6-6" />
-  </svg>
-);
+import { defaultPublicSettings, fetchPublicSettings } from "../../utils/public-settings";
+import { IconArrowLeft, IconCart, IconChevron, IconClose, IconMenu, IconSearch, IconSupport, IconUser, RatingStars } from "./navbar-icons";
 
 type CategoryNode = {
   _id: string;
@@ -88,6 +15,11 @@ type CategoryNode = {
   children?: CategoryNode[];
 };
 
+type CartItem = { qty?: number | string };
+type ProductSummary = {
+  status?: string;
+  catagory_id?: string | { _id?: string };
+};
 const slugify = (value: string) =>
   value
     .toLowerCase()
@@ -100,6 +32,7 @@ export default function HomeNavbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [categoryTree, setCategoryTree] = useState<CategoryNode[]>([]);
+  const [siteName, setSiteName] = useState(defaultPublicSettings.storeName);
   const [expandedRoot, setExpandedRoot] = useState<string | null>(null);
   const [expandedSub, setExpandedSub] = useState<string | null>(null);
   const router = useRouter();
@@ -107,6 +40,12 @@ export default function HomeNavbar() {
 
 
   const searchMode = useMemo(() => pathname.startsWith("/search"), [pathname]);
+
+  useEffect(() => {
+    fetchPublicSettings()
+      .then((settings) => setSiteName(settings.storeName))
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     const loadCartCount = async () => {
@@ -122,7 +61,8 @@ export default function HomeNavbar() {
           body: JSON.stringify({ cart_id: cartId }),
         });
         const data = await res.json();
-        const count = (data?.items || []).reduce((sum: number, i: any) => sum + Number(i.qty || 1), 0);
+        const items = (data?.items || []) as CartItem[];
+        const count = items.reduce((sum, item) => sum + Number(item.qty || 1), 0);
         setCartCount(count);
       } catch {
         setCartCount(0);
@@ -147,12 +87,18 @@ export default function HomeNavbar() {
         ]);
         const treeData = await treeRes.json();
         const productsData = await productsRes.json();
-        const products = (productsData?.products || []).filter(
-          (p: any) => !p.status || p.status === "published",
+        const products = ((productsData?.products || []) as ProductSummary[]).filter(
+          (product) => !product.status || product.status === "published",
         );
         const usedIds = new Set(
           products
-            .map((p: any) => String(p.catagory_id?._id || p.catagory_id || ""))
+            .map((product) =>
+              String(
+                typeof product.catagory_id === "object"
+                  ? product.catagory_id?._id || ""
+                  : product.catagory_id || "",
+              ),
+            )
             .filter(Boolean),
         );
         const prune = (node: CategoryNode): CategoryNode | null => {
@@ -209,7 +155,17 @@ export default function HomeNavbar() {
 
         {/* Center logo / search */}
         {!searchMode ? (
-          <a className="text-lg font-semibold tracking-tight" href="/">{siteName}</a>
+          <Link className="flex items-center gap-2 text-lg font-semibold tracking-tight" href="/">
+            <Image
+              src="/favicon.png"
+              alt=""
+              width={28}
+              height={28}
+              className="h-7 w-7 rounded-full object-cover"
+              priority
+            />
+            <span>{siteName}</span>
+          </Link>
         ) : (
           <div className="flex-1" aria-hidden />
         )}
@@ -254,7 +210,16 @@ export default function HomeNavbar() {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between gap-3 border-b border-black/10 p-4 pb-2 font-semibold">
-            <h3>{siteName}</h3>
+            <h3 className="flex items-center gap-2">
+              <Image
+                src="/favicon.png"
+                alt=""
+                width={28}
+                height={28}
+                className="h-7 w-7 rounded-full object-cover"
+              />
+              <span>{siteName}</span>
+            </h3>
             <button className="cursor-pointer !p-2" aria-label="Close menu" onClick={() => setMenuOpen(false)}>
               <IconClose />
             </button>
@@ -316,20 +281,14 @@ export default function HomeNavbar() {
             })}
             {categoryTree.length === 0 && <div className="text-xs text-[var(--muted)]">No categories</div>}
             <div className="border-black/10 grid gap-2">
-              <a className="py-2 border-b border-black/10" href="/wishlist">Wishlist</a>
-              <a className="py-2 border-b border-black/10" href="/orders">Orders</a>
-              <a className="py-2 border-b border-black/10" href="/return-exchange-policy">Return & Exchange Policy</a>
-              <a className="py-2 border-b border-black/10" href="/support">Support</a>
+              <Link className="py-2 border-b border-black/10" href="/wishlist">Wishlist</Link>
+              <Link className="py-2 border-b border-black/10" href="/orders">Orders</Link>
+              <Link className="py-2 border-b border-black/10" href="/return-exchange-policy">Return & Exchange Policy</Link>
+              <Link className="py-2 border-b border-black/10" href="/support">Support</Link>
             </div>
           </nav>
           <div className="absolute bottom-0 right-0 mt-auto px-4 py-5">
-            <div className="flex items-center justify-center gap-1 text-[#f59e0b]">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <svg key={i} width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.1 6.6L12 17.8 6.2 20.6l1.1-6.6L2.5 9.4l6.6-.9L12 2.5z" />
-                </svg>
-              ))}
-            </div>
+            <RatingStars />
             <p className="text-center text-sm font-extrabold tracking-[0.12em] mt-3">
               LOVED BY 7,00,000+ CUSTOMERS
             </p>
@@ -339,5 +298,3 @@ export default function HomeNavbar() {
     </header>
   );
 }
-
-

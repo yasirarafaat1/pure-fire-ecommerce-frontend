@@ -14,9 +14,9 @@ const normalizeBase = (raw: string) => {
 };
 
 const normalizedBase = normalizeBase(backendBase);
-const targetBase = normalizedBase.replace(/\/$/, "").endsWith("/admin")
+const targetBase = normalizedBase.replace(/\/$/, "").endsWith("/api/admin")
   ? normalizedBase.replace(/\/$/, "")
-  : `${normalizedBase.replace(/\/$/, "")}/admin`;
+  : `${normalizedBase.replace(/\/$/, "")}/api/admin`;
 
 const buildHeaders = (res: Response) => {
   const headers = new Headers();

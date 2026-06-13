@@ -1,187 +1,143 @@
 "use client";
 
-import Link from "next/link";
-import "../../globals.css";
-import { useState } from "react";
-import { FiEye, FiEyeOff } from "react-icons/fi";
+import { useEffect, useState } from "react";
+import { CircleDollarSign, Package, ShoppingCart, Star, Users, Warehouse } from "lucide-react";
+import AdminPageHeader from "../components/AdminPageHeader";
+import AdminStatusBadge from "../components/AdminStatusBadge";
+import { AdminErrorState, AdminLoadingState } from "../components/AdminStates";
+import { AdminApiError, adminApi } from "../lib/adminApi";
+import { formatInrFromPaise } from "../lib/money";
 
-const cards = [
-  {
-    title: "Create Categories",
-    href: "/admin/add-category",
-    subtitle: "Mens > Bottom Wears > Jeans",
-  },
-  {
-    title: "Upload Products",
-    href: "/admin/upload-product",
-    subtitle: "Stepwise media + pricing",
-  },
-  {
-    title: "Orders",
-    href: "/admin/orders",
-    subtitle: "Track payments & stock",
-  },
-];
+type DashboardData = {
+  metrics: {
+    totalRevenue: number;
+    todayRevenue: number;
+    totalOrders: number;
+    pendingOrders: number;
+    lowStockProducts: number;
+    activeProducts: number;
+    customers: number;
+    pendingReviews: number;
+  };
+  recentOrders: Array<{
+    _id: string;
+    order_id?: number;
+    FullName?: string;
+    amount?: number;
+    status?: string;
+    createdAt?: string;
+  }>;
+  topProducts: Array<{ productId: number; name?: string; quantity: number }>;
+  recentActivity: Array<{
+    _id: string;
+    adminEmail: string;
+    action: string;
+    entityType: string;
+    createdAt: string;
+  }>;
+};
 
 export default function DashboardPage() {
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [resetMsg, setResetMsg] = useState("");
-  const [resetLoading, setResetLoading] = useState(false);
-  const [showReset, setShowReset] = useState(false);
-  const [showCurrent, setShowCurrent] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-
-  const handleReset = async () => {
-    if (!currentPassword || newPassword.length < 6 || resetLoading) return;
-    setResetLoading(true);
-    setResetMsg("");
-    try {
-      const res = await fetch("/api/auth/reset", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: "admin",
-          currentPassword,
-          newPassword,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.status) throw new Error(data.message || "Reset failed");
-      setResetMsg("Password updated.");
-      setCurrentPassword("");
-      setNewPassword("");
-    } catch (err: any) {
-      setResetMsg(err.message || "Reset failed");
-    } finally {
-      setResetLoading(false);
-    }
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [error, setError] = useState("");
+  const load = () => {
+    setError("");
+    adminApi
+      .get<{ data: DashboardData }>("/dashboard")
+      .then((response) => setData(response.data))
+      .catch((requestError) =>
+        setError(requestError instanceof AdminApiError ? requestError.message : "Dashboard failed")
+      );
   };
+  useEffect(() => {
+    adminApi
+      .get<{ data: DashboardData }>("/dashboard")
+      .then((response) => setData(response.data))
+      .catch((requestError) =>
+        setError(requestError instanceof AdminApiError ? requestError.message : "Dashboard failed")
+      );
+  }, []);
+
+  if (error) return <AdminErrorState message={error} retry={load} />;
+  if (!data) return <AdminLoadingState label="Loading dashboard..." />;
+
+  const cards = [
+    { label: "Total revenue", value: formatInrFromPaise(data.metrics.totalRevenue), icon: CircleDollarSign },
+    { label: "Today revenue", value: formatInrFromPaise(data.metrics.todayRevenue), icon: CircleDollarSign },
+    { label: "Total orders", value: data.metrics.totalOrders, icon: ShoppingCart },
+    { label: "Pending orders", value: data.metrics.pendingOrders, icon: Package },
+    { label: "Active products", value: data.metrics.activeProducts, icon: Warehouse },
+    { label: "Low stock", value: data.metrics.lowStockProducts, icon: Warehouse },
+    { label: "Customers", value: data.metrics.customers, icon: Users },
+    { label: "Reviews pending", value: data.metrics.pendingReviews, icon: Star },
+  ];
 
   return (
-    <div className="flex flex-col gap-8 py-6">
-      <header className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Admin</p>
-          <h1 className="text-3xl font-semibold">Dashboard</h1>
-        </div>
-      </header>
-
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {cards.map((card) => (
-          <Link key={card.title} href={card.href} className="card p-5">
-            <p className="text-sm text-[var(--muted)]">{card.subtitle}</p>
-            <h3 className="text-xl font-semibold mt-2">{card.title}</h3>
-          </Link>
+    <div className="grid gap-6">
+      <AdminPageHeader
+        title="Dashboard"
+        description="Live commerce, customer, catalog, and administration overview."
+      />
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {cards.map(({ label, value, icon: Icon }) => (
+          <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm" key={label}>
+            <div className="flex items-center justify-between text-slate-500">
+              <span className="text-sm">{label}</span>
+              <Icon size={18} />
+            </div>
+            <p className="mt-3 text-2xl font-semibold text-slate-950">{value}</p>
+          </article>
         ))}
       </section>
-
-      <section className="card p-6">
-        <h2 className="text-xl font-semibold mb-3">Quick actions</h2>
-        <div className="flex flex-wrap gap-3">
-          <Link className="btn btn-primary" href="/admin/upload-product">
-            Add product
-          </Link>
-          <Link className="btn btn-ghost" href="/admin/add-category">
-            Manage categories
-          </Link>
-          <button className="btn btn-ghost" onClick={() => setShowReset(true)}>
-            Reset admin password
-          </button>
-        </div>
-      </section>
-
-      {showReset && (
-        <div className="fixed inset-0 z-50">
-          <div
-            className="absolute inset-0 bg-black/30"
-            onClick={() => setShowReset(false)}
-          />
-          <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white border-l border-black/10 shadow-sm">
-            <div className="h-full flex flex-col px-4">
-              <div className="px-6 py-4 border-b border-black/10 flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold">Reset password</h2>
-                </div>
-                <button
-                  className="btn btn-ghost px-3 py-1"
-                  onClick={() => setShowReset(false)}
-                >
-                  Close
-                </button>
-              </div>
-
-              <div className="p-6 flex-1 overflow-auto">
-                <p className="text-sm text-[var(--muted)] mb-4">
-                  Username is fixed to "admin".
-                </p>
-                <label className="grid gap-2 mb-3">
-                  <span className="label">Current password</span>
-                  <div className="relative">
-                    <input
-                      className="input pr-10"
-                      type={showCurrent ? "text" : "password"}
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleReset();
-                        }
-                      }}
-                      placeholder="******"
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-2 top-3 -translate-y-1/3 text-black/70"
-                      onClick={() => setShowCurrent((v) => !v)}
-                      aria-label={showCurrent ? "Hide password" : "Show password"}
-                    >
-                      {showCurrent ? <FiEyeOff /> : <FiEye />}
-                    </button>
-                  </div>
-                </label>
-                <label className="grid gap-2 mb-3">
-                  <span className="label">New password</span>
-                  <div className="relative">
-                    <input
-                      className="input pr-10"
-                      type={showNew ? "text" : "password"}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleReset();
-                        }
-                      }}
-                      placeholder="At least 6 chars"
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-2 top-3 -translate-y-1/2 text-black/70"
-                      onClick={() => setShowNew((v) => !v)}
-                      aria-label={showNew ? "Hide password" : "Show password"}
-                    >
-                      {showNew ? <FiEyeOff /> : <FiEye />}
-                    </button>
-                  </div>
-                </label>
-                <div className="flex justify-end gap-2">
-                  <button
-                    className="btn btn-primary"
-                    onClick={handleReset}
-                    disabled={resetLoading || newPassword.length < 6 || !currentPassword}
-                  >
-                    {resetLoading ? "Updating..." : "Update password"}
-                  </button>
-                </div>
-                {resetMsg && <p className="mt-3 text-sm text-[var(--muted)]">{resetMsg}</p>}
-              </div>
-            </div>
+      <section className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 px-5 py-4">
+            <h3 className="font-semibold">Recent orders</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-slate-500">
+                <tr>
+                  <th className="px-5 py-3">Order</th>
+                  <th className="px-5 py-3">Customer</th>
+                  <th className="px-5 py-3">Amount</th>
+                  <th className="px-5 py-3">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.recentOrders.map((order) => (
+                  <tr className="border-t border-slate-100" key={order._id}>
+                    <td className="px-5 py-3 font-medium">#{order.order_id || order._id}</td>
+                    <td className="px-5 py-3">{order.FullName || "Unknown"}</td>
+                    <td className="px-5 py-3">{formatInrFromPaise(order.amount)}</td>
+                    <td className="px-5 py-3"><AdminStatusBadge status={order.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-      )}
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="font-semibold">Top selling products</h3>
+          <div className="mt-4 grid gap-3">
+            {data.topProducts.length ? data.topProducts.map((product) => (
+              <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-3" key={product.productId}>
+                <span className="text-sm font-medium">{product.name || `Product #${product.productId}`}</span>
+                <span className="text-sm text-slate-500">{product.quantity} sold</span>
+              </div>
+            )) : <p className="text-sm text-slate-500">No sales data available.</p>}
+          </div>
+          <h3 className="mt-6 font-semibold">Recent admin activity</h3>
+          <div className="mt-3 grid gap-3">
+            {data.recentActivity.map((item) => (
+              <div key={item._id}>
+                <p className="text-sm font-medium">{item.action.replaceAll("_", " ")}</p>
+                <p className="text-xs text-slate-500">{item.adminEmail || "System"} · {item.entityType}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

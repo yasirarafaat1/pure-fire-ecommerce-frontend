@@ -1,5 +1,5 @@
-import UploadProductPage from "./components/UploadProductPage";
+import { redirect } from "next/navigation";
 
-export default function UploadProduct() {
-  return <UploadProductPage />;
+export default function LegacyUploadProductPage() {
+  redirect("/admin/products/new");
 }

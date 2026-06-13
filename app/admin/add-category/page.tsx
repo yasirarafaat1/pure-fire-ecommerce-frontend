@@ -1,5 +1,5 @@
-import CategoryForm from "./components/CategoryForm";
+import { redirect } from "next/navigation";
 
-export default function AddCategoryPage() {
-  return <CategoryForm />;
+export default function LegacyCategoryPage() {
+  redirect("/admin/categories");
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AdminApiError, adminApi } from "../lib/adminApi";
 
 type Banner = {
   _id: string;
@@ -13,12 +14,11 @@ type Banner = {
   isActive?: boolean;
 };
 
-const API = "/api/admin/banners";
-
 export default function AdminBannersPage() {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
   const [form, setForm] = useState({
     title: "",
     imageUrl: "",
@@ -31,9 +31,10 @@ export default function AdminBannersPage() {
   const fetchBanners = async () => {
     setLoading(true);
     try {
-      const res = await fetch(API);
-      const data = await res.json();
+      const data = await adminApi.get<{ banners: Banner[] }>("/banners");
       setBanners(data.banners || []);
+    } catch (error) {
+      setMessage(error instanceof AdminApiError ? error.message : "Unable to load banners");
     } finally {
       setLoading(false);
     }
@@ -59,38 +60,32 @@ export default function AdminBannersPage() {
       if (form.imageUrl) fd.append("imageUrl", form.imageUrl);
       if (form.imageFile) fd.append("image", form.imageFile);
 
-      const res = await fetch(API, { method: "POST", body: fd });
-      if (!res.ok) {
-        const d = await res.json();
-        alert(d.message || "Save failed");
-      } else {
-        setForm({
-          title: "",
-          imageUrl: "",
-          imageFile: null,
-          targetUrl: "",
-          order: "0",
-          isActive: true,
-        });
-        fetchBanners();
-      }
+      await adminApi.post("/banners", fd);
+      setForm({
+        title: "",
+        imageUrl: "",
+        imageFile: null,
+        targetUrl: "",
+        order: "0",
+        isActive: true,
+      });
+      setMessage("Banner saved.");
+      fetchBanners();
+    } catch (error) {
+      setMessage(error instanceof AdminApiError ? error.message : "Save failed");
     } finally {
       setSaving(false);
     }
   };
 
   const toggleActive = async (id: string, isActive: boolean) => {
-    await fetch(`${API}/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isActive }),
-    });
+    await adminApi.patch(`/banners/${id}`, { isActive });
     fetchBanners();
   };
 
   const remove = async (id: string) => {
     if (!confirm("Delete this banner?")) return;
-    await fetch(`${API}/${id}`, { method: "DELETE" });
+    await adminApi.delete(`/banners/${id}`);
     fetchBanners();
   };
 
@@ -100,6 +95,7 @@ export default function AdminBannersPage() {
       <p className="text-sm text-[var(--muted)]">
         Upload 5-10 landscape banners. Recommended size: 1200×675 (16:9), black & white friendly. Provide a target URL—clicking the banner redirects users.
       </p>
+      {message && <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">{message}</p>}
 
       <div className="border border-black/15 rounded-[5px] p-4 grid gap-3 md:grid-cols-2 bg-white">
         <label className="text-sm text-center border border-black/15 rounded-[5px] p-3">

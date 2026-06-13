@@ -8,7 +8,6 @@ type Props = {
   canDraft?: boolean;
   onBack: () => void;
   onNext: () => void;
-  onCancel: () => void;
   onDraft: () => void;
   onPublish: () => void;
   onRequireCategory: () => void;
@@ -48,16 +47,12 @@ export default function FooterControls({
   canDraft = true,
   onBack,
   onNext,
-  onCancel,
   onDraft,
   onPublish,
   onRequireCategory,
   busyAction = null,
 }: Props) {
   const isBusy = !!busyAction;
-  const savingLabel =
-    busyAction === "draft" ? "Saving draft..." : busyAction === "published" ? "Publishing..." : "";
-
   return (
     <footer className="mt-6 flex flex-wrap gap-3 justify-end">
       {active > 1 && (

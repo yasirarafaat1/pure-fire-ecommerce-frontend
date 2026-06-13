@@ -6,10 +6,20 @@ import StepDetails from "./StepDetails";
 import StepVariants from "./StepVariants";
 import { CategoryNode } from "./types";
 import { VariantForm, blankVariant, toSizePayload } from "./variant-utils";
+import { adminApi } from "../../lib/adminApi";
+import type {
+  EditProduct,
+  ProductColorVariant,
+  ProductFormState,
+  ProductSize,
+} from "./product-editor-types";
+import { submitProduct } from "./product-submit";
+import {
+  validateProductDetails,
+  validateProductVariants,
+} from "./product-validation";
 
-type EditProduct = any;
 type Props = { product?: EditProduct | null; onSaved?: () => void; onClose?: () => void };
-const API_BASE = "/api/admin";
 const steps = [{ id: 1, label: "Category" }, { id: 2, label: "Details" }, { id: 3, label: "Variants" }];
 const minHighlights = 6, maxHighlights = 10;
 export default function ProductWizard({ product, onSaved, onClose }: Props) {
@@ -21,13 +31,12 @@ export default function ProductWizard({ product, onSaved, onClose }: Props) {
   const [categoryId, setCategoryId] = useState("");
   const [message, setMessage] = useState("");
   const [busyAction, setBusyAction] = useState<null | "draft" | "published">(null);
-  const [form, setForm] = useState({ name: "", sku: "", price: "", selling_price: "", quantity: "", colors: "", sizes: "" });
+  const [form, setForm] = useState<ProductFormState>({ name: "", sku: "", price: "", selling_price: "", quantity: "", colors: "", sizes: "" });
   const [descriptionHtml, setDescriptionHtml] = useState("");
   const [keyHighlights, setKeyHighlights] = useState<{ key: string; value: string }[]>(Array.from({ length: minHighlights }, () => ({ key: "", value: "" })));
   const [variants, setVariants] = useState<VariantForm[]>([blankVariant(true)]);
   useEffect(() => {
-    fetch(`${API_BASE}/categories/tree`, { cache: "no-store" })
-      .then((r) => r.json())
+    adminApi.get<{ status: boolean; categories: CategoryNode[] }>("/categories/tree")
       .then((d) => d.status && setTree(d.categories || []))
       .catch(() => setMessage("Backend unreachable. Check API URL/env."));
   }, []);
@@ -36,7 +45,7 @@ export default function ProductWizard({ product, onSaved, onClose }: Props) {
     while (stack.length) {
       const n = stack.pop()!;
       if (n._id === id) return n;
-      n.children && stack.push(...n.children);
+      if (n.children) stack.push(...n.children);
     }
     return null;
   };
@@ -51,7 +60,10 @@ export default function ProductWizard({ product, onSaved, onClose }: Props) {
     const dfs = (nodes: CategoryNode[], target: string, trail: string[]): boolean => {
       for (const n of nodes) {
         const next = [...trail, n._id];
-        if (String(n._id) === target) return path.push(...next), true;
+        if (String(n._id) === target) {
+          path.push(...next);
+          return true;
+        }
         if (n.children && dfs(n.children, target, next)) return true;
       }
       return false;
@@ -72,7 +84,7 @@ export default function ProductWizard({ product, onSaved, onClose }: Props) {
       sizes: (product.sizes || []).join(", "),
     });
     setDescriptionHtml(product.description || "");
-    const highlights = (product.key_highlights || []).map((h: any) => ({ key: h.key || "", value: h.value || "" }));
+    const highlights = (product.key_highlights || []).map((highlight) => ({ key: highlight.key || "", value: highlight.value || "" }));
     const padded =
       highlights.length >= minHighlights
         ? highlights.slice(0, maxHighlights)
@@ -82,19 +94,19 @@ export default function ProductWizard({ product, onSaved, onClose }: Props) {
     if (product.colorVariants?.length) {
       const fallbackSizes = Array.isArray(product.sizes) ? product.sizes : [];
       setVariants(
-        product.colorVariants.map((cv: any, idx: number) => ({
+        product.colorVariants.map((cv: ProductColorVariant, idx: number) => ({
           id: `${cv.color}-${idx}`,
           color: cv.color,
           price: cv.price ? cv.price.toString() : "",
           discountedPrice: cv.discountedPrice ? cv.discountedPrice.toString() : "",
           sizes:
             Array.isArray(cv.sizes) && cv.sizes.length
-              ? cv.sizes.map((s: any) => ({
-                  label: typeof s === "string" ? s : s.label,
-                  stock: typeof s === "string" ? "" : String(s.stock ?? ""),
+              ? cv.sizes.map((size: ProductSize | string) => ({
+                  label: typeof size === "string" ? size : size.label,
+                  stock: typeof size === "string" ? "" : String(size.stock ?? ""),
                 }))
-              : fallbackSizes.map((s: any) => ({
-                  label: typeof s === "string" ? s : s.label,
+              : fallbackSizes.map((size: ProductSize | string) => ({
+                  label: typeof size === "string" ? size : size.label,
                   stock: "",
                 })) || [{ label: "", stock: "" }],
           imagesFiles: [],
@@ -110,7 +122,7 @@ export default function ProductWizard({ product, onSaved, onClose }: Props) {
     const stage = (product.draft_stage || "").toLowerCase();
     if (stage === "details") setActive(2);
     else if (stage === "media" || stage === "variants" || stage === "pricing" || stage === "complete") setActive(3);
-  }, [product, tree]);
+  }, [categoryId, product, tree]);
 
   const level1Options = tree;
   const level2Options = useMemo(() => (level1 ? findNode(tree, level1)?.children || [] : []), [tree, level1]);
@@ -145,39 +157,13 @@ export default function ProductWizard({ product, onSaved, onClose }: Props) {
     )}</label>
   );
 
-  const validateDetails = () => {
-    if (!form.name.trim()) return "Product name required.";
-    if (!descriptionHtml.replace(/<[^>]+>/g, "").trim()) return "Description required.";
-    const clean = keyHighlights.filter((h) => h.key.trim() && h.value.trim());
-    return clean.length < minHighlights || clean.length > maxHighlights ? `Enter ${minHighlights}-${maxHighlights} key highlights.` : "";
-  };
-
-  const validateVariants = () => {
-    if (!variants.length) return "Add at least one color.";
-    for (const v of variants) {
-      if (!v.color.trim()) return "Color name required.";
-      const vPrice = Number(v.price);
-      const vDiscount = Number(v.discountedPrice || v.price);
-      if (!Number.isFinite(vPrice) || vPrice <= 0) return "Price must be a positive number.";
-      if (!Number.isFinite(vDiscount) || vDiscount <= 0) return "Discounted price must be a positive number.";
-      if (vDiscount >= vPrice) return "Price must be greater than discounted price.";
-      const imgCount = (v.imagesFiles?.length || 0) + (v.imagePreviews?.length || 0);
-      if (!imgCount || imgCount < 5) return `Color ${v.color || "color"}: need 5-10 images.`;
-      const hasVid = !!v.videoFile || !!v.videoPreview;
-      if (!hasVid) return `Color ${v.color || "color"}: video required.`;
-      const sizesPayload = toSizePayload(v.sizes);
-      if (!sizesPayload.length) return `Color ${v.color || "color"}: add sizes with stock.`;
-      const invalidSize = sizesPayload.find((s) => !/^[A-Z]+$/.test(s.label));
-      if (invalidSize) return "Sizes must be uppercase letters only (e.g., S, M, L, XL).";
-      const invalidStock = sizesPayload.find((s) => Number.isNaN(s.stock) || s.stock < 0);
-      if (invalidStock) return "Stock must be a non-negative number.";
-    }
-    return "";
-  };
+  const validateDetails = () =>
+    validateProductDetails(form, descriptionHtml, keyHighlights, minHighlights, maxHighlights);
+  const validateVariants = () => validateProductVariants(variants);
   const submit = async (status: "draft" | "published") => {
     setMessage("");
     const requiredBasics = ["sku", "price", "selling_price"];
-    const missingBasics = requiredBasics.filter((k) => !(form as any)[k]?.trim());
+    const missingBasics = requiredBasics.filter((key) => !form[key as keyof ProductFormState].trim());
     if (missingBasics.length) {
       return setMessage(`Missing required: ${missingBasics.join(", ")}`);
     }
@@ -198,63 +184,22 @@ export default function ProductWizard({ product, onSaved, onClose }: Props) {
     if (status === "published" && !form.name.trim()) return setMessage("Missing: name");
 
     setBusyAction(status);
-    const fd = new FormData();
-    Object.entries(form).forEach(([k, v]) => {
-      if (k === "sku") return;
-      fd.append(k, v || "");
-    });
-    fd.append("sku", skuValue);
-    fd.append("categoryId", categoryId || "");
-    fd.append("status", status);
-    fd.append("draft_stage", status === "published" ? "complete" : steps[active - 1].label.toLowerCase());
-    fd.append("description", descriptionHtml);
-    fd.append("key_highlights", JSON.stringify(keyHighlights.filter((h) => h.key && h.value)));
-
-    const withPrimary = variants.some((v) => v.primary) ? variants : variants.map((v, i) => ({ ...v, primary: i === 0 }));
-    const processed = withPrimary.map((v) => ({
-      color: v.color.trim(),
-      price: Number(v.price) || 0,
-      discountedPrice: Number(v.discountedPrice || v.price) || 0,
-      imageCount: (v.imagesFiles?.length || 0) + (v.imagePreviews?.length || 0),
-      hasVideo: !!v.videoFile || !!v.videoPreview,
-      images: v.imagesFiles.length ? [] : v.imagePreviews || [],
-      video: v.videoPreview || "",
-      sizes: toSizePayload(v.sizes),
-      primary: !!v.primary,
-    }));
-    const primary = processed.find((v) => v.primary) || processed[0];
-    const totalQty = processed
-      .map((v) => v.sizes.reduce((sum, s) => sum + (Number.isFinite(s.stock) ? s.stock : 0), 0))
-      .reduce((a, b) => a + b, 0);
-    fd.set("price", String(primary.price));
-    fd.set("selling_price", String(primary.discountedPrice || primary.price));
-    fd.set("quantity", String(totalQty || form.quantity || 0));
-    fd.append("colorVariants", JSON.stringify(processed));
-    withPrimary.forEach((v) => {
-      v.imagesFiles.forEach((file) => fd.append("variantImages", file));
-      if (v.videoFile) fd.append("variantVideos", v.videoFile);
-    });
-
     try {
-      let url = `${API_BASE}/upload-product`;
-      let method: "POST" | "PATCH" = "POST";
-      if (product?.draft_id) {
-        url = `${API_BASE}/drafts/${product.draft_id}`;
-        method = "PATCH";
-      } else if (!product && status === "draft") {
-        url = `${API_BASE}/drafts`;
-      } else if (product && !product.draft_id) {
-        url = `${API_BASE}/update-product/${product.product_id}`;
-        method = "PATCH";
-      }
-      const res = await fetch(url, { method, body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Upload failed");
+      await submitProduct({
+        product,
+        form,
+        categoryId,
+        status,
+        activeStep: active,
+        description: descriptionHtml,
+        highlights: keyHighlights,
+        variants,
+      });
       setMessage(status === "published" ? "Published successfully." : "Draft saved.");
       onSaved?.();
       onClose?.();
-    } catch (err: any) {
-      setMessage(err.message || "Server error. Check backend.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Server error. Check backend.");
     } finally {
       setBusyAction(null);
     }
@@ -339,7 +284,6 @@ export default function ProductWizard({ product, onSaved, onClose }: Props) {
         busyAction={busyAction}
         onBack={() => setActive(Math.max(1, active - 1))}
         onNext={() => setActive(Math.min(3, active + 1))}
-        onCancel={() => onClose?.()}
         onDraft={() => submit("draft")}
         onPublish={() => submit("published")}
         onRequireCategory={() => setMessage("Select category, sub category, sub child.")}
