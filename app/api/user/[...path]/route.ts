@@ -1,6 +1,9 @@
 import { NextRequest } from "next/server";
 
-const rawBase = process.env.NEXT_PUBLIC_API_URL || "https://purefire-backend.onrender.com";
+const rawBase =
+  process.env.BACKEND_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://pure-fire-ecommerce-backend.onrender.com";
 
 const normalizeBase = (raw: string) => {
   const trimmed = raw.trim();

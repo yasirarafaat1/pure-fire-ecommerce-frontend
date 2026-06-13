@@ -14,9 +14,16 @@ const normalizeBase = (raw: string) => {
 };
 
 const normalizedBase = normalizeBase(backendBase);
-const targetBase = normalizedBase.replace(/\/$/, "").endsWith("/api/admin")
-  ? normalizedBase.replace(/\/$/, "")
-  : `${normalizedBase.replace(/\/$/, "")}/api/admin`;
+const backendRoot = normalizedBase.replace(/\/$/, "");
+const publicReadPaths = new Set([
+  "get-categories",
+  "categories/tree",
+  "get-products",
+  "search-products",
+  "top-products",
+  "banners/public",
+  "settings/public",
+]);
 
 const buildHeaders = (res: Response) => {
   const headers = new Headers();
@@ -36,6 +43,12 @@ async function proxy(
   const { path = [] } = await context.params;
   const joined = path.join("/");
   const search = req.nextUrl.search || "";
+  const isPublicRead = req.method === "GET" && publicReadPaths.has(joined);
+  const targetBase = isPublicRead
+    ? `${backendRoot}/admin`
+    : backendRoot.endsWith("/api/admin")
+      ? backendRoot
+      : `${backendRoot}/api/admin`;
   const url = `${targetBase}/${joined}${search}`;
 
   const init: RequestInit & { duplex?: "half" } = {
