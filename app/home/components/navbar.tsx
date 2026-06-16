@@ -277,6 +277,7 @@ export default function HomeNavbar({ onOpenCart }: Props) {
             })}
             {categoryTree.length === 0 && <div className="text-xs text-[var(--muted)]">No categories</div>}
             <div className="border-black/10 grid gap-2">
+              <Link className="py-2 border-b border-black/10" href="/collections/all">All Collection</Link>
               <Link className="py-2 border-b border-black/10" href="/wishlist">Wishlist</Link>
               <Link className="py-2 border-b border-black/10" href="/orders">Orders</Link>
               <Link className="py-2 border-b border-black/10" href="/return-policy">Return & Exchange Policy</Link>
