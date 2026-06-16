@@ -20,6 +20,7 @@ const staticRoutes: Array<{ path: string; changeFreq: "daily" | "weekly" | "mont
     { path: "/collections/all", changeFreq: "daily", priority: 0.9 },
     { path: "/shipping-info", changeFreq: "monthly", priority: 0.6 },
     { path: "/return-policy", changeFreq: "monthly", priority: 0.6 },
+    { path: "/refund-policy", changeFreq: "monthly", priority: 0.6 },
     { path: "/privacy-policy", changeFreq: "monthly", priority: 0.6 },
     { path: "/terms-and-conditions", changeFreq: "monthly", priority: 0.6 },
     { path: "/faqs", changeFreq: "monthly", priority: 0.6 },

@@ -12,9 +12,29 @@ import { useProductQuery } from "./hooks/useProductQuery";
 import { useStickyColumns } from "./hooks/useStickyColumns";
 import { useProductPageData } from "./hooks/useProductPageData";
 import { useProductViewModel } from "./hooks/useProductViewModel";
+import { openCartModal } from "../cart/cart-events";
 
 const API_BASE = "/api/user";
 const getToken = () => getUserToken();
+
+type ProductCard = {
+  product_id?: string | number;
+  _id?: string | number;
+  name?: string;
+  price?: number; discountedPrice?: number; selling_price?: number; mrp?: number;
+  images?: string[];
+  discount?: string | number;
+};
+type ProductCrumb = { href?: string; label: string };
+type WishlistApiProduct = { product_id?: string | number; _id?: string | number };
+type ReviewApi = {
+  user_name?: string; userName?: string;
+  review_rate?: number | string; rating?: number | string;
+  createdAt?: string;
+  review_text?: string; text?: string; review?: string;
+  review_image?: string;
+  images?: string[];
+};
 
 export default function ProductPageClient() {
   const router = useRouter();
@@ -128,7 +148,7 @@ export default function ProductPageClient() {
       });
       const data = await res.json();
       const ids = new Set<string>(
-        (data?.products || []).map((p: any) => String(p.product_id || p._id || "")),
+        ((data?.products || []) as WishlistApiProduct[]).map((p) => String(p.product_id || p._id || "")),
       );
       setWishlistIds(ids);
       window.dispatchEvent(new Event("wishlist:updated"));
@@ -145,7 +165,7 @@ export default function ProductPageClient() {
         <>
           <div className="md:hidden">
             <nav className="text-[11px] pl-3 text-[var(--muted)] flex flex-wrap gap-1">
-              {breadcrumbs.map((c: any, i: number) => (
+              {(breadcrumbs as ProductCrumb[]).map((c, i) => (
                 <span key={i} className="flex items-center gap-1">
                   {c.href ? (
                     <a href={c.href} className="underline-offset-2 hover:underline font-semibold text-black">
@@ -186,7 +206,7 @@ export default function ProductPageClient() {
             <div ref={rightRef} className={`${stick === "right" ? "md:sticky md:top-4" : ""}`}>
               {product && (
                 <InfoPanel
-                  breadcrumbs={breadcrumbs as any}
+                  breadcrumbs={breadcrumbs as ProductCrumb[]}
                   name={product.name}
                   price={displayPrice}
                   mrp={displayMrp}
@@ -209,7 +229,7 @@ export default function ProductPageClient() {
                   description={product.description || ""}
                   onAddToCart={addToCart}
                   addedToCart={addedToCart}
-                  onGoToCart={() => (window.location.href = "/cart")}
+                  onGoToCart={openCartModal}
                   onBuyNow={async (payload) => {
                     saveBuyNowItem(payload.color, payload.size);
                     window.location.href = "/checkout";
@@ -222,10 +242,10 @@ export default function ProductPageClient() {
           {recentlyViewed.length > 0 && (
             <ProductRail
               title="Recently Viewed"
-              items={recentlyViewed.map((p: any) => ({
+              items={(recentlyViewed as ProductCard[]).map((p) => ({
                 id: p.product_id || p._id,
-                title: p.name,
-                price: p.discountedPrice ?? p.selling_price ?? p.price,
+                title: p.name || "Product",
+                price: p.discountedPrice ?? p.selling_price ?? p.price ?? 0,
                 mrp: p.mrp ?? p.price,
                 image: p.images?.[0] || "",
                 images: p.images || [],
@@ -238,7 +258,7 @@ export default function ProductPageClient() {
 
           <Reviews
             title="Reviews"
-            reviews={reviews.map((r: any) => ({
+            reviews={(reviews as ReviewApi[]).map((r) => ({
               user: r.user_name || r.userName || "User",
               rating: Number(r.review_rate ?? r.rating ?? 5),
               date: r.createdAt ? new Date(r.createdAt).toDateString() : "",
@@ -262,8 +282,8 @@ export default function ProductPageClient() {
                 if (!res.ok) return { ok: false, message: data?.message || "Submit failed." };
                 if (data?.review) setReviews((prev) => [data.review, ...prev]);
                 return { ok: true };
-              } catch (e: any) {
-                return { ok: false, message: e?.message || "Submit failed." };
+              } catch (error) {
+                return { ok: false, message: error instanceof Error ? error.message : "Submit failed." };
               }
             }}
           />

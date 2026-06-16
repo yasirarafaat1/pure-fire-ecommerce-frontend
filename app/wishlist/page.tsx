@@ -1,7 +1,9 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { openCartModal } from "../cart/cart-events";
 import HoverImage from "../components/HoverImage";
 import { getUserEmail, getUserToken } from "../utils/auth";
 import { buildProductHref } from "../utils/productUrl";
@@ -34,13 +36,15 @@ type Product = {
     images?: string[];
   }[];
 };
+type CartLine = { product_id?: string | number };
+type VariantSize = string | { label?: string; size?: string };
 
 export default function WishlistPage() {
   const router = useRouter();
   const pathname = usePathname();
   const [items, setItems] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [cartItems, setCartItems] = useState<any[]>([]);
+  const [cartItems, setCartItems] = useState<CartLine[]>([]);
   const [authReady, setAuthReady] = useState(false);
 
   const loadWishlist = async () => {
@@ -116,7 +120,7 @@ export default function WishlistPage() {
     const color = firstVariant?.color || p.colors?.[0] || "";
     const sizes = Array.isArray(firstVariant?.sizes) ? firstVariant?.sizes : p.sizes || [];
     const size =
-      (sizes as any[])
+      (sizes as VariantSize[])
         .map((s) => (typeof s === "string" ? s : s?.label || s?.size || String(s)))
         .filter((s) => s && s !== "[object Object]")[0] || "";
     return { color, size };
@@ -164,9 +168,9 @@ export default function WishlistPage() {
           <h1 className="text-2xl font-semibold">Wishlist</h1>
           <p className="text-sm text-[var(--muted)]">Saved items you love.</p>
         </div>
-        <a href="/" className="btn btn-ghost">
+        <Link href="/" className="btn btn-ghost">
           Continue shopping
-        </a>
+        </Link>
       </header>
 
       {loading ? (
@@ -185,7 +189,7 @@ export default function WishlistPage() {
             const price = p.discountedPrice ?? p.selling_price ?? p.price ?? 0;
             const mrp = p.mrp ?? p.price ?? 0;
             const images = p.images?.length ? p.images : p.product_image || [];
-            const inCart = cartItems.some((i: any) => String(i.product_id) === String(id));
+            const inCart = cartItems.some((item) => String(item.product_id) === String(id));
             return (
               <div key={String(id)} className="border border-black/20 rounded-[6px] overflow-hidden bg-white grid">
                 <a href={buildProductHref({ id: String(id), name: title })} className="block">
@@ -213,7 +217,7 @@ export default function WishlistPage() {
                   <div className="flex gap-2">
                     <button
                       className="btn btn-ghost flex-1"
-                      onClick={() => (inCart ? (window.location.href = "/cart") : addToCart(p))}
+                      onClick={() => (inCart ? openCartModal() : addToCart(p))}
                     >
                       {inCart ? "Go to cart" : "Add to cart"}
                     </button>

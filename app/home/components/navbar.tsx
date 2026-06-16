@@ -28,7 +28,9 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-export default function HomeNavbar() {
+type Props = { onOpenCart?: () => void };
+
+export default function HomeNavbar({ onOpenCart }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [categoryTree, setCategoryTree] = useState<CategoryNode[]>([]);
@@ -37,8 +39,6 @@ export default function HomeNavbar() {
   const [expandedSub, setExpandedSub] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
-
-
   const searchMode = useMemo(() => pathname.startsWith("/search"), [pathname]);
 
   useEffect(() => {
@@ -134,7 +134,6 @@ export default function HomeNavbar() {
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-black/10">
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-        {/* Left cluster */}
         <div className="flex items-center gap-3">
           {!searchMode && (
             <>
@@ -153,7 +152,6 @@ export default function HomeNavbar() {
           )}
         </div>
 
-        {/* Center logo / search */}
         {!searchMode ? (
           <Link className="flex items-center gap-2 text-lg font-semibold tracking-tight" href="/">
             <Image
@@ -170,10 +168,9 @@ export default function HomeNavbar() {
           <div className="flex-1" aria-hidden />
         )}
 
-        {/* Right cluster */}
         {!searchMode ? (
           <div className="flex items-center gap-3">
-            <button className="btn btn-ghost cursor-pointer !p-2 relative" aria-label="Cart" onClick={() => router.push("/cart")}>
+            <button className="btn btn-ghost cursor-pointer !p-2 relative" aria-label="Cart" onClick={onOpenCart}>
               <IconCart />
               {cartCount > 0 && (
                 <span className="absolute top-1 right-0.5 w-2.5 h-2.5 rounded-full bg-black border border-white" />
@@ -198,7 +195,6 @@ export default function HomeNavbar() {
         )}
       </div>
 
-      {/* Slide-in menu */}
       <div
         className={`fixed inset-0 z-20 transition-opacity duration-200 ${menuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
           }`}

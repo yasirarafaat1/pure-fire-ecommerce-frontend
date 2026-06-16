@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { openCartModal } from "../../cart/cart-events";
 import { getUserToken } from "../../utils/auth";
 import { buildProductHref } from "../../utils/productUrl";
 
@@ -26,6 +27,8 @@ type Product = {
     images?: string[];
   }[];
 };
+type CartLine = { product_id?: string | number };
+type VariantSize = string | { label?: string; size?: string };
 
 const getEmail = () => {
   const email = (localStorage.getItem("user_email") || "guest@purefire.local").trim();
@@ -36,7 +39,7 @@ const getEmail = () => {
 export default function WishlistSection({ email }: { email: string }) {
   const [items, setItems] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [cartItems, setCartItems] = useState<any[]>([]);
+  const [cartItems, setCartItems] = useState<CartLine[]>([]);
   const [cartId, setCartId] = useState("");
 
   const loadWishlist = async () => {
@@ -61,7 +64,7 @@ export default function WishlistSection({ email }: { email: string }) {
     const color = firstVariant?.color || p.colors?.[0] || "";
     const sizes = Array.isArray(firstVariant?.sizes) ? firstVariant?.sizes : p.sizes || [];
     const size =
-      (sizes as any[])
+      (sizes as VariantSize[])
         .map((s) => (typeof s === "string" ? s : s?.label || s?.size || String(s)))
         .filter((s) => s && s !== "[object Object]")[0] || "";
     return { color, size };
@@ -178,7 +181,7 @@ export default function WishlistSection({ email }: { email: string }) {
         const image = p.images?.[0] || p.product_image?.[0] || "";
         const { color, size } = pickDefaultVariant(p);
         const href = buildProductHref({ id: String(id), name: title, color, size });
-        const inCart = cartItems.some((i: any) => String(i.product_id) === String(id));
+        const inCart = cartItems.some((item) => String(item.product_id) === String(id));
         return (
           <div key={String(id)} className="flex items-center justify-between gap-5">
             <div className="flex items-center gap-3">
@@ -195,8 +198,8 @@ export default function WishlistSection({ email }: { email: string }) {
               </a>
               <div>
                 <div className="text-sm font-semibold">{title}</div>
-                <span className="font-semibold text-[var(--muted)]">₹{price}</span>
-                {mrp > price ? <span className="text-xs text-[#999] line-through">₹{mrp}</span> : null}
+                <span className="font-semibold text-[var(--muted)]">{"\u20B9"}{price}</span>
+                {mrp > price ? <span className="text-xs text-[#999] line-through">{"\u20B9"}{mrp}</span> : null}
                 {mrp > price ? (
                   <span className="text-xs font-semibold text-green-700">
                     {Math.round(((mrp - price) / mrp) * 100)}% off
@@ -207,7 +210,7 @@ export default function WishlistSection({ email }: { email: string }) {
             <div className="flex items-center gap-2 flex-wrap md:flex-nowrap">
               <button
                 className="btn btn-ghost flex-1 md:flex-none"
-                onClick={() => (inCart ? (window.location.href = "/cart") : addToCart(p))}
+                onClick={() => (inCart ? openCartModal() : addToCart(p))}
               >
                 {inCart ? "Go to cart" : "Add to cart"}
               </button>
