@@ -9,6 +9,7 @@ import {
   ChevronRight,
   CircleDollarSign,
   Contact,
+  FileText,
   FolderTree,
   Gauge,
   ImageIcon,
@@ -45,6 +46,7 @@ const sections: { label: string; items: Item[] }[] = [
     label: "Sales",
     items: [
       { label: "Orders", href: "/admin/orders", icon: PackageCheck },
+      { label: "Invoices", href: "/admin/invoices", icon: FileText },
       { label: "Returns", href: "/admin/returns", icon: RotateCcw },
     ],
   },

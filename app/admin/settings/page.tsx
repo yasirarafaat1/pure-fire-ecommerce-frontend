@@ -6,13 +6,13 @@ import { AdminErrorState, AdminLoadingState } from "../components/AdminStates";
 import { AdminApiError, adminApi } from "../lib/adminApi";
 
 type Settings = {
-  storeName: string; supportEmail: string; supportPhone: string; address: string; gstNumber: string;
+  storeName: string; supportEmail: string; supportPhone: string; address: string; gstin?: string; gstNumber?: string; gstPercentage?: number | string | null;
   socialLinks: { instagram?: string; facebook?: string; youtube?: string; twitter?: string };
   seo: { title?: string; description?: string; logoUrl?: string; faviconUrl?: string };
   shipping: { defaultCourier?: string; freeShippingThreshold?: number };
 };
 
-const empty: Settings = { storeName: "", supportEmail: "", supportPhone: "", address: "", gstNumber: "", socialLinks: {}, seo: {}, shipping: {} };
+const empty: Settings = { storeName: "", supportEmail: "", supportPhone: "", address: "", gstin: "", gstNumber: "", gstPercentage: "", socialLinks: {}, seo: {}, shipping: {} };
 
 export default function SettingsPage() {
   const [form, setForm] = useState<Settings>(empty);
@@ -47,6 +47,8 @@ export default function SettingsPage() {
           <Field label="Support email" type="email" value={form.supportEmail} onChange={(value) => setForm({ ...form, supportEmail: value })} />
           <Field label="Support phone" value={form.supportPhone} onChange={(value) => setForm({ ...form, supportPhone: value })} />
           <Field label="Address" value={form.address} onChange={(value) => setForm({ ...form, address: value })} />
+          <Field label="GSTIN" value={form.gstin || form.gstNumber || ""} onChange={(value) => setForm({ ...form, gstin: value, gstNumber: value })} />
+          <Field label="GST percentage" type="number" value={String(form.gstPercentage ?? "")} onChange={(value) => setForm({ ...form, gstPercentage: value })} />
         </SettingsCard>
         <SettingsCard title="Operations">
           {["instagram", "facebook", "youtube", "twitter"].map((network) => <Field key={network} label={`${network[0].toUpperCase()}${network.slice(1)} URL`} value={form.socialLinks?.[network as keyof Settings["socialLinks"]] || ""} onChange={(value) => setForm({ ...form, socialLinks: { ...form.socialLinks, [network]: value } })} />)}
@@ -61,5 +63,5 @@ function SettingsCard({ title, children }: { title: string; children: React.Reac
   return <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="font-semibold">{title}</h3><div className="mt-4 grid gap-4 md:grid-cols-2">{children}</div></section>;
 }
 function Field({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (value: string) => void; type?: string }) {
-  return <label className="grid gap-1.5 text-sm font-medium">{label}<input required={label === "Store name"} type={type} className="rounded-lg border border-slate-300 px-3 py-2.5" value={value} onChange={(event) => onChange(event.target.value)} /></label>;
+  return <label className="grid gap-1.5 text-sm font-medium">{label}<input min={type === "number" ? 0 : undefined} step={type === "number" ? "0.01" : undefined} required={label === "Store name"} type={type} className="rounded-lg border border-slate-300 px-3 py-2.5" value={value} onChange={(event) => onChange(event.target.value)} /></label>;
 }

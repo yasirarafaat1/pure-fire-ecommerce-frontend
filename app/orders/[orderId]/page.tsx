@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
+import { FiDownload } from "react-icons/fi";
 import DeliveryAddressBox from "./components/DeliveryAddressBox";
 import DeliveryProgress from "./components/DeliveryProgress";
 import ItemsGrid from "./components/ItemsGrid";
@@ -14,6 +16,7 @@ import CancelOrderPanel from "./components/CancelOrderPanel";
 import ReturnOrderPanel from "./components/ReturnOrderPanel";
 import useOrderDetail from "./components/useOrderDetail";
 import { formatMoney, formatOrderId, formatStatus } from "./components/orderUtils";
+import { getUserToken } from "../../utils/auth";
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -21,6 +24,7 @@ export default function OrderDetailPage() {
   const [copiedKey, setCopiedKey] = useState<"order" | "txn" | null>(null);
   const [updatesOpen, setUpdatesOpen] = useState(false);
   const [updatesVisible, setUpdatesVisible] = useState(false);
+  const [invoiceMessage, setInvoiceMessage] = useState("");
   const { authReady, order, setOrder, loading, error } = useOrderDetail(orderId);
 
   useEffect(() => {
@@ -78,9 +82,9 @@ export default function OrderDetailPage() {
             We could not locate this order. Please check the order id.
           </div>
           <div>
-            <a href="/orders" className="btn btn-ghost px-4 py-2">
+            <Link href="/orders" className="btn btn-ghost px-4 py-2">
               Back to orders
-            </a>
+            </Link>
           </div>
         </div>
       </main>
@@ -140,6 +144,30 @@ export default function OrderDetailPage() {
     }
   };
 
+  const downloadInvoice = async () => {
+    setInvoiceMessage("");
+    try {
+      const response = await fetch(`/api/user/orders/${orderKey}/invoice/download`, {
+        headers: { "x-user-token": getUserToken() },
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.message || "Invoice is not available yet. Please contact support.");
+      }
+      const blob = await response.blob();
+      const href = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = href;
+      anchor.download = `invoice-${orderDisplayId}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(href);
+    } catch (downloadError) {
+      setInvoiceMessage(downloadError instanceof Error ? downloadError.message : "Invoice is not available yet. Please contact support.");
+    }
+  };
+
   return (
     <main className="max-w-6xl mx-auto px-4 py-6">
       <div className="grid gap-5">
@@ -149,6 +177,18 @@ export default function OrderDetailPage() {
           copiedKey={copiedKey}
           onCopy={copyText}
         />
+        {statusKey.includes("deliver") && (
+          <div className="flex flex-col gap-2 rounded-[5px] border border-black/15 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="text-sm font-semibold">Invoice</div>
+              {invoiceMessage && <div className="mt-1 text-xs text-[var(--muted)]">{invoiceMessage}</div>}
+            </div>
+            <button className="btn btn-ghost inline-flex items-center gap-2 px-4 py-2" onClick={downloadInvoice}>
+              <FiDownload />
+              Download Invoice
+            </button>
+          </div>
+        )}
 
         <DeliveryProgress
           steps={steps}

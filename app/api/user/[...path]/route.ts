@@ -18,9 +18,11 @@ const targetBase = normalizeBase(rawBase).replace(/\/$/, "");
 const buildHeaders = (res: Response) => {
   const headers = new Headers();
   const contentType = res.headers.get("content-type");
+  const contentDisposition = res.headers.get("content-disposition");
   const setCookie = res.headers.get("set-cookie");
   const cacheControl = res.headers.get("cache-control");
   if (contentType) headers.set("content-type", contentType);
+  if (contentDisposition) headers.set("content-disposition", contentDisposition);
   if (cacheControl) headers.set("cache-control", cacheControl);
   if (setCookie) headers.set("set-cookie", setCookie);
   return headers;
