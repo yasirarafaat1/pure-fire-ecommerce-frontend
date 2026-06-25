@@ -1,11 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import Image from "next/image";
+import type { ComponentType } from "react";
 import {
   Activity,
   Boxes,
+  ChevronLeft,
   ChevronRight,
   CircleDollarSign,
   Contact,
@@ -27,12 +29,15 @@ import type { AdminRole } from "../types/admin";
 type Item = {
   label: string;
   href: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: ComponentType<{ size?: number; className?: string }>;
   roles?: AdminRole[];
 };
 
 const sections: { label: string; items: Item[] }[] = [
-  { label: "Overview", items: [{ label: "Dashboard", href: "/admin/dashboard", icon: Gauge }] },
+  {
+    label: "Overview",
+    items: [{ label: "Dashboard", href: "/admin/dashboard", icon: Gauge }],
+  },
   {
     label: "Catalog",
     items: [
@@ -74,10 +79,25 @@ const sections: { label: string; items: Item[] }[] = [
   },
 ];
 
-type Props = { open: boolean; onClose: () => void; role: AdminRole };
+type Props = {
+  open: boolean;
+  onClose: () => void;
+  role: AdminRole;
+  collapsed: boolean;
+  onCollapsedChange: (collapsed: boolean) => void;
+};
 
-export default function AdminSidebar({ open, onClose, role }: Props) {
+export default function AdminSidebar({
+  open,
+  onClose,
+  role,
+  collapsed,
+  onCollapsedChange,
+}: Props) {
   const pathname = usePathname();
+
+  const sidebarWidth = collapsed ? "lg:w-[76px]" : "lg:w-[260px]";
+
   return (
     <>
       {open && (
@@ -87,52 +107,119 @@ export default function AdminSidebar({ open, onClose, role }: Props) {
           onClick={onClose}
         />
       )}
+
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r border-slate-200 bg-slate-950 text-slate-200 transition-transform lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"
-          }`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r border-slate-800 bg-slate-950 text-slate-200 transition-all duration-300 ease-in-out lg:translate-x-0 ${sidebarWidth} ${
+          open ? "translate-x-0" : "-translate-x-full"
+        }`}
       >
-        <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
-          <Link href="/admin/dashboard" className="flex items-center gap-2 font-semibold tracking-tight text-white">
+        <div
+          className={`flex h-16 items-center border-b border-white/10 ${
+            collapsed ? "justify-center px-3" : "justify-between px-5"
+          }`}
+        >
+          <Link
+            href="/admin/dashboard"
+            className={`flex min-w-0 items-center font-semibold tracking-tight text-white ${
+              collapsed ? "justify-center" : "gap-2"
+            }`}
+            onClick={onClose}
+            title="PureFire Admin"
+          >
             <Image
               src="/favicon.png"
               alt=""
               width={28}
               height={28}
-              className="h-7 w-7 rounded-full object-cover"
+              className="h-7 w-7 shrink-0 rounded-full object-cover"
               priority
             />
-            PureFire Admin
+
+            {!collapsed && <span className="truncate">PureFire Admin</span>}
           </Link>
-          <button className="rounded-md p-2 hover:bg-white/10 lg:hidden" onClick={onClose}>
-            <X size={18} />
-          </button>
+
+          {!collapsed && (
+            <button className="rounded-md p-2 hover:bg-white/10 lg:hidden" onClick={onClose}>
+              <X size={18} />
+            </button>
+          )}
+
+          {!collapsed && (
+            <button
+              aria-label="Collapse admin sidebar"
+              className="hidden rounded-md p-2 text-slate-300 hover:bg-white/10 hover:text-white lg:inline-flex"
+              onClick={() => onCollapsedChange(true)}
+              type="button"
+            >
+              <ChevronLeft size={18} />
+            </button>
+          )}
         </div>
-        <nav className="flex-1 overflow-y-auto px-3 py-5">
+
+        {collapsed && (
+          <div className="hidden border-b border-white/10 px-3 py-3 lg:block">
+            <button
+              aria-label="Expand admin sidebar"
+              className="inline-flex h-10 w-full items-center justify-center rounded-lg text-slate-300 hover:bg-white/10 hover:text-white"
+              onClick={() => onCollapsedChange(false)}
+              type="button"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        )}
+
+        <nav className={`flex-1 overflow-y-auto overflow-x-hidden py-5 ${collapsed ? "px-2" : "px-3"}`}>
           {sections.map((section) => {
             const items = section.items.filter((item) => !item.roles || item.roles.includes(role));
+
             if (!items.length) return null;
+
             return (
-              <div className="mb-6" key={section.label}>
-                <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  {section.label}
-                </p>
+              <div className={collapsed ? "mb-4" : "mb-6"} key={section.label}>
+                {!collapsed ? (
+                  <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    {section.label}
+                  </p>
+                ) : (
+                  <div className="mx-auto mb-2 h-px w-8 bg-white/10" />
+                )}
+
                 <div className="grid gap-1">
                   {items.map((item) => {
                     const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
                     const Icon = item.icon;
+
                     return (
                       <Link
                         key={item.href}
                         href={item.href}
                         onClick={onClose}
-                        className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${active
-                          ? "bg-white font-medium !text-slate-950"
-                          : "text-slate-300 hover:bg-white/10 hover:text-white"
-                          }`}
+                        title={collapsed ? item.label : undefined}
+                        className={`group flex items-center rounded-lg text-sm transition ${
+                          collapsed ? "h-11 justify-center px-0" : "gap-3 px-3 py-2.5"
+                        } ${
+                          active
+                            ? "bg-white font-medium !text-slate-950"
+                            : "text-slate-300 hover:bg-white/10 hover:text-white"
+                        }`}
                       >
-                        <Icon size={17} className={active ? "text-slate-950" : undefined} />
-                        <span className={`flex-1 ${active ? "text-slate-950" : ""}`}>{item.label}</span>
-                        {active && <ChevronRight size={14} />}
+                        <Icon
+                          size={collapsed ? 19 : 17}
+                          className={`shrink-0 ${
+                            active ? "text-slate-950" : "text-slate-300 group-hover:text-white"
+                          }`}
+                        />
+
+                        {!collapsed && (
+                          <>
+                            <span className={`min-w-0 flex-1 truncate ${active ? "text-slate-950" : ""}`}>
+                              {item.label}
+                            </span>
+
+                            {active && <ChevronRight size={14} className="shrink-0 text-slate-950" />}
+                          </>
+                        )}
                       </Link>
                     );
                   })}
