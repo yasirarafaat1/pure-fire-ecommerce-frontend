@@ -565,8 +565,8 @@ function BannerModal({
               />
             </label>
 
-            <label className="grid gap-1.5 text-sm font-medium text-slate-700">
-              Target URL <span className="text-red-600">*</span>
+            <label className="grid gap-1.5 flex items-center text-sm font-medium text-slate-700">
+              Target URL *
               <input
                 className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
                 placeholder="https://example.com/collection"
@@ -604,7 +604,7 @@ function BannerModal({
               </span>
             </label>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-wrap items-end gap-3">
               <label className="grid gap-1.5 text-sm font-medium text-slate-700">
                 Display order
                 <input
@@ -628,7 +628,7 @@ function BannerModal({
             </div>
           </div>
 
-          <div className="grid h-fit gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <div className="lg:sticky top-4 grid h-fit gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
             <p className="text-sm font-semibold text-slate-700">Preview</p>
 
             <div className="aspect-[16/9] overflow-hidden rounded-lg border border-slate-200 bg-white">
