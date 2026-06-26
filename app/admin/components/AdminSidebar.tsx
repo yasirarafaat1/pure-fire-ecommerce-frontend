@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
 import {
   Activity,
+  BarChart3,
   Boxes,
   ChevronLeft,
   ChevronRight,
@@ -36,7 +37,10 @@ type Item = {
 const sections: { label: string; items: Item[] }[] = [
   {
     label: "Overview",
-    items: [{ label: "Dashboard", href: "/admin/dashboard", icon: Gauge }],
+    items: [
+      { label: "Dashboard", href: "/admin/dashboard", icon: Gauge },
+      { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
+    ],
   },
   {
     label: "Catalog",

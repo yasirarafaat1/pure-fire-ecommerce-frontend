@@ -213,7 +213,7 @@ export default function CategoriesPage() {
         ) : !list.items.length ? (
           <AdminEmptyState title="No categories" description="Create the first category." />
         ) : (
-          <div className="min-w-0 max-w-full overflow-x-auto">
+          <div className="min-w-0 max-w-full">
             <table className="w-full min-w-[920px] table-fixed text-left text-sm">
               <colgroup>
                 <col className="w-[320px]" />
@@ -226,7 +226,7 @@ export default function CategoriesPage() {
 
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
-                  {["Category", "Parent / Path", "Level", "Sort", "Status", "Actions"].map((label) => (
+                  {["Category", "Parent / Path", "Level", "Sort", "Actions"].map((label) => (
                     <th className="whitespace-nowrap px-4 py-3 font-semibold" key={label}>
                       {label}
                     </th>
@@ -272,10 +272,6 @@ export default function CategoriesPage() {
                         {category.sortOrder ?? 0}
                       </td>
 
-                      <td className="whitespace-nowrap px-4 py-3 align-middle">
-                        <AdminStatusBadge status={category.status} />
-                      </td>
-
                       <td className="px-4 py-3 align-middle">
                         <div className="flex items-center gap-2 whitespace-nowrap">
                           <button
@@ -284,7 +280,6 @@ export default function CategoriesPage() {
                             type="button"
                           >
                             <Pencil size={14} />
-                            Edit
                           </button>
 
                           <button
@@ -293,7 +288,6 @@ export default function CategoriesPage() {
                             type="button"
                           >
                             <Trash2 size={14} />
-                            Delete
                           </button>
                         </div>
                       </td>
