@@ -22,54 +22,68 @@ export default function BannerCarousel() {
   const [visible, setVisible] = useState(1);
   const [slides, setSlides] = useState<Slide[]>([]);
   const [index, setIndex] = useState(0);
-  const [transition, setTransition] = useState(true);
+  const [transition, setTransition] = useState(false);
   const [hovering, setHovering] = useState(false);
   const [isCoarse, setIsCoarse] = useState(false);
 
-  const trackRef = useRef<HTMLDivElement>(null);
   const wheelLockRef = useRef(false);
   const dragStartXRef = useRef<number | null>(null);
   const dragMovedRef = useRef(false);
 
-  // mount & breakpoints
   useEffect(() => {
     setMounted(true);
+
     const apply = () => setVisible(visibleForWidth(window.innerWidth));
     apply();
+
     window.addEventListener("resize", apply);
     return () => window.removeEventListener("resize", apply);
   }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+
     const mq = window.matchMedia("(pointer: coarse)");
     const update = () => setIsCoarse(mq.matches);
+
     update();
+
     if (mq.addEventListener) mq.addEventListener("change", update);
     else mq.addListener(update);
+
     return () => {
       if (mq.removeEventListener) mq.removeEventListener("change", update);
       else mq.removeListener(update);
     };
   }, []);
 
-  // fetch banners on client
   useEffect(() => {
     if (!mounted) return;
+
     const cached = window.localStorage.getItem("banner_cache");
+
     if (cached) {
       try {
         const parsed: Slide[] = JSON.parse(cached);
-        if (parsed.length) setSlides(parsed);
+        if (Array.isArray(parsed) && parsed.length) setSlides(parsed);
       } catch {
         /* ignore */
       }
     }
+
     const load = async () => {
       try {
-        const res = await cachedFetch("/api/admin/banners/public", undefined, 600000, true);
+        const res = await cachedFetch(
+          "/api/admin/banners/public",
+          undefined,
+          600000,
+          true,
+        );
+
         if (!res.ok) throw new Error("fail");
+
         const data = await res.json();
+
         const banners = (data?.banners || [])
           .filter((b: any) => b.imageUrl && b.targetUrl)
           .slice(0, 10)
@@ -78,6 +92,7 @@ export default function BannerCarousel() {
             alt: b.title || `Banner ${i + 1}`,
             href: b.targetUrl,
           }));
+
         if (banners.length) {
           setSlides(banners);
           window.localStorage.setItem("banner_cache", JSON.stringify(banners));
@@ -86,62 +101,105 @@ export default function BannerCarousel() {
         /* ignore */
       }
     };
+
     load();
   }, [mounted]);
 
   const baseSlides = slides.length ? slides : placeholders;
+  const cloneCount = Math.min(visible, baseSlides.length);
+
   const trackSlides = useMemo(() => {
-    const clones = baseSlides.slice(0, visible);
-    return [...baseSlides, ...clones];
-  }, [baseSlides, visible]);
+    if (!baseSlides.length) return [];
+
+    const beforeClones = baseSlides.slice(-cloneCount);
+    const afterClones = baseSlides.slice(0, cloneCount);
+
+    return [...beforeClones, ...baseSlides, ...afterClones];
+  }, [baseSlides, cloneCount]);
+
+  useEffect(() => {
+    if (!mounted || !baseSlides.length) return;
+
+    setTransition(false);
+    setIndex(cloneCount);
+
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setTransition(true));
+    });
+
+    return () => cancelAnimationFrame(raf);
+  }, [mounted, baseSlides.length, cloneCount]);
 
   const step = (dir: 1 | -1) => {
     if (!baseSlides.length) return;
+
     setTransition(true);
-    setIndex((prev) => {
-      const next = (prev + dir + baseSlides.length) % baseSlides.length;
-      return next;
-    });
+    setIndex((prev) => prev + dir);
   };
 
-  // auto-advance with snapback
   useEffect(() => {
     if (!mounted || !baseSlides.length) return;
     if (hovering) return;
+
     const id = setInterval(() => {
-      setTransition(true);
-      setIndex((prev) => prev + 1);
+      step(1);
     }, 3200);
+
     return () => clearInterval(id);
   }, [mounted, baseSlides.length, hovering]);
 
-  // handle seamless loop
-  useEffect(() => {
-    if (!mounted) return;
-    if (index === baseSlides.length) {
-      // reached clone, snap without anim
-      setTimeout(() => {
-        setTransition(false);
-        setIndex(0);
-      }, 10);
+  const handleTransitionEnd = (e: React.TransitionEvent<HTMLDivElement>) => {
+    if (e.propertyName !== "transform") return;
+    if (!baseSlides.length) return;
+
+    const firstRealIndex = cloneCount;
+    const lastRealIndex = cloneCount + baseSlides.length - 1;
+    const afterCloneStart = cloneCount + baseSlides.length;
+
+    if (index >= afterCloneStart) {
+      setTransition(false);
+      setIndex(firstRealIndex);
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setTransition(true));
+      });
+
+      return;
     }
-  }, [index, baseSlides.length, mounted]);
+
+    if (index < firstRealIndex) {
+      setTransition(false);
+      setIndex(lastRealIndex);
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setTransition(true));
+      });
+    }
+  };
 
   const gapPx = 16;
   const translate = `translateX(-${index * (100 / visible)}%)`;
   const width = `calc(${100 / visible}% - ${gapPx - gapPx / visible}px)`;
 
+  const activeDot = baseSlides.length
+    ? ((index - cloneCount) % baseSlides.length + baseSlides.length) %
+      baseSlides.length
+    : 0;
+
   const onDot = (i: number) => {
     setTransition(true);
-    setIndex(i);
+    setIndex(cloneCount + i);
   };
 
   const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     if (Math.abs(e.deltaX) < 10 && Math.abs(e.deltaY) < 10) return;
     if (wheelLockRef.current) return;
+
     wheelLockRef.current = true;
+
     const dir = e.deltaY > 0 || e.deltaX > 0 ? 1 : -1;
     step(dir);
+
     setTimeout(() => {
       wheelLockRef.current = false;
     }, 350);
@@ -149,22 +207,28 @@ export default function BannerCarousel() {
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
+
     dragStartXRef.current = e.clientX;
     dragMovedRef.current = false;
   };
 
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (dragStartXRef.current === null) return;
+
     const delta = e.clientX - dragStartXRef.current;
     if (Math.abs(delta) > 12) dragMovedRef.current = true;
   };
 
   const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     const startX = dragStartXRef.current;
+
     if (startX === null) return;
+
     const delta = e.clientX - startX;
     dragStartXRef.current = null;
+
     if (Math.abs(delta) < 40) return;
+
     step(delta < 0 ? 1 : -1);
   };
 
@@ -190,16 +254,14 @@ export default function BannerCarousel() {
         style={{ touchAction: "pan-y" }}
       >
         <div
-          ref={trackRef}
-          className={`flex gap-0 lg:gap-40 ${transition ? "transition-transform duration-500 ease-out" : ""}`}
+          className={`flex gap-0 lg:gap-40 ${
+            transition ? "transition-transform duration-500 ease-out" : ""
+          }`}
           style={{ transform: translate }}
+          onTransitionEnd={handleTransitionEnd}
         >
           {trackSlides.map((slide, i) => (
-            <div
-              key={slide?.src + i}
-              className="shrink-0"
-              style={{ width }}
-            >
+            <div key={`${slide?.src || slide.alt}-${i}`} className="shrink-0" style={{ width }}>
               <div
                 className="w-full h-[227px] w-[400px] sm:w-[300px] md:w-[500px] sm:h-[220px] md:h-[240px] gap-20 py-5 px-2 lg:p-0 cursor-pointer rounded-[5px] border border-black/10 overflow-hidden"
                 role="button"
@@ -209,17 +271,26 @@ export default function BannerCarousel() {
                     dragMovedRef.current = false;
                     return;
                   }
+
                   if (!isCoarse) return;
+
                   slide?.href && window.open(slide.href, "_self");
                 }}
                 onDoubleClick={() => slide?.href && window.open(slide.href, "_self")}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && slide?.href) window.open(slide.href, "_self");
+                  if (e.key === "Enter" && slide?.href) {
+                    window.open(slide.href, "_self");
+                  }
                 }}
               >
                 {slide?.src ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={slide.src} alt={slide.alt} className="w-full h-full object-cover rounded-[5px]" loading="lazy" />
+                  <img
+                    src={slide.src}
+                    alt={slide.alt}
+                    className="w-full h-full object-cover rounded-[5px]"
+                    loading="lazy"
+                  />
                 ) : (
                   <div className="w-full h-full bg-black/5 animate-pulse" aria-hidden />
                 )}
@@ -228,14 +299,15 @@ export default function BannerCarousel() {
           ))}
         </div>
       </div>
+
       <div className="flex justify-center gap-2">
         {baseSlides.map((_, i) => (
           <button
             key={i}
             onClick={() => onDot(i)}
             aria-label={`Go to slide ${i + 1}`}
-            className={`h-1 w-1 rounded-full cursor-pointer transition-all ${
-              i === (index % baseSlides.length) ? "w-4 bg-black" : "w-1.5 bg-black/30"
+            className={`h-1 rounded-full cursor-pointer transition-all ${
+              i === activeDot ? "w-4 bg-black" : "w-1.5 bg-black/30"
             }`}
           />
         ))}
