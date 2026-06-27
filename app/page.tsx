@@ -5,6 +5,8 @@ import BestSellers from "./home/components/best-sellers";
 import TopProducts from "./home/components/top-products";
 import SuggestedProducts from "./components/SuggestedProducts";
 import QualityMarquee from "./home/components/quality-marquee";
+import CustomerReviewsMarquee from "./home/components/customerreviewsmarquee";
+import InstagramReelsMarquee from "./home/components/insta-reels";
 
 export default function Home() {
   return (
@@ -15,6 +17,8 @@ export default function Home() {
       <NewArrivals />
       <SuggestedProducts />
       <BestSellers />
+      <CustomerReviewsMarquee />
+      <InstagramReelsMarquee />
       <QualityMarquee />
     </div>
   );

@@ -223,6 +223,367 @@ export default function HomeNavbar({ onOpenCart }: Props) {
 
   return (
     <>
+      <style jsx>{`
+        @keyframes navShine {
+          0% {
+            transform: translateX(-150%) rotate(18deg);
+            opacity: 0;
+          }
+          15% {
+            opacity: 0.75;
+          }
+          80% {
+            opacity: 0.75;
+          }
+          100% {
+            transform: translateX(170%) rotate(18deg);
+            opacity: 0;
+          }
+        }
+
+        @keyframes cartBadgePulse {
+          0%,
+          100% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.08);
+          }
+        }
+
+        .nav-icon-button {
+          position: relative;
+          isolation: isolate;
+          overflow: hidden;
+        }
+
+        .nav-icon-button::before {
+          content: "";
+          position: absolute;
+          inset: 2px;
+          z-index: 0;
+          border-radius: 9999px;
+          background:
+            radial-gradient(circle at 30% 18%, rgba(255, 255, 255, 0.32), transparent 36%),
+            linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
+          opacity: 0;
+          transform: scale(0.72);
+          transition:
+            opacity 360ms ease,
+            transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .nav-icon-button::after {
+          content: "";
+          position: absolute;
+          top: -35%;
+          left: -55%;
+          z-index: 1;
+          height: 170%;
+          width: 42%;
+          border-radius: 9999px;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.52),
+            transparent
+          );
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        .nav-icon-button:hover {
+          border-color: rgba(0, 0, 0, 0.28);
+          background: #090909;
+          color: #ffffff;
+          box-shadow:
+            0 12px 30px rgba(0, 0, 0, 0.16),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+        }
+
+        .nav-icon-button:hover::before {
+          opacity: 1;
+          transform: scale(1);
+        }
+
+        .nav-icon-button:hover::after {
+          animation: navShine 900ms ease-in-out forwards;
+        }
+
+        .nav-icon-button:focus-visible {
+          outline: none;
+          box-shadow:
+            0 0 0 3px rgba(0, 0, 0, 0.12),
+            0 12px 30px rgba(0, 0, 0, 0.16);
+        }
+
+        .nav-icon-glyph {
+          position: relative;
+          z-index: 2;
+          display: inline-flex;
+          transition:
+            transform 380ms cubic-bezier(0.22, 1, 0.36, 1),
+            opacity 260ms ease;
+        }
+.nav-icon-glyph svg {
+  overflow: visible;
+}
+
+.nav-icon-glyph {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  transition:
+    transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 260ms ease;
+}
+
+/* Menu: lines reshift, no rotate */
+.nav-menu-button:hover .nav-icon-glyph {
+  transform: scale(1.04);
+}
+
+.nav-menu-button:hover .nav-icon-glyph svg > *:nth-child(1) {
+  transform: translateX(-2.5px);
+}
+
+.nav-menu-button:hover .nav-icon-glyph svg > *:nth-child(2) {
+  transform: translateX(3px);
+}
+
+.nav-menu-button:hover .nav-icon-glyph svg > *:nth-child(3) {
+  transform: translateX(-1.5px);
+}
+
+/* Search: lens slight focus, no jump */
+.nav-search-button:hover .nav-icon-glyph {
+  transform: scale(1.05);
+}
+
+.nav-search-button:hover .nav-icon-glyph svg > *:nth-child(1) {
+  transform: scale(1.04);
+}
+
+.nav-search-button:hover .nav-icon-glyph svg > *:nth-child(2) {
+  transform: translate(1.5px, 1.5px);
+}
+
+/* Cart: basket smooth reshift */
+.nav-cart-button:hover .nav-icon-glyph {
+  transform: scale(1.045);
+}
+
+.nav-cart-button:hover .nav-icon-glyph svg > *:nth-child(1) {
+  transform: translateX(-1.5px);
+}
+
+.nav-cart-button:hover .nav-icon-glyph svg > *:nth-child(2) {
+  transform: translateX(2px);
+}
+
+.nav-cart-button:hover .nav-icon-glyph svg > *:nth-child(3) {
+  transform: translateY(-1.5px);
+}
+
+/* User: premium soft focus */
+.nav-user-button:hover .nav-icon-glyph {
+  transform: scale(1.05);
+}
+
+.nav-user-button:hover .nav-icon-glyph svg > *:nth-child(1) {
+  transform: translateY(-1.5px) scale(1.03);
+}
+
+.nav-user-button:hover .nav-icon-glyph svg > *:nth-child(2) {
+  transform: translateY(1.5px) scale(1.02);
+}
+
+/* Back: arrow slides slightly left */
+.nav-back-button:hover .nav-icon-glyph {
+  transform: translateX(-2px) scale(1.04);
+}
+
+        .nav-brand {
+          position: relative;
+          isolation: isolate;
+        }
+
+        .nav-brand::after {
+          content: "";
+          position: absolute;
+          left: 18px;
+          right: 18px;
+          bottom: 2px;
+          height: 1px;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(0, 0, 0, 0.45),
+            transparent
+          );
+          opacity: 0;
+          transform: scaleX(0.2);
+          transition:
+            opacity 320ms ease,
+            transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .nav-brand:hover::after {
+          opacity: 1;
+          transform: scaleX(1);
+        }
+
+        .nav-brand-logo {
+          transition:
+            transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+            box-shadow 320ms ease,
+            border-color 320ms ease;
+        }
+
+        .nav-brand:hover .nav-brand-logo {
+          transform: scale(1.045);
+          border-color: rgba(0, 0, 0, 0.22);
+          box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+        }
+
+        .nav-brand-text {
+          transition:
+            letter-spacing 360ms ease,
+            opacity 300ms ease;
+        }
+
+        .nav-brand:hover .nav-brand-text {
+          letter-spacing: -0.01em;
+          opacity: 0.88;
+        }
+
+        .nav-cart-badge {
+          animation: cartBadgePulse 2.4s ease-in-out infinite;
+        }
+
+        .nav-support-button {
+          position: relative;
+          isolation: isolate;
+          overflow: hidden;
+        }
+
+        .nav-support-button::before {
+          content: "";
+          position: absolute;
+          inset: 1px;
+          z-index: 0;
+          border-radius: 9999px;
+          background:
+            radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.28), transparent 35%),
+            linear-gradient(135deg, rgba(255, 255, 255, 0.16), transparent);
+          opacity: 0;
+          transition: opacity 320ms ease;
+        }
+
+        .nav-support-button::after {
+          content: "";
+          position: absolute;
+          top: -40%;
+          left: -50%;
+          z-index: 1;
+          height: 180%;
+          width: 36%;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.46),
+            transparent
+          );
+          opacity: 0;
+          transform: rotate(18deg);
+          pointer-events: none;
+        }
+
+        .nav-support-button:hover {
+          box-shadow:
+            0 12px 34px rgba(0, 0, 0, 0.18),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+        }
+
+        .nav-support-button:hover::before {
+          opacity: 1;
+        }
+
+        .nav-support-button:hover::after {
+          animation: navShine 950ms ease-in-out forwards;
+        }
+
+        .drawer-close-button,
+        .drawer-search-button,
+        .drawer-link-card,
+        .drawer-category-card,
+        .drawer-child-link {
+          position: relative;
+          isolation: isolate;
+          overflow: hidden;
+        }
+
+        .drawer-close-button::after,
+        .drawer-search-button::after,
+        .drawer-link-card::after,
+        .drawer-category-card::after,
+        .drawer-child-link::after {
+          content: "";
+          position: absolute;
+          top: -40%;
+          left: -65%;
+          height: 180%;
+          width: 42%;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.5),
+            transparent
+          );
+          opacity: 0;
+          transform: rotate(18deg);
+          pointer-events: none;
+        }
+
+        .drawer-close-button:hover::after,
+        .drawer-search-button:hover::after,
+        .drawer-link-card:hover::after,
+        .drawer-category-card:hover::after,
+        .drawer-child-link:hover::after {
+          animation: navShine 880ms ease-in-out forwards;
+        }
+
+        .drawer-link-card:hover,
+        .drawer-category-card:hover,
+        .drawer-child-link:hover {
+          box-shadow:
+            0 10px 28px rgba(0, 0, 0, 0.1),
+            inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .nav-icon-button::after,
+          .nav-support-button::after,
+          .drawer-close-button::after,
+          .drawer-search-button::after,
+          .drawer-link-card::after,
+          .drawer-category-card::after,
+          .drawer-child-link::after {
+            animation: none !important;
+          }
+
+          .nav-icon-glyph,
+          .nav-brand-logo,
+          .nav-brand-text {
+            transition: none;
+          }
+
+          .nav-cart-badge {
+            animation: none;
+          }
+        }
+      `}</style>
+
       <header className="sticky top-0 z-40 border-b border-black/5 bg-white/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-5 lg:px-8">
           <div className="flex min-w-0 items-center gap-2">
@@ -232,18 +593,22 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                   type="button"
                   onClick={() => setMenuOpen(true)}
                   aria-label="Open menu"
-                  className="group inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-sm transition-all hover:-translate-y-0.5 hover:border-black/20 hover:bg-black hover:text-white hover:shadow-md active:translate-y-0"
+                  className="nav-icon-button nav-menu-button group inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-sm transition-[background,color,border-color,box-shadow] duration-300 active:scale-[0.96]"
                 >
-                  <IconMenu />
+                  <span className="nav-icon-glyph">
+                    <IconMenu />
+                  </span>
                 </button>
 
                 <button
                   type="button"
                   onClick={startSearch}
                   aria-label="Search"
-                  className="group inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-sm transition-all hover:-translate-y-0.5 hover:border-black/20 hover:bg-black hover:text-white hover:shadow-md active:translate-y-0"
+                  className="nav-icon-button nav-search-button group inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-sm transition-[background,color,border-color,box-shadow] duration-300 active:scale-[0.96]"
                 >
-                  <IconSearch />
+                  <span className="nav-icon-glyph">
+                    <IconSearch />
+                  </span>
                 </button>
               </>
             ) : (
@@ -251,9 +616,11 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                 type="button"
                 onClick={backFromSearch}
                 aria-label="Back"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-sm transition-all hover:bg-black hover:text-white"
+                className="nav-icon-button nav-back-button inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-sm transition-[background,color,border-color,box-shadow] duration-300 active:scale-[0.96]"
               >
-                <IconArrowLeft />
+                <span className="nav-icon-glyph">
+                  <IconArrowLeft />
+                </span>
               </button>
             )}
           </div>
@@ -261,9 +628,9 @@ export default function HomeNavbar({ onOpenCart }: Props) {
           {!searchMode ? (
             <Link
               href="/"
-              className="group absolute left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-1.5 transition-all hover:bg-black/[0.03]"
+              className="nav-brand group absolute left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-1.5 transition-colors duration-300 hover:bg-black/[0.03]"
             >
-              <span className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-black/10 bg-white shadow-sm">
+              <span className="nav-brand-logo relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-black/10 bg-white shadow-sm">
                 <Image
                   src="/favicon.png"
                   alt={siteName}
@@ -274,7 +641,7 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                 />
               </span>
 
-              <span className="hidden max-w-[170px] truncate text-base font-black tracking-tight text-black sm:block">
+              <span className="nav-brand-text hidden max-w-[170px] truncate text-base font-black tracking-tight text-black sm:block">
                 {siteName}
               </span>
             </Link>
@@ -288,12 +655,14 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                 type="button"
                 aria-label="Cart"
                 onClick={onOpenCart}
-                className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-sm transition-all hover:-translate-y-0.5 hover:bg-black hover:text-white hover:shadow-md active:translate-y-0"
+                className="nav-icon-button nav-cart-button relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-sm transition-[background,color,border-color,box-shadow] duration-300 active:scale-[0.96]"
               >
-                <IconCart />
+                <span className="nav-icon-glyph">
+                  <IconCart />
+                </span>
 
                 {cartCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-black px-1.5 text-[10px] font-bold leading-none text-white ring-2 ring-white">
+                  <span className="nav-cart-badge absolute -right-1 -top-1 z-10 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-black px-1.5 text-[10px] font-bold leading-none text-white ring-2 ring-white">
                     {cartCount > 99 ? "99+" : cartCount}
                   </span>
                 )}
@@ -303,19 +672,23 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                 type="button"
                 aria-label="Profile"
                 onClick={goToProfile}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-sm transition-all hover:-translate-y-0.5 hover:bg-black hover:text-white hover:shadow-md active:translate-y-0"
+                className="nav-icon-button nav-user-button inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-sm transition-[background,color,border-color,box-shadow] duration-300 active:scale-[0.96]"
               >
-                <IconUser />
+                <span className="nav-icon-glyph">
+                  <IconUser />
+                </span>
               </button>
 
               <button
                 type="button"
                 aria-label="24x7 Support"
                 onClick={() => router.push("/support")}
-                className="hidden h-10 items-center gap-2 rounded-full border border-black/10 bg-black px-4 text-sm font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 sm:inline-flex"
+                className="nav-support-button hidden h-10 items-center gap-2 rounded-full border border-black/10 bg-black px-4 text-sm font-bold text-white shadow-sm transition-[box-shadow,border-color] duration-300 active:scale-[0.98] sm:inline-flex"
               >
-                <IconSupport />
-                <span>Support</span>
+                <span className="relative z-10 inline-flex items-center gap-2">
+                  <IconSupport />
+                  <span>Support</span>
+                </span>
               </button>
             </div>
           ) : (
@@ -325,25 +698,22 @@ export default function HomeNavbar({ onOpenCart }: Props) {
       </header>
 
       <div
-        className={`fixed inset-0 z-50 transition-all duration-300 ${
-          menuOpen
+        className={`fixed inset-0 z-50 transition-all duration-300 ${menuOpen
             ? "pointer-events-auto visible"
             : "pointer-events-none invisible"
-        }`}
+          }`}
       >
         <button
           type="button"
           aria-label="Close menu overlay"
           onClick={closeMenu}
-          className={`absolute inset-0 bg-black/45 backdrop-blur-[2px] transition-opacity duration-300 ${
-            menuOpen ? "opacity-100" : "opacity-0"
-          }`}
+          className={`absolute inset-0 bg-black/45 backdrop-blur-[2px] transition-opacity duration-300 ${menuOpen ? "opacity-100" : "opacity-0"
+            }`}
         />
 
         <aside
-          className={`absolute left-0 top-0 flex h-full w-[88vw] max-w-[390px] flex-col overflow-hidden rounded-r-[2rem] border-r border-white/20 bg-white shadow-2xl transition-transform duration-300 ease-out ${
-            menuOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+          className={`absolute left-0 top-0 flex h-full w-[88vw] max-w-[390px] flex-col overflow-hidden rounded-r-[2rem] border-r border-white/20 bg-white shadow-2xl transition-transform duration-300 ease-out ${menuOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="relative overflow-hidden border-b border-black/10 bg-gradient-to-br from-black via-zinc-900 to-zinc-700 px-5 pb-5 pt-4 text-white">
@@ -356,7 +726,7 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                 onClick={closeMenu}
                 className="flex min-w-0 items-center gap-3"
               >
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white shadow-lg">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-white shadow-lg">
                   <Image
                     src="/favicon.png"
                     alt={siteName}
@@ -380,19 +750,23 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                 type="button"
                 aria-label="Close menu"
                 onClick={closeMenu}
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white transition-all hover:bg-white hover:text-black"
+                className="drawer-close-button inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white transition-[background,color,border-color,box-shadow] duration-300 hover:bg-white hover:text-black hover:shadow-lg"
               >
-                <IconClose />
+                <span className="relative z-10">
+                  <IconClose />
+                </span>
               </button>
             </div>
 
             <button
               type="button"
               onClick={startSearch}
-              className="relative mt-5 flex w-full items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-left text-sm font-semibold text-white/90 shadow-sm transition-all hover:bg-white hover:text-black"
+              className="drawer-search-button relative mt-5 flex w-full items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-left text-sm font-semibold text-white/90 shadow-sm transition-[background,color,border-color,box-shadow] duration-300 hover:bg-white hover:text-black hover:shadow-lg"
             >
-              <IconSearch />
-              <span>Search products, categories...</span>
+              <span className="relative z-10 inline-flex items-center gap-3">
+                <IconSearch />
+                <span>Search products, categories...</span>
+              </span>
             </button>
           </div>
 
@@ -423,7 +797,7 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                   >
                     <button
                       type="button"
-                      className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-all hover:bg-zinc-50"
+                      className="drawer-category-card flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-[background,box-shadow] duration-300 hover:bg-zinc-50"
                       onClick={() => {
                         if (!hasSubCategories) {
                           goToCategory({ root: root.name });
@@ -435,7 +809,7 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                         setExpandedSub(null);
                       }}
                     >
-                      <span className="min-w-0">
+                      <span className="relative z-10 min-w-0">
                         <span className="block truncate text-sm font-extrabold text-zinc-950">
                           {root.name}
                         </span>
@@ -452,7 +826,7 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                       </span>
 
                       {hasSubCategories ? (
-                        <span className="shrink-0 rounded-full bg-zinc-100 p-1.5">
+                        <span className="relative z-10 shrink-0 rounded-full bg-zinc-100 p-1.5">
                           <IconChevron open={openRoot} />
                         </span>
                       ) : null}
@@ -468,7 +842,7 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                             <div key={sub._id} className="mb-1 last:mb-0">
                               <button
                                 type="button"
-                                className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-bold text-zinc-800 transition-all hover:bg-white hover:shadow-sm"
+                                className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-bold text-zinc-800 transition-[background,box-shadow,color] duration-300 hover:bg-white hover:shadow-sm"
                                 onClick={() => {
                                   if (!hasChildren) {
                                     goToCategory({
@@ -498,7 +872,7 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                                     <button
                                       key={child._id}
                                       type="button"
-                                      className="rounded-xl px-3 py-2 text-left text-sm font-semibold text-zinc-600 transition-all hover:bg-white hover:text-black hover:shadow-sm"
+                                      className="drawer-child-link rounded-xl px-3 py-2 text-left text-sm font-semibold text-zinc-600 transition-[background,color,box-shadow] duration-300 hover:bg-white hover:text-black hover:shadow-sm"
                                       onClick={() =>
                                         goToCategory({
                                           root: root.name,
@@ -507,7 +881,9 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                                         })
                                       }
                                     >
-                                      {child.name}
+                                      <span className="relative z-10">
+                                        {child.name}
+                                      </span>
                                     </button>
                                   ))}
                                 </div>
@@ -545,9 +921,9 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                     key={link.href}
                     href={link.href}
                     onClick={closeMenu}
-                    className="group rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-bold !text-zinc-800 transition-all duration-300 hover:-translate-y-0.5 hover:border-black hover:!bg-black hover:!text-white hover:shadow-lg active:translate-y-0"
+                    className="drawer-link-card group rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-bold !text-zinc-800 transition-[background,color,border-color,box-shadow] duration-300 hover:border-black hover:!bg-black hover:!text-white hover:shadow-lg"
                   >
-                    <span className="block transition-colors duration-300 group-hover:!text-white">
+                    <span className="relative z-10 block transition-colors duration-300 group-hover:!text-white">
                       {link.label}
                     </span>
                   </Link>
@@ -556,8 +932,8 @@ export default function HomeNavbar({ onOpenCart }: Props) {
             </div>
           </nav>
 
-          <div className="border-t border-black/10 bg-zinc-50 px-5 py-4">
-            <div className="rounded-3xl border border-black/10 bg-white px-4 py-4 text-center shadow-sm">
+          <div className="border-t border-black/10 px-5 py-4">
+            <div className="text-center">
               <div className="flex justify-center">
                 <RatingStars />
               </div>

@@ -77,6 +77,9 @@ const items = [
   },
 ];
 
+const marqueeHalf = Array.from({ length: 3 }).flatMap(() => items);
+const marqueeLoop = [...marqueeHalf, ...marqueeHalf];
+
 export default function CategoryStrip() {
   const router = useRouter();
   const pathname = usePathname() || "";
@@ -86,44 +89,138 @@ export default function CategoryStrip() {
   const activeSlug =
     collectionsIndex >= 0 ? parts[collectionsIndex + 1] || "all" : "";
 
+  const hasActive = items.some((item) => item.slug === activeSlug);
+  const renderItems = hasActive ? items : marqueeLoop;
+
   return (
-    <section className="relative overflow-hidden border-b border-black/5 bg-white">
+    <section className="relative border-b border-black/5 bg-white overflow-hidden">
       <style jsx>{`
         @keyframes softFloat {
-          0% {
-            transform: translateY(0);
-          }
-          50% {
-            transform: translateY(-4px);
-          }
+          0%,
           100% {
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
+          }
+
+          50% {
+            transform: translateY(-4px) scale(1.015);
+          }
+        }
+
+        @keyframes categoryMarquee {
+          0% {
+            transform: translateX(0);
+          }
+
+          100% {
+            transform: translateX(-50%);
           }
         }
 
         @keyframes shineMove {
           0% {
-            transform: translateX(-130%) rotate(18deg);
+            left: -90%;
+            opacity: 0;
           }
+
+          12% {
+            opacity: 0.85;
+          }
+
+          82% {
+            opacity: 0.85;
+          }
+
           100% {
-            transform: translateX(180%) rotate(18deg);
+            left: 140%;
+            opacity: 0;
           }
         }
 
-        .category-scroll {
+        .category-marquee-viewport {
           scrollbar-width: none;
+          -ms-overflow-style: none;
         }
 
-        .category-scroll::-webkit-scrollbar {
+        .category-marquee-viewport::-webkit-scrollbar {
           display: none;
         }
 
-        .category-card:hover .category-shine {
-          animation: shineMove 0.85s ease;
+        .category-marquee-viewport.is-moving {
+          overflow: hidden;
+        }
+
+        .category-marquee-viewport.is-stopped {
+          overflow-x: auto;
+          overflow-y: visible;
+        }
+
+        .category-marquee-track {
+          display: flex;
+          width: max-content;
+          gap: 12px;
+          will-change: transform;
+        }
+
+        .category-marquee-track.is-moving {
+          animation: categoryMarquee 95s linear infinite;
+        }
+
+        .category-marquee-track.is-stopped {
+          animation: none;
+        }
+
+        .category-marquee-viewport:hover .category-marquee-track.is-moving {
+          animation-play-state: paused;
+        }
+
+        .category-breath {
+          animation: softFloat 3.4s ease-in-out infinite;
+          will-change: transform;
+        }
+
+        .category-card.is-active .category-breath {
+          animation: none;
+          transform: translateY(-3px);
+        }
+
+        .category-card:hover .category-breath {
+          animation-play-state: paused;
+          transform: translateY(-3px);
+        }
+
+        .category-card:hover .category-shine,
+        .category-card:focus-visible .category-shine {
+          animation: shineMove 1.05s ease-in-out forwards;
         }
 
         .category-card:hover .category-image {
           transform: scale(1.12);
+        }
+
+        @media (min-width: 768px) {
+          .category-marquee-track.is-stopped {
+            margin-inline: auto;
+          }
+        }
+
+        @media (max-width: 767px) {
+          .category-marquee-track {
+            gap: 10px;
+          }
+
+          .category-marquee-track.is-moving {
+            animation-duration: 78s;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .category-marquee-track.is-moving {
+            animation: none;
+          }
+
+          .category-breath {
+            animation: none;
+          }
         }
       `}</style>
 
@@ -131,80 +228,91 @@ export default function CategoryStrip() {
 
       <div className="relative mx-auto max-w-7xl px-3 sm:px-5 lg:px-8">
         <div
-          className="pointer-events-none absolute left-0 top-0 z-10 h-full w-10 bg-gradient-to-r from-white via-white/90 to-transparent sm:w-16"
+          className="pointer-events-none absolute left-0 top-0 z-30 h-full w-8 bg-gradient-to-r from-white via-white/90 to-transparent sm:w-14"
           aria-hidden
         />
 
         <div
-          className="pointer-events-none absolute right-0 top-0 z-10 h-full w-10 bg-gradient-to-l from-white via-white/90 to-transparent sm:w-16"
+          className="pointer-events-none absolute right-0 top-0 z-30 h-full w-8 bg-gradient-to-l from-white via-white/90 to-transparent sm:w-14"
           aria-hidden
         />
 
-        <div className="category-scroll flex items-start gap-3 overflow-x-auto scroll-smooth px-1 py-4 sm:gap-4 sm:py-5 md:justify-center">
-          {items.map((item, index) => {
-            const active = item.slug === activeSlug;
+        <div
+          className={`category-marquee-viewport relative z-20 pt-4 pb-4 ${
+            hasActive ? "is-stopped" : "is-moving"
+          }`}
+        >
+          <div
+            className={`category-marquee-track ${
+              hasActive ? "is-stopped" : "is-moving"
+            }`}
+          >
+            {renderItems.map((item, index) => {
+              const active = item.slug === activeSlug;
 
-            return (
-              <button
-                key={item.slug}
-                type="button"
-                aria-label={item.label}
-                aria-current={active ? "true" : undefined}
-                onClick={() => router.push(`/collections/${item.slug}`)}
-                className="category-card group relative flex min-w-[82px] flex-col items-center gap-2 rounded-3xl outline-none transition-all duration-300 active:scale-[0.97] sm:min-w-[96px]"
-                style={{
-                  animation: `softFloat 3.2s ease-in-out ${index * 0.08}s infinite`,
-                }}
-              >
-                <span
-                  className={`relative flex h-[72px] w-[72px] items-center justify-center overflow-hidden rounded-[1.6rem] border p-[3px] shadow-sm transition-all duration-300 sm:h-20 sm:w-20 ${
-                    active
-                      ? "border-black bg-black shadow-[0_14px_35px_rgba(0,0,0,0.22)]"
-                      : "border-black/10 bg-white shadow-[0_10px_28px_rgba(0,0,0,0.08)] group-hover:-translate-y-1 group-hover:border-black/25 group-hover:shadow-[0_18px_42px_rgba(0,0,0,0.14)]"
+              return (
+                <button
+                  key={`${item.slug}-${index}`}
+                  type="button"
+                  aria-label={item.label}
+                  aria-current={active ? "true" : undefined}
+                  onClick={() => router.push(`/collections/${item.slug}`)}
+                  className={`category-card group relative flex min-w-[82px] flex-col items-center rounded-3xl outline-none transition-[filter] duration-300 active:scale-[0.97] sm:min-w-[96px] ${
+                    active ? "is-active z-40" : "z-10 hover:z-40"
                   }`}
                 >
-                  <span className="absolute inset-0 rounded-[1.6rem] bg-gradient-to-br from-white/45 via-transparent to-black/10" />
-
-                  <span className="relative h-full w-full overflow-hidden rounded-[1.35rem] bg-zinc-100">
-                    <img
-                      src={item.image}
-                      alt={item.label}
-                      loading="lazy"
-                      className={`category-image h-full w-full object-cover transition-transform duration-700 ease-out ${
-                        active ? "scale-110" : "scale-100"
+                  <div className="category-breath flex flex-col items-center gap-2">
+                    <span
+                      className={`relative flex h-[72px] w-[72px] items-center justify-center overflow-visible rounded-[1.6rem] border p-[3px] transition-all duration-300 ease-out sm:h-20 sm:w-20 ${
+                        active
+                          ? "border-black bg-black shadow-[0_14px_34px_rgba(0,0,0,0.28)] ring-2 ring-black/20"
+                          : "border-black/10 bg-white shadow-[0_8px_22px_rgba(0,0,0,0.08)] group-hover:border-black/25 group-hover:shadow-[0_14px_34px_rgba(0,0,0,0.14)]"
                       }`}
-                    />
+                    >
+                      <span className="pointer-events-none absolute inset-0 rounded-[1.6rem] bg-gradient-to-br from-white/45 via-transparent to-black/10" />
+
+                      <span className="relative h-full w-full overflow-hidden rounded-[1.35rem] bg-zinc-100">
+                        <img
+                          src={item.image}
+                          alt={item.label}
+                          loading="lazy"
+                          className={`category-image h-full w-full object-cover transition-transform duration-700 ease-out ${
+                            active ? "scale-110" : "scale-100"
+                          }`}
+                        />
+
+                        <span
+                          className={`absolute inset-0 transition-all duration-300 ${
+                            active
+                              ? "bg-black/25"
+                              : "bg-gradient-to-t from-black/25 via-black/0 to-white/5 group-hover:bg-black/10"
+                          }`}
+                        />
+
+                        <span className="category-shine absolute top-[-28%] h-[156%] w-[44%] rotate-[18deg] bg-white/55 blur-[2px] opacity-0" />
+                      </span>
+
+                      {active && (
+                        <span className="absolute right-0 top-0 z-50 flex h-5 w-5 -translate-y-1 translate-x-1 items-center justify-center rounded-full bg-black text-[10px] font-black text-white ring-2 ring-white shadow-md">
+                          ✓
+                        </span>
+                      )}
+                    </span>
 
                     <span
-                      className={`absolute inset-0 transition-all duration-300 ${
+                      className={`relative z-50 max-w-[92px] truncate rounded-full px-2.5 py-1 text-[11px] font-extrabold tracking-tight transition-all duration-300 ease-out sm:text-xs ${
                         active
-                          ? "bg-black/25"
-                          : "bg-gradient-to-t from-black/25 via-black/0 to-white/5 group-hover:bg-black/10"
+                          ? "bg-black text-white shadow-[0_8px_20px_rgba(0,0,0,0.18)]"
+                          : "bg-transparent text-zinc-800 group-hover:bg-zinc-100 group-hover:text-black"
                       }`}
-                    />
-
-                    <span className="category-shine absolute -left-8 top-0 h-full w-5 bg-white/45 blur-[2px]" />
-                  </span>
-
-                  {active && (
-                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black text-[10px] font-black text-white ring-2 ring-white">
-                      ✓
+                    >
+                      {item.label}
                     </span>
-                  )}
-                </span>
-
-                <span
-                  className={`max-w-[92px] truncate rounded-full px-2.5 py-1 text-[11px] font-extrabold tracking-tight transition-all duration-300 sm:text-xs ${
-                    active
-                      ? "bg-black text-white shadow-sm"
-                      : "bg-transparent text-zinc-800 group-hover:bg-zinc-100 group-hover:text-black"
-                  }`}
-                >
-                  {item.label}
-                </span>
-              </button>
-            );
-          })}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>
