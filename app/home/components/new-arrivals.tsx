@@ -30,19 +30,37 @@ export default function NewArrivals() {
   useEffect(() => {
     const load = async () => {
       if (!seededRef.current) setLoading(true);
+
       try {
         const cached = getCachedJson("/api/user/show-product?limit=12");
-        const cachedList = Array.isArray(cached?.data?.products) ? cached?.data?.products : [];
-        const cachedPublished = cachedList.filter((p: any) => !p?.status || p.status === "published");
+        const cachedList = Array.isArray(cached?.data?.products)
+          ? cached?.data?.products
+          : [];
+
+        const cachedPublished = cachedList.filter(
+          (p: any) => !p?.status || p.status === "published",
+        );
+
         if (cachedPublished.length) {
           setItems(cachedPublished.slice(0, 8));
           setLoading(false);
           seededRef.current = true;
         }
-        const res = await cachedFetch("/api/user/show-product?limit=12", undefined, 600000, true);
+
+        const res = await cachedFetch(
+          "/api/user/show-product?limit=12",
+          undefined,
+          600000,
+          true,
+        );
+
         const data = await res.json();
         const list = Array.isArray(data?.products) ? data.products : [];
-        const published = list.filter((p: any) => !p?.status || p.status === "published");
+
+        const published = list.filter(
+          (p: any) => !p?.status || p.status === "published",
+        );
+
         setItems(published.slice(0, 8));
       } catch {
         setItems([]);
@@ -50,6 +68,7 @@ export default function NewArrivals() {
         setLoading(false);
       }
     };
+
     load();
   }, []);
 
@@ -58,8 +77,11 @@ export default function NewArrivals() {
   return (
     <section className="max-w-6xl mx-auto p-4 md:p-2 py-3 md:py-5">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold border-b border-gray-600">New Arrivals</h2>
+        <h2 className="text-lg font-semibold border-b border-gray-600">
+          New Arrivals
+        </h2>
       </div>
+
       {loading && !hasReal ? (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border border-black/10 rounded-[5px] p-3">
           {placeholders.map((p) => (
@@ -81,24 +103,40 @@ export default function NewArrivals() {
             const name = p.name || p.title || "Product";
             const selling = p.selling_price ?? p.price ?? 0;
             const mrp = p.price ?? p.selling_price ?? 0;
-            const images = Array.isArray(p.product_image) ? p.product_image : [];
+            const images = Array.isArray(p.product_image)
+              ? p.product_image
+              : [];
+
             return (
               <a
                 key={p.product_id}
                 href={buildProductHref({ id: p.product_id, name })}
                 className="block bg-white"
               >
-                <div className="relative w-full aspect-square md:aspect-[3/4] bg-black/5 overflow-hidden rounded-[5px]">
-                  <HoverImage images={images} alt={name} className="w-full h-full" />
+                <div className="new-arrival-image-frame relative w-full aspect-square md:aspect-[3/4] bg-black/5 overflow-hidden rounded-[5px]">
+                  <HoverImage
+                    images={images}
+                    alt={name}
+                    className="w-full h-full"
+                  />
+
                   <span className="absolute top-2 right-2 bg-black text-white text-[10px] px-2 py-1 rounded-[3px]">
                     New
                   </span>
                 </div>
+
                 <div className="p-3">
-                  <div className="text-sm font-semibold line-clamp-2">{name}</div>
+                  <div className="text-sm font-semibold line-clamp-2">
+                    {name}
+                  </div>
+
                   <div className="flex items-center gap-2 text-sm mt-1">
                     <span className="font-semibold">₹{selling || "-"}</span>
-                    {mrp ? <span className="text-xs text-[#999] line-through">₹{mrp}</span> : null}
+                    {mrp ? (
+                      <span className="text-xs text-[#999] line-through">
+                        ₹{mrp}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               </a>
@@ -106,18 +144,21 @@ export default function NewArrivals() {
           })}
         </div>
       )}
+
       <div className="group flex items-center justify-center border border-gray-600 rounded-[5px] p-2 mt-3 cursor-pointer max-w-sm mx-auto text-black transition-all duration-200 hover:-translate-y-0.5 hover:bg-black hover:text-white hover:border-black">
-        <a href="/collections/new-arrival" className="text-sm font-semibold">View All</a>
+        <a href="/collections/new-arrival" className="text-sm font-semibold">
+          View All
+        </a>
         <BiRightArrowAlt className="text-current" />
       </div>
+
+      <style jsx>{`
+        @media (max-width: 767px) {
+          .new-arrival-image-frame :global(img) {
+            object-position: top center !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }
-
-
-
-
-
-
-
-

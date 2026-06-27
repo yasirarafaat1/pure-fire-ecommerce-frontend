@@ -31,18 +31,23 @@ export default function SuggestedProducts({ items }: { items?: Product[] }) {
       setSuggested(items);
       return;
     }
+
     const load = async () => {
       setLoading(true);
+
       try {
         const token = getUserToken();
+
         if (!token) {
           setSuggested([]);
           return;
         }
+
         const res = await fetch(`${API_BASE}/suggested-products`, {
           headers: { "x-user-token": token },
           cache: "no-store",
         });
+
         const data = await res.json();
         setSuggested(data?.products || []);
       } catch {
@@ -51,17 +56,22 @@ export default function SuggestedProducts({ items }: { items?: Product[] }) {
         setLoading(false);
       }
     };
+
     load();
   }, [items]);
 
   const display = useMemo(() => suggested.slice(0, 8), [suggested]);
+
   if (!loading && !display.length) return null;
 
   return (
     <section className="mt-6 p-4 md:p-5">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="font-semibold text-lg border-b border-gray-600">Suggested for you</h2>
+        <h2 className="font-semibold text-lg border-b border-gray-600">
+          Suggested for you
+        </h2>
       </div>
+
       {loading ? (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border border-black/10 rounded-[5px] p-3">
           {Array.from({ length: 4 }).map((_, idx) => (
@@ -76,19 +86,32 @@ export default function SuggestedProducts({ items }: { items?: Product[] }) {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {display.map((p) => {
-            const showRating = (p.avgRating || 0) > 0 && (p.reviewCount || 0) > 0;
+            const productName = p.name || p.title || "Product";
+            const showRating =
+              (p.avgRating || 0) > 0 && (p.reviewCount || 0) > 0;
             const sell = p.selling_price ?? p.price ?? 0;
             const mrp = p.price ?? p.selling_price ?? 0;
             const hasMrp = mrp !== undefined && mrp !== null;
-            const images = Array.isArray(p.product_image) ? p.product_image : [];
+            const images = Array.isArray(p.product_image)
+              ? p.product_image
+              : [];
+
             return (
               <a
                 key={p.product_id}
-                href={buildProductHref({ id: p.product_id, name: p.name || p.title || "product" })}
+                href={buildProductHref({
+                  id: p.product_id,
+                  name: productName,
+                })}
                 className="block bg-white"
               >
-                <div className="relative w-full aspect-square md:aspect-[3/4] bg-black/5 overflow-hidden rounded-[5px]">
-                  <HoverImage images={images} alt={p.name || p.title || "product"} className="w-full h-full" />
+                <div className="suggested-product-image-frame relative w-full aspect-square md:aspect-[3/4] bg-black/5 overflow-hidden rounded-[5px]">
+                  <HoverImage
+                    images={images}
+                    alt={productName}
+                    className="w-full h-full"
+                  />
+
                   {showRating && (
                     <div className="absolute bottom-2 right-2 bg-white border border-black/10 rounded-[5px] px-2 py-1 text-xs flex items-center gap-1">
                       <span>{Number(p.avgRating || 0).toFixed(1)}</span>
@@ -97,11 +120,19 @@ export default function SuggestedProducts({ items }: { items?: Product[] }) {
                     </div>
                   )}
                 </div>
+
                 <div className="p-3">
-                  <div className="text-sm font-semibold line-clamp-2">{p.name || p.title || "Product"}</div>
+                  <div className="text-sm font-semibold line-clamp-2">
+                    {productName}
+                  </div>
+
                   <div className="flex items-center gap-2 text-sm mt-1">
                     <span className="font-semibold">₹{sell || "-"}</span>
-                    {hasMrp && <span className="text-xs text-[#999] line-through">₹{mrp}</span>}
+                    {hasMrp && (
+                      <span className="text-xs text-[#999] line-through">
+                        ₹{mrp}
+                      </span>
+                    )}
                   </div>
                 </div>
               </a>
@@ -109,6 +140,14 @@ export default function SuggestedProducts({ items }: { items?: Product[] }) {
           })}
         </div>
       )}
+
+      <style jsx>{`
+        @media (max-width: 767px) {
+          .suggested-product-image-frame :global(img) {
+            object-position: top center !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }
