@@ -58,10 +58,10 @@ const MOCK_VIDEO_1 =
   "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
 
 const MOCK_VIDEO_2 =
-  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4";
+  "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
 
 const MOCK_VIDEO_3 =
-  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4";
+  "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
 
 const MOCK_REELS: RawReel[] = [
   {
