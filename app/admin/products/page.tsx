@@ -124,7 +124,7 @@ export default function ProductsPage() {
           <AdminEmptyState title="No products found" description="Create a product or change your filters." />
         ) : (
           <div className="min-w-0 max-w-full overflow-x-auto">
-            <table className="w-full min-w-[1180px] table-fixed text-left text-sm">
+            <table className="w-full text-left text-sm">
               <colgroup>
                 <col className="w-[320px]" />
                 <col className="w-[150px]" />
@@ -133,12 +133,13 @@ export default function ProductsPage() {
                 <col className="w-[90px]" />
                 <col className="w-[130px]" />
                 <col className="w-[120px]" />
+                <col className="w-[120px]" />
                 <col className="w-[220px]" />
               </colgroup>
 
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
-                  {["Product", "SKU", "Category", "Price", "Stock", "Status", "Updated", "Actions"].map(
+                  {["Product", "SKU", "Category", "Price", "Stock", "Status", "Updated", "Publish", "Actions"].map(
                     (label) => (
                       <th className="whitespace-nowrap px-4 py-3 font-semibold" key={label}>
                         {label}
@@ -201,6 +202,15 @@ export default function ProductsPage() {
                       {formatDate(product.updatedAt)}
                     </td>
 
+                    <td className="whitespace-nowrap px-4 py-3 align-middle">
+                      <button
+                        className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 px-3 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                        onClick={() => updateStatus(product)}
+                      >
+                        {product.status === "published" ? "Unpublish" : "Publish"}
+                      </button>
+                    </td>
+
                     <td className="px-4 py-3 align-middle">
                       <div className="flex items-center gap-2 whitespace-nowrap">
                         <Link
@@ -210,13 +220,6 @@ export default function ProductsPage() {
                         >
                           <Pencil size={15} />
                         </Link>
-
-                        <button
-                          className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 px-3 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                          onClick={() => updateStatus(product)}
-                        >
-                          {product.status === "published" ? "Unpublish" : "Publish"}
-                        </button>
 
                         <button
                           aria-label="Delete product"
