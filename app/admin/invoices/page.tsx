@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Download } from "lucide-react";
+import { Download, Eye } from "lucide-react";
 import AdminPageHeader from "../components/AdminPageHeader";
 import AdminPagination from "../components/AdminPagination";
 import { AdminEmptyState, AdminErrorState, AdminLoadingState } from "../components/AdminStates";
@@ -136,12 +136,13 @@ export default function InvoicesPage() {
                     <td className="px-4 py-3">{dash(invoice.companySnapshot?.gstin)}</td>
                     <td className="px-4 py-3">{formatInr(invoice.totals?.grandTotal)}</td>
                     <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-2">
-                        <Link className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm" href={`/admin/invoices/${invoice._id}`} onClick={(event) => event.stopPropagation()}>
+                      <div className="flex items-center gap-2">
+                        <Link className="flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-1.5 text-sm" href={`/admin/invoices/${invoice._id}`} onClick={(event) => event.stopPropagation()}>
+                          <Eye size={16} />
                           View
                         </Link>
                         <button
-                          className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+                          className="flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
                           onClick={(event) => {
                             event.stopPropagation();
                             setMessage("");
@@ -150,6 +151,7 @@ export default function InvoicesPage() {
                             );
                           }}
                         >
+                          <Download size={16} />
                           Download
                         </button>
                       </div>
