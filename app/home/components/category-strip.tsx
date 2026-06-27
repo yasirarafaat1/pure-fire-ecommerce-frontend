@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 const items = [
@@ -84,6 +85,9 @@ export default function CategoryStrip() {
   const router = useRouter();
   const pathname = usePathname() || "";
 
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const activeCardRef = useRef<HTMLButtonElement | null>(null);
+
   const parts = pathname.split("/").filter(Boolean);
   const collectionsIndex = parts.indexOf("collections");
   const activeSlug =
@@ -91,6 +95,38 @@ export default function CategoryStrip() {
 
   const hasActive = items.some((item) => item.slug === activeSlug);
   const renderItems = hasActive ? items : marqueeLoop;
+
+  useEffect(() => {
+    if (!hasActive) return;
+
+    const centerActive = () => {
+      const viewport = viewportRef.current;
+      const activeCard = activeCardRef.current;
+
+      if (!viewport || !activeCard) return;
+
+      const targetLeft =
+        activeCard.offsetLeft -
+        viewport.clientWidth / 2 +
+        activeCard.offsetWidth / 2;
+
+      viewport.scrollTo({
+        left: Math.max(0, targetLeft),
+        behavior: "smooth",
+      });
+    };
+
+    const frame = requestAnimationFrame(() => {
+      requestAnimationFrame(centerActive);
+    });
+
+    window.addEventListener("resize", centerActive);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("resize", centerActive);
+    };
+  }, [activeSlug, hasActive]);
 
   return (
     <section className="relative border-b border-black/5 bg-white overflow-hidden">
@@ -139,6 +175,7 @@ export default function CategoryStrip() {
         .category-marquee-viewport {
           scrollbar-width: none;
           -ms-overflow-style: none;
+          scroll-behavior: smooth;
         }
 
         .category-marquee-viewport::-webkit-scrollbar {
@@ -167,6 +204,7 @@ export default function CategoryStrip() {
 
         .category-marquee-track.is-stopped {
           animation: none;
+          padding-inline: calc(50% - 41px);
         }
 
         .category-marquee-viewport:hover .category-marquee-track.is-moving {
@@ -197,9 +235,9 @@ export default function CategoryStrip() {
           transform: scale(1.12);
         }
 
-        @media (min-width: 768px) {
+        @media (min-width: 640px) {
           .category-marquee-track.is-stopped {
-            margin-inline: auto;
+            padding-inline: calc(50% - 48px);
           }
         }
 
@@ -238,6 +276,7 @@ export default function CategoryStrip() {
         />
 
         <div
+          ref={viewportRef}
           className={`category-marquee-viewport relative z-20 pt-4 pb-4 ${
             hasActive ? "is-stopped" : "is-moving"
           }`}
@@ -253,6 +292,7 @@ export default function CategoryStrip() {
               return (
                 <button
                   key={`${item.slug}-${index}`}
+                  ref={active && hasActive ? activeCardRef : null}
                   type="button"
                   aria-label={item.label}
                   aria-current={active ? "true" : undefined}
