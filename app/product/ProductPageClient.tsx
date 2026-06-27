@@ -13,6 +13,7 @@ import { useStickyColumns } from "./hooks/useStickyColumns";
 import { useProductPageData } from "./hooks/useProductPageData";
 import { useProductViewModel } from "./hooks/useProductViewModel";
 import { openCartModal } from "../cart/cart-events";
+import SuggestedProducts from "../components/SuggestedProducts";
 
 const API_BASE = "/api/user";
 const getToken = () => getUserToken();
@@ -287,6 +288,7 @@ export default function ProductPageClient() {
               }
             }}
           />
+          <SuggestedProducts />
         </>
       )}
     </main>
