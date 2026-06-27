@@ -81,12 +81,21 @@ const items = [
 const marqueeHalf = Array.from({ length: 3 }).flatMap(() => items);
 const marqueeLoop = [...marqueeHalf, ...marqueeHalf];
 
+const activeRepeatCount = 9;
+const activeMiddleCopy = Math.floor(activeRepeatCount / 2);
+const activeLoop = Array.from({ length: activeRepeatCount }).flatMap(
+  () => items,
+);
+
 export default function CategoryStrip() {
   const router = useRouter();
   const pathname = usePathname() || "";
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const trackRef = useRef<HTMLDivElement | null>(null);
   const activeCardRef = useRef<HTMLButtonElement | null>(null);
+  const scrollFrameRef = useRef<number | null>(null);
+  const isResettingScrollRef = useRef(false);
 
   const parts = pathname.split("/").filter(Boolean);
   const collectionsIndex = parts.indexOf("collections");
@@ -94,7 +103,7 @@ export default function CategoryStrip() {
     collectionsIndex >= 0 ? parts[collectionsIndex + 1] || "all" : "";
 
   const hasActive = items.some((item) => item.slug === activeSlug);
-  const renderItems = hasActive ? items : marqueeLoop;
+  const renderItems = hasActive ? activeLoop : marqueeLoop;
 
   useEffect(() => {
     if (!hasActive) return;
@@ -112,7 +121,7 @@ export default function CategoryStrip() {
 
       viewport.scrollTo({
         left: Math.max(0, targetLeft),
-        behavior: "smooth",
+        behavior: "auto",
       });
     };
 
@@ -127,6 +136,54 @@ export default function CategoryStrip() {
       window.removeEventListener("resize", centerActive);
     };
   }, [activeSlug, hasActive]);
+
+  useEffect(() => {
+    return () => {
+      if (scrollFrameRef.current) {
+        cancelAnimationFrame(scrollFrameRef.current);
+      }
+    };
+  }, []);
+
+  const handleActiveScroll = () => {
+    if (!hasActive) return;
+    if (isResettingScrollRef.current) return;
+
+    if (scrollFrameRef.current) {
+      cancelAnimationFrame(scrollFrameRef.current);
+    }
+
+    scrollFrameRef.current = requestAnimationFrame(() => {
+      const viewport = viewportRef.current;
+      const track = trackRef.current;
+
+      if (!viewport || !track) return;
+
+      const oneSetWidth = track.scrollWidth / activeRepeatCount;
+
+      if (!Number.isFinite(oneSetWidth) || oneSetWidth <= 0) return;
+
+      const minSafeScroll = oneSetWidth * 2;
+      const maxSafeScroll = oneSetWidth * (activeRepeatCount - 3);
+
+      let nextScrollLeft = viewport.scrollLeft;
+
+      if (viewport.scrollLeft < minSafeScroll) {
+        nextScrollLeft = viewport.scrollLeft + oneSetWidth;
+      } else if (viewport.scrollLeft > maxSafeScroll) {
+        nextScrollLeft = viewport.scrollLeft - oneSetWidth;
+      }
+
+      if (nextScrollLeft !== viewport.scrollLeft) {
+        isResettingScrollRef.current = true;
+        viewport.scrollLeft = nextScrollLeft;
+
+        requestAnimationFrame(() => {
+          isResettingScrollRef.current = false;
+        });
+      }
+    });
+  };
 
   return (
     <section className="relative border-b border-black/5 bg-white overflow-hidden">
@@ -175,7 +232,7 @@ export default function CategoryStrip() {
         .category-marquee-viewport {
           scrollbar-width: none;
           -ms-overflow-style: none;
-          scroll-behavior: smooth;
+          overscroll-behavior-x: contain;
         }
 
         .category-marquee-viewport::-webkit-scrollbar {
@@ -204,7 +261,6 @@ export default function CategoryStrip() {
 
         .category-marquee-track.is-stopped {
           animation: none;
-          padding-inline: calc(50% - 41px);
         }
 
         .category-marquee-viewport:hover .category-marquee-track.is-moving {
@@ -233,12 +289,6 @@ export default function CategoryStrip() {
 
         .category-card:hover .category-image {
           transform: scale(1.12);
-        }
-
-        @media (min-width: 640px) {
-          .category-marquee-track.is-stopped {
-            padding-inline: calc(50% - 48px);
-          }
         }
 
         @media (max-width: 767px) {
@@ -277,22 +327,27 @@ export default function CategoryStrip() {
 
         <div
           ref={viewportRef}
+          onScroll={handleActiveScroll}
           className={`category-marquee-viewport relative z-20 pt-4 pb-4 ${
             hasActive ? "is-stopped" : "is-moving"
           }`}
         >
           <div
+            ref={trackRef}
             className={`category-marquee-track ${
               hasActive ? "is-stopped" : "is-moving"
             }`}
           >
             {renderItems.map((item, index) => {
               const active = item.slug === activeSlug;
+              const copyIndex = Math.floor(index / items.length);
+              const isMiddleActive =
+                hasActive && active && copyIndex === activeMiddleCopy;
 
               return (
                 <button
                   key={`${item.slug}-${index}`}
-                  ref={active && hasActive ? activeCardRef : null}
+                  ref={isMiddleActive ? activeCardRef : null}
                   type="button"
                   aria-label={item.label}
                   aria-current={active ? "true" : undefined}
