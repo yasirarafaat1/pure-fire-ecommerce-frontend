@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import AdminPageHeader from "../components/AdminPageHeader";
 import { AdminErrorState, AdminLoadingState } from "../components/AdminStates";
 import { AdminApiError, adminApi } from "../lib/adminApi";
+import { Store } from "lucide-react";
 
 type Settings = {
   storeName: string;
@@ -270,6 +271,7 @@ export default function SettingsPage() {
           <Field
             label="Store name"
             value={form.storeName}
+            placeholder="My Store"
             onChange={(value) => setForm({ ...form, storeName: value })}
           />
 
@@ -277,24 +279,28 @@ export default function SettingsPage() {
             label="Support email"
             type="email"
             value={form.supportEmail}
+            placeholder="storename@example.com"
             onChange={(value) => setForm({ ...form, supportEmail: value })}
           />
 
           <Field
             label="Support phone"
             value={form.supportPhone}
+            placeholder="+91 1234 5678 90"
             onChange={(value) => setForm({ ...form, supportPhone: value })}
           />
 
           <Field
             label="Address"
             value={form.address}
+            placeholder="123, Smart City, Country"
             onChange={(value) => setForm({ ...form, address: value })}
           />
 
           <Field
             label="GSTIN"
             value={form.gstin || form.gstNumber || ""}
+            placeholder="27ABCDE1234F2Z5"
             onChange={(value) =>
               setForm({ ...form, gstin: value, gstNumber: value })
             }
@@ -304,6 +310,7 @@ export default function SettingsPage() {
             label="GST percentage"
             type="number"
             value={String(form.gstPercentage ?? "")}
+            placeholder="18"
             onChange={(value) => setForm({ ...form, gstPercentage: value })}
           />
         </SettingsCard>
@@ -316,6 +323,7 @@ export default function SettingsPage() {
             <Field
               key={network}
               label={`${network[0].toUpperCase()}${network.slice(1)} URL`}
+              placeholder={`https://www.${network}.com/store-name`}
               value={
                 form.socialLinks?.[
                 network as keyof Settings["socialLinks"]
