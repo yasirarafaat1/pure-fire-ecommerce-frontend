@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { cachedFetch, getCachedJson } from "../../utils/cachedFetch";
+import { useEffect, useMemo, useState } from "react";
+import { cachedFetch } from "../../utils/cachedFetch";
 import { IoIosClose } from "react-icons/io";
 import { IoChevronBack, IoChevronForward } from "react-icons/io5";
 
@@ -38,78 +38,7 @@ type Review = {
 
 const REVIEW_ENDPOINT = "/api/user/reviews?minRating=4&limit=40";
 
-const USE_MOCK_REVIEWS_ONLY = false;
-
-const USE_MOCK_REVIEWS_FALLBACK = process.env.NODE_ENV === "development";
-
 const placeholders = Array.from({ length: 6 }, (_, i) => i);
-
-function makeMockImage(label: string, bg: string) {
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" width="720" height="720" viewBox="0 0 720 720">
-      <rect width="720" height="720" fill="${bg}"/>
-      <circle cx="360" cy="270" r="120" fill="rgba(255,255,255,0.28)"/>
-      <rect x="150" y="430" width="420" height="34" rx="17" fill="rgba(255,255,255,0.42)"/>
-      <rect x="210" y="490" width="300" height="24" rx="12" fill="rgba(255,255,255,0.35)"/>
-      <text x="360" y="620" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#111111">${label}</text>
-    </svg>
-  `)}`;
-}
-
-const MOCK_REVIEWS: RawReview[] = [
-  {
-    id: "mock-1",
-    user: "Ayesha",
-    rating: 5,
-    text: "Fabric quality bahut premium lagi. Fit aur finishing dono expected se better hain.",
-    images: [makeMockImage("Review Photo", "#f3e7d3")],
-  },
-  {
-    id: "mock-2",
-    user: "Riya",
-    rating: 5,
-    text: "Color exactly photos jaisa hai. Delivery bhi time par aa gayi.",
-  },
-  {
-    id: "mock-3",
-    user: "Neha",
-    rating: 4,
-    text: "Material soft hai aur stitching clean hai. Overall value for money product.",
-    images: [makeMockImage("Customer Look", "#ead7c0")],
-  },
-  {
-    id: "mock-4",
-    user: "Sana",
-    rating: 5,
-    text: "Party wear ke liye perfect laga. Packaging bhi neat thi.",
-  },
-  {
-    id: "mock-5",
-    user: "Priya",
-    rating: 5,
-    text: "Design simple aur classy hai. Lightweight hone ki wajah se comfortable hai.",
-    images: [makeMockImage("Premium Fit", "#efe2cf")],
-  },
-  {
-    id: "mock-6",
-    user: "Mehak",
-    rating: 4,
-    text: "Product achcha hai, fabric comfortable hai aur look elegant aata hai.",
-  },
-  {
-    id: "mock-7",
-    user: "Kashish",
-    rating: 5,
-    text: "Mujhe iska color combination bahut pasand aaya. Quality bhi impressive hai.",
-  },
-  {
-    id: "mock-8",
-    user: "Anjali",
-    rating: 5,
-    text: "Occasion wear ke liye kaafi premium feel deta hai. Highly satisfied.",
-    images: [makeMockImage("Happy Customer", "#f1dec8")],
-  },
-];
 
 function getString(value: unknown, fallback = "") {
   return typeof value === "string" ? value.trim() : fallback;
@@ -159,12 +88,6 @@ function normalizeReview(raw: RawReview, index: number): Review | null {
   };
 }
 
-function getMockReviews() {
-  return MOCK_REVIEWS.map(normalizeReview).filter(
-    (review): review is Review => Boolean(review),
-  );
-}
-
 function extractReviews(payload: unknown): RawReview[] {
   if (Array.isArray(payload)) return payload as RawReview[];
   if (!payload || typeof payload !== "object") return [];
@@ -183,41 +106,22 @@ export default function CustomerReviewsMarquee() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [openIdx, setOpenIdx] = useState<number | null>(null);
-  const seededRef = useRef(false);
 
   useEffect(() => {
     const load = async () => {
-      if (!seededRef.current) setLoading(true);
-
-      if (USE_MOCK_REVIEWS_ONLY) {
-        setReviews(getMockReviews());
-        setLoading(false);
-        seededRef.current = true;
-        return;
-      }
+      setLoading(true);
 
       try {
-        const cached = getCachedJson(REVIEW_ENDPOINT);
-        const cachedReviews = extractReviews(cached)
-          .map(normalizeReview)
-          .filter((review): review is Review => Boolean(review));
-
-        if (cachedReviews.length) {
-          setReviews(cachedReviews);
-          setLoading(false);
-          seededRef.current = true;
-        }
-
-        const res = await cachedFetch(REVIEW_ENDPOINT, undefined, 600000, true);
+        const res = await cachedFetch(
+          REVIEW_ENDPOINT,
+          { cache: "no-store" },
+          0,
+          false,
+        );
 
         if (!res.ok) {
           console.error("Reviews API failed:", res.status, REVIEW_ENDPOINT);
-
-          if (!seededRef.current && USE_MOCK_REVIEWS_FALLBACK) {
-            setReviews(getMockReviews());
-            seededRef.current = true;
-          }
-
+          setReviews([]);
           return;
         }
 
@@ -227,24 +131,10 @@ export default function CustomerReviewsMarquee() {
           .map(normalizeReview)
           .filter((review): review is Review => Boolean(review));
 
-        if (freshReviews.length) {
-          setReviews(freshReviews);
-          seededRef.current = true;
-        } else if (!seededRef.current && USE_MOCK_REVIEWS_FALLBACK) {
-          setReviews(getMockReviews());
-          seededRef.current = true;
-        } else {
-          setReviews([]);
-        }
+        setReviews(freshReviews);
       } catch (error) {
         console.error("Reviews load error:", error);
-
-        if (USE_MOCK_REVIEWS_FALLBACK) {
-          setReviews(getMockReviews());
-          seededRef.current = true;
-        } else {
-          setReviews([]);
-        }
+        setReviews([]);
       } finally {
         setLoading(false);
       }
