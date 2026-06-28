@@ -36,7 +36,8 @@ type Review = {
   images: string[];
 };
 
-const REVIEW_ENDPOINT = "/api/user/reviews?minRating=4&limit=40";
+const MIN_REVIEW_RATING = 3;
+const REVIEW_ENDPOINT = `/api/user/reviews?minRating=${MIN_REVIEW_RATING}&limit=40`;
 
 const placeholders = Array.from({ length: 6 }, (_, i) => i);
 
@@ -68,7 +69,7 @@ function normalizeReview(raw: RawReview, index: number): Review | null {
     getString(raw.review) ||
     getString(raw.message);
 
-  if (!Number.isFinite(rating) || rating < 4) return null;
+  if (!Number.isFinite(rating) || rating < MIN_REVIEW_RATING) return null;
   if (!text) return null;
 
   const user =
@@ -182,16 +183,31 @@ export default function CustomerReviewsMarquee() {
       </div>
 
       {loading && !hasReal ? (
-        <div className="max-w-6xl mx-auto px-4 md:px-2">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {placeholders.map((item) => (
+        <div className="reviews-marquee-wrap">
+          <div className="reviews-marquee-track reviews-marquee-track-skeleton">
+            {[...placeholders, ...placeholders].map((item, index) => (
               <div
-                key={item}
-                className="border border-black/10 rounded-[6px] bg-white p-4"
+                key={`${item}-${index}`}
+                className={`reviews-marquee-card ${
+                  index % 3 === 0 ? "reviews-marquee-card-image" : ""
+                }`}
               >
-                <div className="h-4 w-24 bg-black/5 rounded-[3px] animate-pulse" />
-                <div className="h-3 w-full bg-black/5 rounded-[3px] animate-pulse mt-4" />
-                <div className="h-3 w-3/4 bg-black/5 rounded-[3px] animate-pulse mt-2" />
+                <div className="h-4 w-24 bg-black/10 rounded-[3px] animate-pulse" />
+                {index % 3 === 0 ? (
+                  <div className="review-image-row">
+                    <div className="review-image-button rounded-[6px] bg-black/10 animate-pulse flex-shrink-0" />
+                    <div className="flex-1">
+                      <div className="h-3 w-full bg-black/10 rounded-[3px] animate-pulse" />
+                      <div className="h-3 w-4/5 bg-black/10 rounded-[3px] animate-pulse mt-2" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4">
+                    <div className="h-3 w-full bg-black/10 rounded-[3px] animate-pulse" />
+                    <div className="h-3 w-5/6 bg-black/10 rounded-[3px] animate-pulse mt-2" />
+                    <div className="h-3 w-2/3 bg-black/10 rounded-[3px] animate-pulse mt-2" />
+                  </div>
+                )}
               </div>
             ))}
           </div>
