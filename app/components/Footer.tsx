@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import {
   FiInstagram,
@@ -41,11 +40,15 @@ const linkClass = "hover:underline underline-offset-4 transition-colors hover:te
 
 export default function Footer() {
   const [settings, setSettings] = useState(defaultPublicSettings);
+  const [logoSrc, setLogoSrc] = useState(defaultPublicSettings.seo?.logoUrl || "/favicon.png");
   const social = settings.socialLinks || {};
 
   useEffect(() => {
     fetchPublicSettings()
-      .then(setSettings)
+      .then((nextSettings) => {
+        setSettings(nextSettings);
+        setLogoSrc(nextSettings.seo?.logoUrl || "/favicon.png");
+      })
       .catch(() => undefined);
   }, []);
 
@@ -55,12 +58,13 @@ export default function Footer() {
         <div className="grid grid-cols-2 gap-10 lg:grid-cols-5 py-5">
           <div className="flex flex-col gap-3 col-span-2 lg:col-span-1 space-y-4">
             <div className="flex items-center gap-2 text-xl font-semibold tracking-tight">
-              <Image
-                src="/favicon.png"
+              <img
+                src={logoSrc}
                 alt=""
                 width={32}
                 height={32}
                 className="h-8 w-8 rounded-full object-cover"
+                onError={() => setLogoSrc("/favicon.png")}
               />
               <span>{settings.storeName}</span>
             </div>

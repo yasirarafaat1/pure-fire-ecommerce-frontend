@@ -13,13 +13,17 @@ type RawReview = {
   name?: string;
   customerName?: string;
   customer_name?: string;
+  user_name?: string;
   rating?: number | string;
+  review_rate?: number | string;
   text?: string;
   comment?: string;
+  review_text?: string;
   review?: string;
   message?: string;
   images?: string[];
   image?: string;
+  review_image?: string;
   photos?: string[];
   review_images?: string[];
 };
@@ -34,12 +38,9 @@ type Review = {
 
 const REVIEW_ENDPOINT = "/api/user/reviews?minRating=4&limit=40";
 
-// Temporary mock mode.
-// Later when backend endpoint is ready, change this to false.
-const USE_MOCK_REVIEWS_ONLY = true;
+const USE_MOCK_REVIEWS_ONLY = false;
 
-// Keep this true during development. In production, keep mock reviews disabled.
-const USE_MOCK_REVIEWS_FALLBACK = true;
+const USE_MOCK_REVIEWS_FALLBACK = process.env.NODE_ENV === "development";
 
 const placeholders = Array.from({ length: 6 }, (_, i) => i);
 
@@ -115,23 +116,24 @@ function getString(value: unknown, fallback = "") {
 }
 
 function getImages(raw: RawReview) {
-  const images =
-    raw.images ||
-    raw.photos ||
-    raw.review_images ||
-    (raw.image ? [raw.image] : []);
+  const candidates = [
+    ...(Array.isArray(raw.images) ? raw.images : []),
+    ...(Array.isArray(raw.photos) ? raw.photos : []),
+    ...(Array.isArray(raw.review_images) ? raw.review_images : []),
+    raw.review_image,
+    raw.image,
+  ];
 
-  return Array.isArray(images)
-    ? images.filter(
-        (src): src is string =>
-          typeof src === "string" && src.trim().length > 0,
-      )
-    : [];
+  return candidates.filter(
+    (src): src is string =>
+      typeof src === "string" && src.trim().length > 0,
+  );
 }
 
 function normalizeReview(raw: RawReview, index: number): Review | null {
-  const rating = Number(raw.rating || 0);
+  const rating = Number(raw.review_rate || raw.rating || 0);
   const text =
+    getString(raw.review_text) ||
     getString(raw.text) ||
     getString(raw.comment) ||
     getString(raw.review) ||
@@ -142,6 +144,7 @@ function normalizeReview(raw: RawReview, index: number): Review | null {
 
   const user =
     getString(raw.user) ||
+    getString(raw.user_name) ||
     getString(raw.name) ||
     getString(raw.customerName) ||
     getString(raw.customer_name) ||
@@ -162,11 +165,13 @@ function getMockReviews() {
   );
 }
 
-function extractReviews(payload: any): RawReview[] {
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.reviews)) return payload.reviews;
-  if (Array.isArray(payload?.data?.reviews)) return payload.data.reviews;
-  if (Array.isArray(payload?.data)) return payload.data;
+function extractReviews(payload: unknown): RawReview[] {
+  if (Array.isArray(payload)) return payload as RawReview[];
+  if (!payload || typeof payload !== "object") return [];
+  const data = payload as { reviews?: RawReview[]; data?: RawReview[] | { reviews?: RawReview[] } };
+  if (Array.isArray(data.reviews)) return data.reviews;
+  if (data.data && !Array.isArray(data.data) && Array.isArray(data.data.reviews)) return data.data.reviews;
+  if (Array.isArray(data.data)) return data.data;
   return [];
 }
 

@@ -93,8 +93,24 @@ export default function AnalyticsPage() {
   }, [range]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    let active = true;
+    adminApi
+      .get<{ data: AnalyticsData }>(`/analytics/summary?range=${range}`)
+      .then((response) => {
+        if (active) setData(response.data);
+      })
+      .catch((requestError) => {
+        if (active) {
+          setError(requestError instanceof AdminApiError ? requestError.message : "Analytics failed");
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [range]);
 
   const revenueOrders = useMemo(() => {
     const orderMap = new Map((data?.orderSeries || []).map((row) => [row.date, row.orders || 0]));
@@ -134,7 +150,11 @@ export default function AnalyticsPage() {
             <select
               className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
               value={range}
-              onChange={(event) => setRange(event.target.value as RangeKey)}
+              onChange={(event) => {
+                setLoading(true);
+                setError("");
+                setRange(event.target.value as RangeKey);
+              }}
             >
               {ranges.map((item) => (
                 <option key={item.value} value={item.value}>{item.label}</option>

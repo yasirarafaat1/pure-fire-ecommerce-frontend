@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from "react";
 import AdminPageHeader from "../components/AdminPageHeader";
 import { AdminErrorState, AdminLoadingState } from "../components/AdminStates";
 import { AdminApiError, adminApi } from "../lib/adminApi";
-import { Store } from "lucide-react";
 
 type Settings = {
   storeName: string;
@@ -31,6 +30,19 @@ type Settings = {
     defaultCourier?: string;
     freeShippingThreshold?: number;
   };
+  instagramReels?: {
+    enabled?: boolean;
+    handle?: string;
+    igUserId?: string;
+    pageId?: string;
+    accessToken?: string;
+    tokenExpiresAt?: string;
+    metaAppId?: string;
+    metaAppSecret?: string;
+    lastSyncedAt?: string | null;
+    lastSyncStatus?: string;
+    lastSyncError?: string;
+  };
 };
 
 const empty: Settings = {
@@ -44,6 +56,7 @@ const empty: Settings = {
   socialLinks: {},
   seo: {},
   shipping: {},
+  instagramReels: {},
 };
 
 function normalizeSettings(settings?: Partial<Settings> | null): Settings {
@@ -59,6 +72,9 @@ function normalizeSettings(settings?: Partial<Settings> | null): Settings {
     shipping: {
       ...(settings?.shipping || {}),
     },
+    instagramReels: {
+      ...(settings?.instagramReels || {}),
+    },
   };
 }
 
@@ -70,6 +86,7 @@ export default function SettingsPage() {
   const [message, setMessage] = useState("");
 
   const [logoFileName, setLogoFileName] = useState("");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
   const logoObjectUrlRef = useRef("");
 
@@ -105,7 +122,6 @@ export default function SettingsPage() {
     return () => {
       clearLogoObjectUrl();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleLogoFile = (event: ChangeEvent<HTMLInputElement>) => {
@@ -133,6 +149,7 @@ export default function SettingsPage() {
     logoObjectUrlRef.current = nextUrl;
 
     setLogoFileName(file.name);
+    setLogoFile(file);
     setLogoPreviewUrl(nextUrl);
   };
 
@@ -140,6 +157,7 @@ export default function SettingsPage() {
     clearLogoObjectUrl();
     setLogoPreviewUrl("");
     setLogoFileName("");
+    setLogoFile(null);
   };
 
   const submit = async (event: FormEvent) => {
@@ -148,17 +166,28 @@ export default function SettingsPage() {
     setSaving(true);
 
     try {
-      // Important:
-      // Logo file is frontend-preview only for now.
-      // Backend upload is not connected, so we only save existing JSON settings.
-      const response = await adminApi.put<{ data: Settings }>("/settings", form);
+      let payload = form;
+      let uploadedLogo = false;
+
+      if (logoFile) {
+        const body = new FormData();
+        body.append("logo", logoFile);
+        const uploadResponse = await adminApi.post<{ logoUrl: string }>("/settings/logo", body);
+        payload = {
+          ...form,
+          seo: {
+            ...form.seo,
+            logoUrl: uploadResponse.logoUrl,
+          },
+        };
+        uploadedLogo = true;
+      }
+
+      const response = await adminApi.put<{ data: Settings }>("/settings", payload);
 
       setForm(normalizeSettings(response.data));
-      setMessage(
-        logoPreviewUrl
-          ? "Store settings updated. Logo preview is temporary until upload backend is connected."
-          : "Store settings updated.",
-      );
+      removeLogoPreview();
+      setMessage(uploadedLogo ? "Logo uploaded and settings saved." : "Store settings updated.");
     } catch (requestError) {
       setMessage(
         requestError instanceof AdminApiError
@@ -184,7 +213,7 @@ export default function SettingsPage() {
 
         <SettingsCard
           title="Brand logo"
-          description="Upload and preview your storefront logo. This is UI-only until backend upload is connected."
+          description="Upload and preview your storefront logo."
         >
           <div className="md:col-span-2 grid gap-4 lg:grid-cols-[260px_1fr]">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -210,7 +239,7 @@ export default function SettingsPage() {
 
               <div className="mt-3 grid gap-1 text-center">
                 <p className="text-sm font-semibold text-slate-900">
-                  {logoFileName || "Current logo"}
+                      {logoFileName || "Current logo"}
                 </p>
               </div>
             </div>
@@ -246,8 +275,7 @@ export default function SettingsPage() {
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <p className="text-xs font-medium text-amber-800">
-                      Preview selected. This image will not be uploaded until
-                      backend upload API is added.
+                      Preview selected. It will upload when you save settings.
                     </p>
 
                     <button
@@ -340,6 +368,104 @@ export default function SettingsPage() {
               }
             />
           ))}
+        </SettingsCard>
+
+        <SettingsCard
+          title="Instagram Reels"
+          description="Credentials are used only on the server and are never exposed publicly."
+        >
+          <label className="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-800">
+            <input
+              type="checkbox"
+              checked={Boolean(form.instagramReels?.enabled)}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  instagramReels: { ...form.instagramReels, enabled: event.target.checked },
+                })
+              }
+            />
+            Enable Instagram Reels
+          </label>
+          <Field
+            label="Instagram handle / username"
+            value={form.instagramReels?.handle || ""}
+            placeholder="yourbrand"
+            onChange={(value) => setForm({ ...form, instagramReels: { ...form.instagramReels, handle: value } })}
+          />
+          <Field
+            label="Instagram User ID / IG Business Account ID"
+            value={form.instagramReels?.igUserId || ""}
+            onChange={(value) => setForm({ ...form, instagramReels: { ...form.instagramReels, igUserId: value } })}
+          />
+          <Field
+            label="Facebook Page ID"
+            value={form.instagramReels?.pageId || ""}
+            onChange={(value) => setForm({ ...form, instagramReels: { ...form.instagramReels, pageId: value } })}
+          />
+          <Field
+            label="Long-lived Access Token"
+            value={form.instagramReels?.accessToken || ""}
+            onChange={(value) => setForm({ ...form, instagramReels: { ...form.instagramReels, accessToken: value } })}
+          />
+          <Field
+            label="Token expiry date"
+            type="date"
+            value={form.instagramReels?.tokenExpiresAt || ""}
+            onChange={(value) => setForm({ ...form, instagramReels: { ...form.instagramReels, tokenExpiresAt: value } })}
+          />
+          <Field
+            label="Meta App ID"
+            value={form.instagramReels?.metaAppId || ""}
+            onChange={(value) => setForm({ ...form, instagramReels: { ...form.instagramReels, metaAppId: value } })}
+          />
+          <Field
+            label="Meta App Secret"
+            value={form.instagramReels?.metaAppSecret || ""}
+            onChange={(value) => setForm({ ...form, instagramReels: { ...form.instagramReels, metaAppSecret: value } })}
+          />
+          <div className="md:col-span-2 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium"
+              onClick={() =>
+                adminApi
+                  .post<{ message?: string }>("/settings/instagram/test")
+                  .then((response) => setMessage(response.message || "Instagram connection successful."))
+                  .catch((requestError) =>
+                    setMessage(requestError instanceof AdminApiError ? requestError.message : "Instagram test failed"),
+                  )
+              }
+            >
+              Test connection
+            </button>
+            <button
+              type="button"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium"
+              onClick={() =>
+                adminApi
+                  .post<{ message?: string }>("/settings/instagram/sync")
+                  .then((response) => {
+                    setMessage(response.message || "Instagram reels synced.");
+                    load();
+                  })
+                  .catch((requestError) =>
+                    setMessage(requestError instanceof AdminApiError ? requestError.message : "Instagram sync failed"),
+                  )
+              }
+            >
+              Sync reels now
+            </button>
+            <span className="text-xs text-slate-500">
+              Last sync: {form.instagramReels?.lastSyncedAt ? new Date(form.instagramReels.lastSyncedAt).toLocaleString() : "-"}
+              {form.instagramReels?.lastSyncStatus ? ` (${form.instagramReels.lastSyncStatus})` : ""}
+            </span>
+          </div>
+          {form.instagramReels?.lastSyncError && (
+            <p className="md:col-span-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              {form.instagramReels.lastSyncError}
+            </p>
+          )}
         </SettingsCard>
 
         <div className="flex flex-wrap items-center gap-3">

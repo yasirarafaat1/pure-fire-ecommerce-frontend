@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { cachedFetch } from "../../utils/cachedFetch";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getUserToken } from "../../utils/auth";
@@ -54,6 +53,7 @@ export default function HomeNavbar({ onOpenCart }: Props) {
   const [cartCount, setCartCount] = useState(0);
   const [categoryTree, setCategoryTree] = useState<CategoryNode[]>([]);
   const [siteName, setSiteName] = useState(defaultPublicSettings.storeName);
+  const [logoSrc, setLogoSrc] = useState(defaultPublicSettings.seo?.logoUrl || "/favicon.png");
   const [expandedRoot, setExpandedRoot] = useState<string | null>(null);
   const [expandedSub, setExpandedSub] = useState<string | null>(null);
 
@@ -64,7 +64,10 @@ export default function HomeNavbar({ onOpenCart }: Props) {
 
   useEffect(() => {
     fetchPublicSettings()
-      .then((settings) => setSiteName(settings.storeName))
+      .then((settings) => {
+        setSiteName(settings.storeName);
+        setLogoSrc(settings.seo?.logoUrl || "/favicon.png");
+      })
       .catch(() => undefined);
   }, []);
 
@@ -631,13 +634,13 @@ export default function HomeNavbar({ onOpenCart }: Props) {
               className="nav-brand group absolute left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-1.5 transition-colors duration-300 hover:bg-black/[0.03]"
             >
               <span className="nav-brand-logo relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-black/10 bg-white shadow-sm">
-                <Image
-                  src="/favicon.png"
+                <img
+                  src={logoSrc}
                   alt={siteName}
                   width={36}
                   height={36}
                   className="h-full w-full object-cover"
-                  priority
+                  onError={() => setLogoSrc("/favicon.png")}
                 />
               </span>
 
@@ -727,12 +730,13 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                 className="flex min-w-0 items-center gap-3"
               >
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-white shadow-lg">
-                  <Image
-                    src="/favicon.png"
+                  <img
+                    src={logoSrc}
                     alt={siteName}
                     width={48}
                     height={48}
                     className="h-full w-full object-cover"
+                    onError={() => setLogoSrc("/favicon.png")}
                   />
                 </span>
 

@@ -15,6 +15,10 @@ export type PublicSettings = {
     logoUrl?: string;
     faviconUrl?: string;
   };
+  instagramReels?: {
+    enabled?: boolean;
+    handle?: string;
+  };
 };
 
 export const defaultPublicSettings: PublicSettings = {
@@ -28,6 +32,14 @@ export const defaultPublicSettings: PublicSettings = {
     youtube: process.env.NEXT_PUBLIC_SOCIAL_YOUTUBE || "#",
     twitter: process.env.NEXT_PUBLIC_SOCIAL_TWITTER || "#",
   },
+  seo: {
+    logoUrl: "",
+    faviconUrl: "",
+  },
+  instagramReels: {
+    enabled: false,
+    handle: "",
+  },
 };
 
 export async function fetchPublicSettings() {
@@ -40,6 +52,14 @@ export async function fetchPublicSettings() {
     socialLinks: {
       ...defaultPublicSettings.socialLinks,
       ...(payload.data?.socialLinks || {}),
+    },
+    seo: {
+      ...defaultPublicSettings.seo,
+      ...(payload.data?.seo || {}),
+    },
+    instagramReels: {
+      ...defaultPublicSettings.instagramReels,
+      ...(payload.data?.instagramReels || {}),
     },
   };
 }

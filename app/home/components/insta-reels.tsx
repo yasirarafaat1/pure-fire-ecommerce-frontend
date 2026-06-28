@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cachedFetch, getCachedJson } from "../../utils/cachedFetch";
+import { defaultPublicSettings, fetchPublicSettings } from "../../utils/public-settings";
 import { IoIosClose } from "react-icons/io";
 import { IoChevronBack, IoChevronForward } from "react-icons/io5";
 import {
@@ -33,6 +34,7 @@ type RawReel = {
   timestamp?: string;
   date?: string;
   createdAt?: string;
+  username?: string;
 };
 
 type Reel = {
@@ -43,16 +45,14 @@ type Reel = {
   thumbnailUrl?: string;
   permalink?: string;
   date: string;
+  username?: string;
 };
 
 const REELS_ENDPOINT = "/api/user/instagram/reels?limit=20";
 
-// Temporary mock mode.
-// Dynamic backend ready hone ke baad isko false kar dena.
-const USE_MOCK_REELS_ONLY = true;
+const USE_MOCK_REELS_ONLY = false;
 
-// Development fallback. Production mein backend ready ho jaye to false rakh sakte ho.
-const USE_MOCK_REELS_FALLBACK = true;
+const USE_MOCK_REELS_FALLBACK = process.env.NODE_ENV === "development";
 
 const MOCK_VIDEO_1 =
   "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
@@ -151,6 +151,7 @@ function normalizeReel(raw: RawReel, index: number): Reel | null {
       getString(raw.coverUrl) ||
       getString(raw.cover_url),
     permalink: getString(raw.permalink),
+    username: getString(raw.username),
     date:
       getString(raw.date) ||
       formatDate(raw.timestamp || raw.createdAt) ||
@@ -158,12 +159,28 @@ function normalizeReel(raw: RawReel, index: number): Reel | null {
   };
 }
 
-function extractReels(payload: any): RawReel[] {
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.reels)) return payload.reels;
-  if (Array.isArray(payload?.data?.reels)) return payload.data.reels;
-  if (Array.isArray(payload?.data)) return payload.data;
+function extractReels(payload: unknown): RawReel[] {
+  if (Array.isArray(payload)) return payload as RawReel[];
+  if (!payload || typeof payload !== "object") return [];
+  const data = payload as { reels?: RawReel[]; data?: RawReel[] | { reels?: RawReel[] } };
+  if (Array.isArray(data.reels)) return data.reels;
+  if (data.data && !Array.isArray(data.data) && Array.isArray(data.data.reels)) return data.data.reels;
+  if (Array.isArray(data.data)) return data.data;
   return [];
+}
+
+function extractHandle(payload: unknown) {
+  if (!payload || typeof payload !== "object") return "";
+  const data = payload as { handle?: string; data?: { handle?: string } };
+  return getString(data.handle) || getString(data.data?.handle);
+}
+
+function extractEnabled(payload: unknown) {
+  if (!payload || typeof payload !== "object") return true;
+  const data = payload as { enabled?: boolean; data?: { enabled?: boolean } };
+  if (typeof data.enabled === "boolean") return data.enabled;
+  if (typeof data.data?.enabled === "boolean") return data.data.enabled;
+  return true;
 }
 
 function getMockReels() {
@@ -192,6 +209,8 @@ function trimText(text: string, max = 92) {
 export default function InstagramReelsMarquee() {
   const [reels, setReels] = useState<Reel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [enabled, setEnabled] = useState(true);
+  const [handle, setHandle] = useState("");
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -204,18 +223,30 @@ export default function InstagramReelsMarquee() {
 
       if (USE_MOCK_REELS_ONLY) {
         setReels(getMockReels());
+        setHandle(defaultPublicSettings.instagramReels?.handle || defaultPublicSettings.storeName || "Instagram");
         setLoading(false);
         seededRef.current = true;
         return;
       }
 
       try {
+        const publicSettings = await fetchPublicSettings().catch(() => defaultPublicSettings);
+        const settingsHandle = publicSettings.instagramReels?.handle || publicSettings.storeName || "Instagram";
+        setHandle(settingsHandle);
+
         const cached = getCachedJson(REELS_ENDPOINT);
+        if (cached && !extractEnabled(cached)) {
+          setEnabled(false);
+          setReels([]);
+          seededRef.current = true;
+          return;
+        }
         const cachedReels = extractReels(cached)
           .map(normalizeReel)
           .filter((reel): reel is Reel => Boolean(reel));
 
         if (cachedReels.length) {
+          setHandle(extractHandle(cached) || settingsHandle);
           setReels(cachedReels);
           setLoading(false);
           seededRef.current = true;
@@ -235,6 +266,15 @@ export default function InstagramReelsMarquee() {
         }
 
         const data = await res.json();
+        const responseEnabled = extractEnabled(data);
+        setEnabled(responseEnabled);
+        setHandle(extractHandle(data) || settingsHandle);
+
+        if (!responseEnabled) {
+          setReels([]);
+          seededRef.current = true;
+          return;
+        }
 
         const freshReels = extractReels(data)
           .map(normalizeReel)
@@ -254,6 +294,7 @@ export default function InstagramReelsMarquee() {
 
         if (USE_MOCK_REELS_FALLBACK) {
           setReels(getMockReels());
+          setHandle(defaultPublicSettings.instagramReels?.handle || defaultPublicSettings.storeName || "Instagram");
           seededRef.current = true;
         } else {
           setReels([]);
@@ -332,6 +373,9 @@ export default function InstagramReelsMarquee() {
   };
 
   const hasReal = reels.length > 0;
+  const displayHandle = (handle || selectedReel?.username || "Instagram").replace(/^@+/, "");
+
+  if (!loading && !enabled) return null;
 
   return (
     <section className="py-5 overflow-hidden">
@@ -340,7 +384,7 @@ export default function InstagramReelsMarquee() {
           <div>
             <h2 className="text-lg font-semibold border-b border-gray-600 inline-flex items-center gap-2">
               <FaInstagram className="text-black" />
-              @purefire
+              @{displayHandle}
             </h2>
             <p className="text-xs text-[var(--muted)] mt-2">
               Latest looks, styling ideas, and product moments.
