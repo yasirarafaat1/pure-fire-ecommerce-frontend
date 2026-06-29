@@ -50,70 +50,6 @@ type Reel = {
 
 const REELS_ENDPOINT = "/api/user/instagram/reels?limit=20";
 
-const USE_MOCK_REELS_ONLY = false;
-
-const USE_MOCK_REELS_FALLBACK = process.env.NODE_ENV === "development";
-
-const MOCK_VIDEO_1 =
-  "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
-
-const MOCK_VIDEO_2 =
-  "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
-
-const MOCK_VIDEO_3 =
-  "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
-
-const MOCK_REELS: RawReel[] = [
-  {
-    id: "mock-reel-1",
-    title: "Wedding Edit",
-    description:
-      "Premium festive collection with soft fabric, clean finishing, and elegant styling for wedding functions.",
-    videoUrl: MOCK_VIDEO_1,
-    date: "27 Jun 2026",
-  },
-  {
-    id: "mock-reel-2",
-    title: "Festive Lookbook",
-    description:
-      "A classic ethnic look designed for comfort, movement, and premium day-to-night styling.",
-    videoUrl: MOCK_VIDEO_2,
-    date: "25 Jun 2026",
-  },
-  {
-    id: "mock-reel-3",
-    title: "New Arrivals",
-    description:
-      "Fresh designs with lightweight fabric, modern silhouettes, and timeless color combinations.",
-    videoUrl: MOCK_VIDEO_3,
-    date: "23 Jun 2026",
-  },
-  {
-    id: "mock-reel-4",
-    title: "Party Wear Styles",
-    description:
-      "Elegant party-ready outfits with premium detailing and a clean luxury finish.",
-    videoUrl: MOCK_VIDEO_1,
-    date: "21 Jun 2026",
-  },
-  {
-    id: "mock-reel-5",
-    title: "Bridal Inspired",
-    description:
-      "Rich ethnic styling inspiration for engagement, reception, festive events, and family occasions.",
-    videoUrl: MOCK_VIDEO_2,
-    date: "18 Jun 2026",
-  },
-  {
-    id: "mock-reel-6",
-    title: "Daily Premium Wear",
-    description:
-      "Simple, breathable, and classy outfits made for repeat wear without compromising the look.",
-    videoUrl: MOCK_VIDEO_3,
-    date: "15 Jun 2026",
-  },
-];
-
 function getString(value: unknown, fallback = "") {
   return typeof value === "string" ? value.trim() : fallback;
 }
@@ -183,12 +119,6 @@ function extractEnabled(payload: unknown) {
   return true;
 }
 
-function getMockReels() {
-  return MOCK_REELS.map(normalizeReel).filter(
-    (reel): reel is Reel => Boolean(reel),
-  );
-}
-
 function formatDate(value?: string) {
   if (!value) return "";
 
@@ -221,47 +151,42 @@ export default function InstagramReelsMarquee() {
     const load = async () => {
       if (!seededRef.current) setLoading(true);
 
-      if (USE_MOCK_REELS_ONLY) {
-        setReels(getMockReels());
-        setHandle(defaultPublicSettings.instagramReels?.handle || defaultPublicSettings.storeName || "Instagram");
-        setLoading(false);
-        seededRef.current = true;
-        return;
-      }
-
       try {
-        const publicSettings = await fetchPublicSettings().catch(() => defaultPublicSettings);
-        const settingsHandle = publicSettings.instagramReels?.handle || publicSettings.storeName || "Instagram";
-        setHandle(settingsHandle);
-
         const cached = getCachedJson(REELS_ENDPOINT);
-        if (cached && !extractEnabled(cached)) {
-          setEnabled(false);
-          setReels([]);
-          seededRef.current = true;
-          return;
-        }
         const cachedReels = extractReels(cached)
           .map(normalizeReel)
           .filter((reel): reel is Reel => Boolean(reel));
+        const cachedHandle = extractHandle(cached);
+        const fallbackHandle =
+          defaultPublicSettings.instagramReels?.handle ||
+          defaultPublicSettings.storeName ||
+          "Instagram";
+
+        if (cached) {
+          setEnabled(extractEnabled(cached));
+          if (cachedHandle) setHandle(cachedHandle);
+        }
 
         if (cachedReels.length) {
-          setHandle(extractHandle(cached) || settingsHandle);
+          setHandle(cachedHandle || fallbackHandle);
           setReels(cachedReels);
           setLoading(false);
           seededRef.current = true;
         }
 
-        const res = await cachedFetch(REELS_ENDPOINT, undefined, 600000, true);
+        const [publicSettings, res] = await Promise.all([
+          fetchPublicSettings().catch(() => defaultPublicSettings),
+          cachedFetch(REELS_ENDPOINT, undefined, 600000, true),
+        ]);
+        const settingsHandle =
+          publicSettings.instagramReels?.handle ||
+          publicSettings.storeName ||
+          fallbackHandle;
+        setHandle(settingsHandle);
 
         if (!res.ok) {
           console.error("Instagram reels API failed:", res.status, REELS_ENDPOINT);
-
-          if (!seededRef.current && USE_MOCK_REELS_FALLBACK) {
-            setReels(getMockReels());
-            seededRef.current = true;
-          }
-
+          if (!seededRef.current) setReels([]);
           return;
         }
 
@@ -272,7 +197,7 @@ export default function InstagramReelsMarquee() {
 
         if (!responseEnabled) {
           setReels([]);
-          seededRef.current = true;
+          seededRef.current = false;
           return;
         }
 
@@ -280,25 +205,11 @@ export default function InstagramReelsMarquee() {
           .map(normalizeReel)
           .filter((reel): reel is Reel => Boolean(reel));
 
-        if (freshReels.length) {
-          setReels(freshReels);
-          seededRef.current = true;
-        } else if (!seededRef.current && USE_MOCK_REELS_FALLBACK) {
-          setReels(getMockReels());
-          seededRef.current = true;
-        } else {
-          setReels([]);
-        }
+        setReels(freshReels);
+        seededRef.current = freshReels.length > 0;
       } catch (error) {
         console.error("Instagram reels load error:", error);
-
-        if (USE_MOCK_REELS_FALLBACK) {
-          setReels(getMockReels());
-          setHandle(defaultPublicSettings.instagramReels?.handle || defaultPublicSettings.storeName || "Instagram");
-          seededRef.current = true;
-        } else {
-          setReels([]);
-        }
+        if (!seededRef.current) setReels([]);
       } finally {
         setLoading(false);
       }
@@ -375,10 +286,10 @@ export default function InstagramReelsMarquee() {
   const hasReal = reels.length > 0;
   const displayHandle = (handle || selectedReel?.username || "Instagram").replace(/^@+/, "");
 
-  if (!loading && !enabled) return null;
+  if (!loading && (!enabled || !hasReal)) return null;
 
   return (
-    <section className="py-5 overflow-hidden">
+    <section className="min-h-[440px] py-5 overflow-hidden md:min-h-[470px]">
       <div className="max-w-6xl mx-auto px-4 md:px-2 mb-4">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -394,20 +305,17 @@ export default function InstagramReelsMarquee() {
       </div>
 
       {loading && !hasReal ? (
-        <div className="max-w-6xl mx-auto px-4 md:px-2">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {Array.from({ length: 4 }).map((_, item) => (
-              <div
-                key={item}
-                className="aspect-[9/16] border border-black/10 rounded-[8px] bg-black/5 animate-pulse"
-              />
+        <div className="reels-marquee-wrap">
+          <div className="reels-marquee-track">
+            {Array.from({ length: 10 }).map((_, item) => (
+              <div key={item} className="reel-card reel-card-skeleton">
+                <div className="absolute left-3 right-3 bottom-3">
+                  <div className="h-3 w-24 rounded-[3px] bg-white/50 animate-pulse" />
+                  <div className="mt-2 h-2.5 w-full rounded-[3px] bg-white/35 animate-pulse" />
+                  <div className="mt-2 h-2.5 w-4/5 rounded-[3px] bg-white/35 animate-pulse" />
+                </div>
+              </div>
             ))}
-          </div>
-        </div>
-      ) : !hasReal ? (
-        <div className="max-w-6xl mx-auto px-4 md:px-2">
-          <div className="border border-black/10 rounded-[5px] p-8 text-center text-sm text-[var(--muted)] bg-white">
-            No Instagram reels available yet.
           </div>
         </div>
       ) : (
@@ -599,6 +507,13 @@ export default function InstagramReelsMarquee() {
           border: 1px solid rgba(0, 0, 0, 0.12);
           flex-shrink: 0;
           cursor: pointer;
+        }
+
+        .reel-card-skeleton {
+          cursor: default;
+          background:
+            linear-gradient(180deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.28)),
+            rgba(0, 0, 0, 0.06);
         }
 
         .reel-card-gradient {

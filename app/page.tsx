@@ -10,7 +10,7 @@ import InstagramReelsMarquee from "./home/components/insta-reels";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-white text-black">
+    <main className="min-h-[calc(100vh-80px)] overflow-x-hidden bg-white text-black">
       <CategoryStrip />
       <BannerCarousel />
       <TopProducts />
@@ -20,6 +20,6 @@ export default function Home() {
       <CustomerReviewsMarquee />
       <InstagramReelsMarquee />
       <QualityMarquee />
-    </div>
+    </main>
   );
 }

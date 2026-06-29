@@ -31,15 +31,15 @@ export default function PublicFrame({ children }: { children: React.ReactNode })
   if (hide) return <>{children}</>;
 
   return (
-    <>
+    <div className="flex min-h-screen flex-col bg-white">
       <Navbar onOpenCart={() => setCartOpen(true)} />
-      <div className="mt-4">
+      <main className="flex-1 pt-4">
         <div key={pathname} className="page-transition">
           {children}
         </div>
-      </div>
+      </main>
       {showFooter && <Footer />}
       <CartModal open={cartOpen} onClose={() => setCartOpen(false)} />
-    </>
+    </div>
   );
 }

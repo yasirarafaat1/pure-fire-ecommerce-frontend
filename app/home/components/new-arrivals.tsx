@@ -75,7 +75,7 @@ export default function NewArrivals() {
   const hasReal = items.length > 0;
 
   return (
-    <section className="max-w-6xl mx-auto p-4 md:p-2 py-3 md:py-5">
+    <section className="min-h-[350px] max-w-6xl mx-auto p-4 md:min-h-[520px] md:p-2 py-3 md:py-5">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold border-b border-gray-600">
           New Arrivals

@@ -237,7 +237,16 @@ export default function BannerCarousel() {
   };
 
   if (!mounted) {
-    return <div className="max-w-6xl h-[240px] animate-pulse" />;
+    return (
+      <div className="mx-auto max-w-6xl pb-4 md:py-4">
+        <div className="h-[227px] sm:h-[220px] md:h-[240px] rounded-[5px] border border-black/10 bg-black/5 animate-pulse" />
+        <div className="mt-3 flex justify-center gap-2">
+          {placeholders.map((slide) => (
+            <span key={slide.alt} className="h-1 w-1.5 rounded-full bg-black/20" />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (

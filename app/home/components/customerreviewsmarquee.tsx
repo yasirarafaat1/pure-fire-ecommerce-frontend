@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { cachedFetch } from "../../utils/cachedFetch";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { cachedFetch, getCachedJson } from "../../utils/cachedFetch";
 import { IoIosClose } from "react-icons/io";
 import { IoChevronBack, IoChevronForward } from "react-icons/io5";
 
@@ -107,22 +107,29 @@ export default function CustomerReviewsMarquee() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [openIdx, setOpenIdx] = useState<number | null>(null);
+  const seededRef = useRef(false);
 
   useEffect(() => {
     const load = async () => {
-      setLoading(true);
+      if (!seededRef.current) setLoading(true);
 
       try {
-        const res = await cachedFetch(
-          REVIEW_ENDPOINT,
-          { cache: "no-store" },
-          0,
-          false,
-        );
+        const cached = getCachedJson(REVIEW_ENDPOINT);
+        const cachedReviews = extractReviews(cached)
+          .map(normalizeReview)
+          .filter((review): review is Review => Boolean(review));
+
+        if (cachedReviews.length) {
+          setReviews(cachedReviews);
+          setLoading(false);
+          seededRef.current = true;
+        }
+
+        const res = await cachedFetch(REVIEW_ENDPOINT, undefined, 600000, true);
 
         if (!res.ok) {
           console.error("Reviews API failed:", res.status, REVIEW_ENDPOINT);
-          setReviews([]);
+          if (!seededRef.current) setReviews([]);
           return;
         }
 
@@ -133,9 +140,10 @@ export default function CustomerReviewsMarquee() {
           .filter((review): review is Review => Boolean(review));
 
         setReviews(freshReviews);
+        seededRef.current = freshReviews.length > 0;
       } catch (error) {
         console.error("Reviews load error:", error);
-        setReviews([]);
+        if (!seededRef.current) setReviews([]);
       } finally {
         setLoading(false);
       }
@@ -172,8 +180,10 @@ export default function CustomerReviewsMarquee() {
 
   const hasReal = reviews.length > 0;
 
+  if (!loading && !hasReal) return null;
+
   return (
-    <section className="py-5 overflow-hidden">
+    <section className="min-h-[210px] py-5 overflow-hidden">
       <div className="max-w-6xl mx-auto px-4 md:px-2 mb-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold border-b border-gray-600">
@@ -210,12 +220,6 @@ export default function CustomerReviewsMarquee() {
                 )}
               </div>
             ))}
-          </div>
-        </div>
-      ) : !hasReal ? (
-        <div className="max-w-6xl mx-auto px-4 md:px-2">
-          <div className="border border-black/10 rounded-[5px] p-8 text-center text-sm text-[var(--muted)] bg-white">
-            No customer reviews yet.
           </div>
         </div>
       ) : (
