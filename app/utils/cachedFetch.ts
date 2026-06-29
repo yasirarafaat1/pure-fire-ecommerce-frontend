@@ -7,6 +7,21 @@ type CacheEntry = {
 };
 
 const memoryCache = new Map<string, CacheEntry>();
+const DEFAULT_TIMEOUT_MS = 8000;
+
+async function fetchWithTimeout(url: string, options?: RequestInit) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: options?.signal || controller.signal,
+    });
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
 
 const getKey = (url: string, options?: RequestInit) => {
   const method = (options?.method || "GET").toUpperCase();
@@ -82,7 +97,7 @@ export async function cachedFetch(
   allowStale: boolean = false,
 ): Promise<Response> {
   const method = (options?.method || "GET").toUpperCase();
-  if (method !== "GET") return fetch(url, options);
+  if (method !== "GET") return fetchWithTimeout(url, options);
 
   const key = getKey(url, options);
   const now = Date.now();
@@ -115,7 +130,7 @@ export async function cachedFetch(
   const staleHit = memoryHit || sessionHit || localHit;
   if (staleHit && allowStale) {
     const startRevalidate = () => {
-      fetch(url, options)
+      fetchWithTimeout(url, options)
         .then(async (res) => {
           const contentType = res.headers.get("content-type") || "";
           if (!res.ok || !contentType.includes("application/json")) return;
@@ -134,7 +149,7 @@ export async function cachedFetch(
     });
   }
 
-  const res = await fetch(url, options);
+  const res = await fetchWithTimeout(url, options);
   const contentType = res.headers.get("content-type") || "";
   if (!res.ok || !contentType.includes("application/json")) return res;
 

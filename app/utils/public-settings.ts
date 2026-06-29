@@ -42,8 +42,22 @@ export const defaultPublicSettings: PublicSettings = {
   },
 };
 
+async function fetchWithTimeout(url: string, options?: RequestInit) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 6000);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: options?.signal || controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function fetchPublicSettings() {
-  const response = await fetch("/api/site-settings", { cache: "no-store" });
+  const response = await fetchWithTimeout("/api/site-settings", { cache: "no-store" });
   if (!response.ok) throw new Error("Settings request failed");
   const payload = (await response.json()) as { data?: Partial<PublicSettings> };
   return {

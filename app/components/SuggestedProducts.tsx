@@ -58,6 +58,21 @@ function writeSuggestedCache(token: string, products: Product[]) {
   }
 }
 
+async function fetchSuggestedProducts(token: string) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 8000);
+
+  try {
+    return await fetch(SUGGESTED_ENDPOINT, {
+      headers: { "x-user-token": token },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
 export default function SuggestedProducts({ items }: { items?: Product[] }) {
   const [suggested, setSuggested] = useState<Product[]>(items || []);
   const [loading, setLoading] = useState(false);
@@ -90,10 +105,7 @@ export default function SuggestedProducts({ items }: { items?: Product[] }) {
           seededRef.current = true;
         }
 
-        const res = await fetch(SUGGESTED_ENDPOINT, {
-          headers: { "x-user-token": token },
-          cache: "no-store",
-        });
+        const res = await fetchSuggestedProducts(token);
 
         const data = await res.json();
         const products = Array.isArray(data?.products) ? data.products : [];
