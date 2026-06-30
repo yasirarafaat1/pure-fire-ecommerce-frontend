@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { cachedFetch } from "../../utils/cachedFetch";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -48,14 +48,43 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
+const CUSTOMER_LINKS = [
+  {
+    label: "Orders",
+    href: "/orders",
+    subtitle: "Track current and past orders",
+  },
+  {
+    label: "Wishlist",
+    href: "/wishlist",
+    subtitle: "View your saved products",
+  },
+  {
+    label: "Support",
+    href: "/support",
+    subtitle: "Get help from our team",
+  },
+  {
+    label: "Return Policy",
+    href: "/return-policy",
+    subtitle: "Return and exchange details",
+  },
+];
+
 export default function HomeNavbar({ onOpenCart }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [categoryTree, setCategoryTree] = useState<CategoryNode[]>([]);
   const [siteName, setSiteName] = useState(defaultPublicSettings.storeName);
-  const [logoSrc, setLogoSrc] = useState(defaultPublicSettings.seo?.logoUrl || "/favicon.png");
+  const [logoSrc, setLogoSrc] = useState(
+    defaultPublicSettings.seo?.logoUrl || "/favicon.png",
+  );
   const [expandedRoot, setExpandedRoot] = useState<string | null>(null);
   const [expandedSub, setExpandedSub] = useState<string | null>(null);
+  const [drawerSearch, setDrawerSearch] = useState("");
+  const [scrolled, setScrolled] = useState(false);
+
+  const drawerSearchRef = useRef<HTMLInputElement | null>(null);
 
   const router = useRouter();
   const pathname = usePathname();
@@ -63,9 +92,18 @@ export default function HomeNavbar({ onOpenCart }: Props) {
   const searchMode = useMemo(() => pathname.startsWith("/search"), [pathname]);
 
   useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
     fetchPublicSettings()
       .then((settings) => {
-        setSiteName(settings.storeName);
+        setSiteName(settings.storeName || defaultPublicSettings.storeName);
         setLogoSrc(settings.seo?.logoUrl || "/favicon.png");
       })
       .catch(() => undefined);
@@ -77,8 +115,13 @@ export default function HomeNavbar({ onOpenCart }: Props) {
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
+    const timer = window.setTimeout(() => {
+      drawerSearchRef.current?.focus();
+    }, 280);
+
     return () => {
       document.body.style.overflow = originalOverflow;
+      window.clearTimeout(timer);
     };
   }, [menuOpen]);
 
@@ -193,6 +236,21 @@ export default function HomeNavbar({ onOpenCart }: Props) {
     router.push("/search");
   };
 
+  const submitDrawerSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const query = drawerSearch.trim();
+
+    closeMenu();
+
+    if (query) {
+      router.push(`/search?q=${encodeURIComponent(query)}`);
+      return;
+    }
+
+    router.push("/search");
+  };
+
   const backFromSearch = () => {
     router.back();
   };
@@ -224,100 +282,127 @@ export default function HomeNavbar({ onOpenCart }: Props) {
     router.push(`/collections/${slugify(targetName)}?${params.toString()}`);
   };
 
+  const handleLogoError = () => {
+    if (logoSrc !== "/favicon.png") setLogoSrc("/favicon.png");
+  };
+
   return (
     <>
       <style jsx>{`
-        @keyframes navShine {
+        @keyframes navSweep {
           0% {
-            transform: translateX(-150%) rotate(18deg);
+            transform: translateX(-140%) rotate(18deg);
             opacity: 0;
           }
-          15% {
+
+          18% {
             opacity: 0.75;
           }
-          80% {
+
+          78% {
             opacity: 0.75;
           }
+
           100% {
             transform: translateX(170%) rotate(18deg);
             opacity: 0;
           }
         }
 
-        @keyframes cartBadgePulse {
+        @keyframes drawerEnter {
+          0% {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes cartPulse {
           0%,
           100% {
             transform: scale(1);
           }
+
           50% {
             transform: scale(1.08);
           }
         }
 
-        .nav-icon-button {
+        .nav-shell {
+          position: sticky;
+          top: 0;
+          z-index: 40;
+          border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+          background:
+            radial-gradient(
+              circle at 10% 0%,
+              rgba(245, 158, 11, 0.11),
+              transparent 30%
+            ),
+            rgba(255, 255, 255, 0.92);
+          backdrop-filter: blur(20px) saturate(1.25);
+          -webkit-backdrop-filter: blur(20px) saturate(1.25);
+          transition:
+            box-shadow 360ms ease,
+            border-color 360ms ease,
+            background 360ms ease;
+        }
+
+        .nav-shell.is-scrolled {
+          border-color: rgba(15, 23, 42, 0.1);
+          background: rgba(255, 255, 255, 0.96);
+          box-shadow:
+            0 18px 44px rgba(15, 23, 42, 0.08),
+            inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        }
+
+        .nav-action,
+        .drawer-close,
+        .drawer-search-button,
+        .drawer-row,
+        .drawer-child-row,
+        .drawer-customer-row {
           position: relative;
           isolation: isolate;
           overflow: hidden;
+          transform: translateZ(0);
         }
 
-        .nav-icon-button::before {
+        .nav-action::after,
+        .drawer-close::after,
+        .drawer-search-button::after,
+        .drawer-row::after,
+        .drawer-child-row::after,
+        .drawer-customer-row::after {
           content: "";
           position: absolute;
-          inset: 2px;
-          z-index: 0;
-          border-radius: 9999px;
-          background:
-            radial-gradient(circle at 30% 18%, rgba(255, 255, 255, 0.32), transparent 36%),
-            linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
-          opacity: 0;
-          transform: scale(0.72);
-          transition:
-            opacity 360ms ease,
-            transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
-        }
-
-        .nav-icon-button::after {
-          content: "";
-          position: absolute;
-          top: -35%;
-          left: -55%;
+          top: -42%;
+          left: -68%;
           z-index: 1;
-          height: 170%;
+          height: 184%;
           width: 42%;
-          border-radius: 9999px;
           background: linear-gradient(
             90deg,
             transparent,
-            rgba(255, 255, 255, 0.52),
+            rgba(255, 255, 255, 0.58),
             transparent
           );
           opacity: 0;
+          transform: rotate(18deg);
           pointer-events: none;
         }
 
-        .nav-icon-button:hover {
-          border-color: rgba(0, 0, 0, 0.28);
-          background: #090909;
-          color: #ffffff;
-          box-shadow:
-            0 12px 30px rgba(0, 0, 0, 0.16),
-            inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-        }
-
-        .nav-icon-button:hover::before {
-          opacity: 1;
-          transform: scale(1);
-        }
-
-        .nav-icon-button:hover::after {
-          animation: navShine 900ms ease-in-out forwards;
-        }
-
-        .nav-icon-button:focus-visible {
-          outline: none;
-          box-shadow:
-            0 0 0 3px rgba(0, 0, 0, 0.12),
-            0 12px 30px rgba(0, 0, 0, 0.16);
+        .nav-action:hover::after,
+        .drawer-close:hover::after,
+        .drawer-search-button:hover::after,
+        .drawer-row:hover::after,
+        .drawer-child-row:hover::after,
+        .drawer-customer-row:hover::after {
+          animation: navSweep 880ms ease-in-out forwards;
         }
 
         .nav-icon-glyph {
@@ -325,293 +410,231 @@ export default function HomeNavbar({ onOpenCart }: Props) {
           z-index: 2;
           display: inline-flex;
           transition:
-            transform 380ms cubic-bezier(0.22, 1, 0.36, 1),
-            opacity 260ms ease;
+            transform 430ms cubic-bezier(0.22, 1, 0.36, 1),
+            color 260ms ease;
         }
-.nav-icon-glyph svg {
-  overflow: visible;
-}
 
-.nav-icon-glyph {
-  position: relative;
-  z-index: 2;
-  display: inline-flex;
-  transition:
-    transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 260ms ease;
-}
+        .nav-icon-glyph svg {
+          overflow: visible;
+        }
 
-/* Menu: lines reshift, no rotate */
-.nav-menu-button:hover .nav-icon-glyph {
-  transform: scale(1.04);
-}
+        .nav-icon-glyph svg > * {
+          transition:
+            transform 430ms cubic-bezier(0.22, 1, 0.36, 1),
+            opacity 260ms ease,
+            stroke-width 320ms ease;
+          transform-box: fill-box;
+          transform-origin: center;
+        }
 
-.nav-menu-button:hover .nav-icon-glyph svg > *:nth-child(1) {
-  transform: translateX(-2.5px);
-}
+        .nav-menu-button:hover .nav-icon-glyph {
+          transform: scale(1.04);
+        }
 
-.nav-menu-button:hover .nav-icon-glyph svg > *:nth-child(2) {
-  transform: translateX(3px);
-}
+        .nav-menu-button:hover .nav-icon-glyph svg > *:nth-child(1) {
+          transform: translateX(-3px);
+        }
 
-.nav-menu-button:hover .nav-icon-glyph svg > *:nth-child(3) {
-  transform: translateX(-1.5px);
-}
+        .nav-menu-button:hover .nav-icon-glyph svg > *:nth-child(2) {
+          transform: translateX(3.5px);
+        }
 
-/* Search: lens slight focus, no jump */
-.nav-search-button:hover .nav-icon-glyph {
-  transform: scale(1.05);
-}
+        .nav-menu-button:hover .nav-icon-glyph svg > *:nth-child(3) {
+          transform: translateX(-2px);
+        }
 
-.nav-search-button:hover .nav-icon-glyph svg > *:nth-child(1) {
-  transform: scale(1.04);
-}
+        .nav-search-button:hover .nav-icon-glyph {
+          transform: scale(1.06);
+        }
 
-.nav-search-button:hover .nav-icon-glyph svg > *:nth-child(2) {
-  transform: translate(1.5px, 1.5px);
-}
+        .nav-search-button:hover .nav-icon-glyph svg > *:nth-child(1) {
+          transform: scale(1.05);
+        }
 
-/* Cart: basket smooth reshift */
-.nav-cart-button:hover .nav-icon-glyph {
-  transform: scale(1.045);
-}
+        .nav-search-button:hover .nav-icon-glyph svg > *:nth-child(2) {
+          transform: translate(1.5px, 1.5px);
+        }
 
-.nav-cart-button:hover .nav-icon-glyph svg > *:nth-child(1) {
-  transform: translateX(-1.5px);
-}
-
-.nav-cart-button:hover .nav-icon-glyph svg > *:nth-child(2) {
-  transform: translateX(2px);
-}
-
-.nav-cart-button:hover .nav-icon-glyph svg > *:nth-child(3) {
-  transform: translateY(-1.5px);
-}
-
-/* User: premium soft focus */
-.nav-user-button:hover .nav-icon-glyph {
-  transform: scale(1.05);
-}
-
-.nav-user-button:hover .nav-icon-glyph svg > *:nth-child(1) {
-  transform: translateY(-1.5px) scale(1.03);
-}
-
-.nav-user-button:hover .nav-icon-glyph svg > *:nth-child(2) {
-  transform: translateY(1.5px) scale(1.02);
-}
-
-/* Back: arrow slides slightly left */
-.nav-back-button:hover .nav-icon-glyph {
-  transform: translateX(-2px) scale(1.04);
-}
+        .nav-cart-button:hover .nav-icon-glyph,
+        .nav-user-button:hover .nav-icon-glyph {
+          transform: scale(1.055);
+        }
 
         .nav-brand {
           position: relative;
           isolation: isolate;
         }
 
-        .nav-brand::after {
+        .nav-brand::before {
           content: "";
           position: absolute;
-          left: 18px;
-          right: 18px;
-          bottom: 2px;
-          height: 1px;
-          background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(0, 0, 0, 0.45),
-            transparent
-          );
+          inset: -7px -10px;
+          z-index: -1;
+          border-radius: 999px;
+          background:
+            linear-gradient(135deg, rgba(245, 158, 11, 0.12), transparent),
+            rgba(15, 23, 42, 0.04);
           opacity: 0;
-          transform: scaleX(0.2);
+          transform: scale(0.86);
           transition:
-            opacity 320ms ease,
-            transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+            opacity 340ms ease,
+            transform 430ms cubic-bezier(0.22, 1, 0.36, 1);
         }
 
-        .nav-brand:hover::after {
+        .nav-brand:hover::before {
           opacity: 1;
-          transform: scaleX(1);
+          transform: scale(1);
         }
 
         .nav-brand-logo {
           transition:
-            transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
-            box-shadow 320ms ease,
-            border-color 320ms ease;
+            transform 430ms cubic-bezier(0.22, 1, 0.36, 1),
+            box-shadow 340ms ease,
+            border-color 340ms ease;
         }
 
         .nav-brand:hover .nav-brand-logo {
-          transform: scale(1.045);
-          border-color: rgba(0, 0, 0, 0.22);
-          box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+          transform: translateY(-1px) scale(1.06);
+          border-color: rgba(245, 158, 11, 0.55);
+          box-shadow:
+            0 14px 32px rgba(15, 23, 42, 0.14),
+            0 0 0 5px rgba(245, 158, 11, 0.08);
         }
 
         .nav-brand-text {
           transition:
-            letter-spacing 360ms ease,
-            opacity 300ms ease;
+            opacity 280ms ease,
+            transform 360ms cubic-bezier(0.22, 1, 0.36, 1),
+            letter-spacing 320ms ease;
         }
 
         .nav-brand:hover .nav-brand-text {
-          letter-spacing: -0.01em;
-          opacity: 0.88;
+          opacity: 0.9;
+          transform: translateY(-0.5px);
+          letter-spacing: -0.02em;
         }
 
-        .nav-cart-badge {
-          animation: cartBadgePulse 2.4s ease-in-out infinite;
+        .cart-badge {
+          animation: cartPulse 2.35s ease-in-out infinite;
         }
 
-        .nav-support-button {
-          position: relative;
-          isolation: isolate;
-          overflow: hidden;
-        }
-
-        .nav-support-button::before {
-          content: "";
-          position: absolute;
-          inset: 1px;
-          z-index: 0;
-          border-radius: 9999px;
-          background:
-            radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.28), transparent 35%),
-            linear-gradient(135deg, rgba(255, 255, 255, 0.16), transparent);
-          opacity: 0;
-          transition: opacity 320ms ease;
-        }
-
-        .nav-support-button::after {
-          content: "";
-          position: absolute;
-          top: -40%;
-          left: -50%;
-          z-index: 1;
-          height: 180%;
-          width: 36%;
-          background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255, 255, 255, 0.46),
-            transparent
-          );
-          opacity: 0;
-          transform: rotate(18deg);
-          pointer-events: none;
-        }
-
-        .nav-support-button:hover {
+        .drawer-panel {
           box-shadow:
-            0 12px 34px rgba(0, 0, 0, 0.18),
-            inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+            30px 0 90px rgba(15, 23, 42, 0.24),
+            inset -1px 0 0 rgba(255, 255, 255, 0.6);
         }
 
-        .nav-support-button:hover::before {
-          opacity: 1;
+        .drawer-scroll {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+          overscroll-behavior: contain;
         }
 
-        .nav-support-button:hover::after {
-          animation: navShine 950ms ease-in-out forwards;
+        .drawer-scroll::-webkit-scrollbar {
+          display: none;
+          width: 0;
+          height: 0;
         }
 
-        .drawer-close-button,
-        .drawer-search-button,
-        .drawer-link-card,
-        .drawer-category-card,
-        .drawer-child-link {
-          position: relative;
-          isolation: isolate;
-          overflow: hidden;
+        .drawer-enter {
+          animation: drawerEnter 430ms cubic-bezier(0.22, 1, 0.36, 1) both;
         }
 
-        .drawer-close-button::after,
-        .drawer-search-button::after,
-        .drawer-link-card::after,
-        .drawer-category-card::after,
-        .drawer-child-link::after {
-          content: "";
-          position: absolute;
-          top: -40%;
-          left: -65%;
-          height: 180%;
-          width: 42%;
-          background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255, 255, 255, 0.5),
-            transparent
-          );
-          opacity: 0;
-          transform: rotate(18deg);
-          pointer-events: none;
+        .drawer-search-input::placeholder {
+          color: rgba(100, 116, 139, 0.84);
         }
 
-        .drawer-close-button:hover::after,
-        .drawer-search-button:hover::after,
-        .drawer-link-card:hover::after,
-        .drawer-category-card:hover::after,
-        .drawer-child-link:hover::after {
-          animation: navShine 880ms ease-in-out forwards;
+        .drawer-safe-link,
+        .drawer-safe-link * {
+          text-decoration: none;
         }
 
-        .drawer-link-card:hover,
-        .drawer-category-card:hover,
-        .drawer-child-link:hover {
-          box-shadow:
-            0 10px 28px rgba(0, 0, 0, 0.1),
-            inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+        .drawer-row:hover .drawer-row-title,
+        .drawer-row:hover .drawer-row-subtitle,
+        .drawer-row:hover .drawer-row-arrow,
+        .drawer-customer-row:hover .drawer-row-title,
+        .drawer-customer-row:hover .drawer-row-subtitle,
+        .drawer-customer-row:hover .drawer-row-arrow {
+          color: #ffffff !important;
+        }
+
+        .drawer-row:hover .drawer-row-index,
+        .drawer-customer-row:hover .drawer-row-index {
+          border-color: rgba(255, 255, 255, 0.2) !important;
+          background: rgba(255, 255, 255, 0.14) !important;
+          color: #ffffff !important;
+        }
+
+        .drawer-child-row:hover {
+          transform: translateX(3px);
+        }
+
+        @media (max-width: 430px) {
+          .nav-brand-name {
+            max-width: 128px;
+            font-size: 13px;
+          }
+
+          .nav-left-label {
+            display: none;
+          }
+        }
+
+        @media (max-width: 360px) {
+          .nav-brand-name {
+            max-width: 104px;
+          }
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .nav-icon-button::after,
-          .nav-support-button::after,
-          .drawer-close-button::after,
+          .nav-action::after,
+          .drawer-close::after,
           .drawer-search-button::after,
-          .drawer-link-card::after,
-          .drawer-category-card::after,
-          .drawer-child-link::after {
+          .drawer-row::after,
+          .drawer-child-row::after,
+          .drawer-customer-row::after,
+          .cart-badge {
             animation: none !important;
           }
 
           .nav-icon-glyph,
+          .nav-icon-glyph svg > *,
           .nav-brand-logo,
-          .nav-brand-text {
-            transition: none;
-          }
-
-          .nav-cart-badge {
-            animation: none;
+          .nav-brand-text,
+          .drawer-child-row {
+            transition: none !important;
           }
         }
       `}</style>
 
-      <header className="sticky top-0 z-40 border-b border-black/5 bg-white/85 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-5 lg:px-8">
-          <div className="flex min-w-0 items-center gap-2">
+      <header className={`nav-shell ${scrolled ? "is-scrolled" : ""}`}>
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-3 sm:px-5 lg:px-8">
+          <div className="flex min-w-0 items-center gap-2 rounded-sm border border-slate-900/10 bg-white/80 p-1 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
             {!searchMode ? (
               <>
                 <button
                   type="button"
                   onClick={() => setMenuOpen(true)}
                   aria-label="Open menu"
-                  className="nav-icon-button nav-menu-button group inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-sm transition-[background,color,border-color,box-shadow] duration-300 active:scale-[0.96]"
+                  aria-expanded={menuOpen}
+                  className="nav-action cursor-pointer nav-menu-button inline-flex h-9 items-center gap-2 rounded-sm bg-slate-950 px-3 text-sm font-black text-white transition active:scale-[0.97]"
                 >
                   <span className="nav-icon-glyph">
                     <IconMenu />
                   </span>
+                  <span className="nav-left-label relative z-10">Menu</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={startSearch}
                   aria-label="Search"
-                  className="nav-icon-button nav-search-button group inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-sm transition-[background,color,border-color,box-shadow] duration-300 active:scale-[0.96]"
+                  className="nav-action cursor-pointer nav-search-button inline-flex h-9 items-center gap-2 rounded-sm bg-slate-100 px-3 text-sm font-bold text-slate-700 transition hover:bg-amber-100 hover:text-slate-950 active:scale-[0.97]"
                 >
-                  <span className="nav-icon-glyph">
+                  <span className="nav-icon-glyph text-slate-800">
                     <IconSearch />
                   </span>
+                  {/* <span className="relative z-10 hidden sm:inline">Search</span> */}
                 </button>
               </>
             ) : (
@@ -619,11 +642,12 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                 type="button"
                 onClick={backFromSearch}
                 aria-label="Back"
-                className="nav-icon-button nav-back-button inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-sm transition-[background,color,border-color,box-shadow] duration-300 active:scale-[0.96]"
+                className="nav-action nav-back-button inline-flex h-9 items-center gap-2 rounded-sm bg-slate-950 px-3 text-sm font-black text-white transition active:scale-[0.97]"
               >
                 <span className="nav-icon-glyph">
                   <IconArrowLeft />
                 </span>
+                <span className="relative z-10">Back</span>
               </button>
             )}
           </div>
@@ -631,20 +655,22 @@ export default function HomeNavbar({ onOpenCart }: Props) {
           {!searchMode ? (
             <Link
               href="/"
-              className="nav-brand group absolute left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-1.5 transition-colors duration-300 hover:bg-black/[0.03]"
+              className="nav-brand group absolute left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-sm px-2.5 py-1.5"
+              aria-label={`${siteName} home`}
             >
-              <span className="nav-brand-logo relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-black/10 bg-white shadow-sm">
+              <span className="nav-brand-logo relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-900/10 bg-white shadow-sm">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={logoSrc}
                   alt={siteName}
                   width={36}
                   height={36}
                   className="h-full w-full object-cover"
-                  onError={() => setLogoSrc("/favicon.png")}
+                  onError={handleLogoError}
                 />
               </span>
 
-              <span className="nav-brand-text hidden max-w-[170px] truncate text-base font-black tracking-tight text-black sm:block">
+              <span className="nav-brand-text nav-brand-name block max-w-[154px] truncate text-sm font-black tracking-tight text-slate-950 sm:max-w-[210px] sm:text-base">
                 {siteName}
               </span>
             </Link>
@@ -658,14 +684,14 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                 type="button"
                 aria-label="Cart"
                 onClick={onOpenCart}
-                className="nav-icon-button nav-cart-button relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-sm transition-[background,color,border-color,box-shadow] duration-300 active:scale-[0.96]"
+                className="nav-action nav-cart-button cursor-pointer relative inline-flex h-10 w-10 items-center justify-center rounded-sm border border-slate-900/10 bg-white text-slate-950 shadow-[0_8px_24px_rgba(15,23,42,0.07)] transition hover:bg-slate-950 hover:text-white active:scale-[0.96]"
               >
                 <span className="nav-icon-glyph">
                   <IconCart />
                 </span>
 
                 {cartCount > 0 && (
-                  <span className="nav-cart-badge absolute -right-1 -top-1 z-10 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-black px-1.5 text-[10px] font-bold leading-none text-white ring-2 ring-white">
+                  <span className="cart-badge absolute -right-1 -top-1 z-10 flex min-h-5 min-w-5 items-center justify-center rounded-sm bg-amber-400 px-1.5 text-[10px] font-black leading-none text-slate-950 ring-2 ring-white">
                     {cartCount > 99 ? "99+" : cartCount}
                   </span>
                 )}
@@ -675,7 +701,7 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                 type="button"
                 aria-label="Profile"
                 onClick={goToProfile}
-                className="nav-icon-button nav-user-button inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-sm transition-[background,color,border-color,box-shadow] duration-300 active:scale-[0.96]"
+                className="nav-action nav-user-button cursor-pointer inline-flex h-10 w-10 items-center justify-center rounded-sm border border-slate-900/10 bg-white text-slate-950 shadow-[0_8px_24px_rgba(15,23,42,0.07)] transition hover:bg-slate-950 hover:text-white active:scale-[0.96]"
               >
                 <span className="nav-icon-glyph">
                   <IconUser />
@@ -686,7 +712,7 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                 type="button"
                 aria-label="24x7 Support"
                 onClick={() => router.push("/support")}
-                className="nav-support-button hidden h-10 items-center gap-2 rounded-full border border-black/10 bg-black px-4 text-sm font-bold text-white shadow-sm transition-[box-shadow,border-color] duration-300 active:scale-[0.98] sm:inline-flex"
+                className="nav-action hidden cursor-pointer h-10 items-center gap-2 rounded-sm bg-slate-950 px-4 text-sm font-black text-white shadow-[0_12px_28px_rgba(15,23,42,0.16)] transition hover:bg-amber-400 hover:text-slate-950 active:scale-[0.98] sm:inline-flex"
               >
                 <span className="relative z-10 inline-flex items-center gap-2">
                   <IconSupport />
@@ -701,50 +727,47 @@ export default function HomeNavbar({ onOpenCart }: Props) {
       </header>
 
       <div
-        className={`fixed inset-0 z-50 transition-all duration-300 ${menuOpen
-            ? "pointer-events-auto visible"
-            : "pointer-events-none invisible"
+        className={`fixed inset-0 z-50 transition-all duration-300 ${menuOpen ? "pointer-events-auto visible" : "pointer-events-none invisible"
           }`}
       >
         <button
           type="button"
           aria-label="Close menu overlay"
           onClick={closeMenu}
-          className={`absolute inset-0 bg-black/45 backdrop-blur-[2px] transition-opacity duration-300 ${menuOpen ? "opacity-100" : "opacity-0"
+          className={`absolute inset-0 bg-slate-950/55 backdrop-blur-[4px] transition-opacity duration-300 ${menuOpen ? "opacity-100" : "opacity-0"
             }`}
         />
 
         <aside
-          className={`absolute left-0 top-0 flex h-full w-[88vw] max-w-[390px] flex-col overflow-hidden rounded-r-[2rem] border-r border-white/20 bg-white shadow-2xl transition-transform duration-300 ease-out ${menuOpen ? "translate-x-0" : "-translate-x-full"
+          className={`drawer-panel absolute left-0 top-0 flex h-full w-[92vw] max-w-[420px] flex-col overflow-hidden rounded-r-sm border-r border-white/30 bg-[#fbfaf7] transition-transform duration-500 ease-out ${menuOpen ? "translate-x-0" : "-translate-x-full"
             }`}
-          onClick={(e) => e.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
         >
-          <div className="relative overflow-hidden border-b border-black/10 bg-gradient-to-br from-black via-zinc-900 to-zinc-700 px-5 pb-5 pt-4 text-white">
-            <div className="absolute -right-12 -top-12 h-36 w-36 rounded-full bg-white/10 blur-2xl" />
-            <div className="absolute -bottom-16 left-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
-
-            <div className="relative flex items-center justify-between gap-4">
+          {/* HEADER */}
+          <div className="border-b border-slate-900/8 bg-white px-5 pb-4 pt-4">
+            <div className="drawer-enter flex items-center justify-between gap-4">
               <Link
                 href="/"
                 onClick={closeMenu}
-                className="flex min-w-0 items-center gap-3"
+                className="flex min-w-0 items-center gap-3 rounded-sm transition hover:opacity-85"
               >
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-white shadow-lg">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-900/10 bg-white shadow-sm">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={logoSrc}
                     alt={siteName}
                     width={48}
                     height={48}
                     className="h-full w-full object-cover"
-                    onError={() => setLogoSrc("/favicon.png")}
+                    onError={handleLogoError}
                   />
                 </span>
 
                 <span className="min-w-0">
-                  <span className="block truncate text-lg font-black tracking-tight">
+                  <span className="block truncate text-lg font-black tracking-tight text-slate-950">
                     {siteName}
                   </span>
-                  <span className="mt-0.5 block text-xs font-medium text-white/70">
+                  <span className="mt-0.5 block text-xs font-semibold text-slate-500">
                     Premium shopping experience
                   </span>
                 </span>
@@ -754,7 +777,7 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                 type="button"
                 aria-label="Close menu"
                 onClick={closeMenu}
-                className="drawer-close-button inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white transition-[background,color,border-color,box-shadow] duration-300 hover:bg-white hover:text-black hover:shadow-lg"
+                className="drawer-close cursor-pointer inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border border-slate-900/10 bg-slate-100 text-slate-950 transition hover:bg-slate-950 hover:text-white active:scale-[0.96]"
               >
                 <span className="relative z-10">
                   <IconClose />
@@ -762,194 +785,216 @@ export default function HomeNavbar({ onOpenCart }: Props) {
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={startSearch}
-              className="drawer-search-button relative mt-5 flex w-full items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-left text-sm font-semibold text-white/90 shadow-sm transition-[background,color,border-color,box-shadow] duration-300 hover:bg-white hover:text-black hover:shadow-lg"
+            {/* SEARCH */}
+            <form
+              onSubmit={submitDrawerSearch}
+              className="drawer-enter mt-4"
+              style={{ animationDelay: "70ms" }}
             >
-              <span className="relative z-10 inline-flex items-center gap-3">
-                <IconSearch />
-                <span>Search products, categories...</span>
-              </span>
-            </button>
+              <label className="group flex w-full cursor-text items-center gap-3 rounded-sm border border-slate-900/10 bg-slate-50 px-3 py-2.5 transition focus-within:border-amber-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-amber-300/20">
+                <input
+                  ref={drawerSearchRef}
+                  value={drawerSearch}
+                  onChange={(event) => setDrawerSearch(event.target.value)}
+                  type="search"
+                  inputMode="search"
+                  autoComplete="off"
+                  placeholder="Search products, colors, sizes..."
+                  className="drawer-search-input min-w-0 flex-1 cursor-text bg-transparent text-sm font-bold text-slate-950 caret-amber-500 outline-none"
+                />
+
+                <button
+                  type="submit"
+                  aria-label="Search"
+                  className="shrink-0 rounded-sm transition active:scale-[0.96]"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-slate-950 text-white">
+                    <IconSearch />
+                  </span>
+                </button>
+              </label>
+            </form>
           </div>
 
-          <nav className="flex-1 overflow-y-auto px-4 py-4">
-            <div className="mb-3 flex items-center justify-between px-1">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">
-                Categories
-              </p>
+          <nav className="drawer-scroll flex-1 overflow-y-auto px-4 py-4">
+            {/* SHOP BY CATEGORY */}
+            <section className="drawer-enter" style={{ animationDelay: "110ms" }}>
+              <div className="mb-3 flex items-end justify-between px-1">
 
-              <Link
-                href="/collections/all"
-                onClick={closeMenu}
-                className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-bold text-zinc-700 transition-all hover:bg-black hover:text-white"
-              >
-                View all
-              </Link>
-            </div>
-
-            <div className="grid gap-2">
-              {categoryTree.map((root) => {
-                const openRoot = expandedRoot === root._id;
-                const hasSubCategories = Boolean(root.children?.length);
-
-                return (
-                  <div
-                    key={root._id}
-                    className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm"
-                  >
-                    <button
-                      type="button"
-                      className="drawer-category-card flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-[background,box-shadow] duration-300 hover:bg-zinc-50"
-                      onClick={() => {
-                        if (!hasSubCategories) {
-                          goToCategory({ root: root.name });
-                          return;
-                        }
-
-                        const next = openRoot ? null : root._id;
-                        setExpandedRoot(next);
-                        setExpandedSub(null);
-                      }}
-                    >
-                      <span className="relative z-10 min-w-0">
-                        <span className="block truncate text-sm font-extrabold text-zinc-950">
-                          {root.name}
-                        </span>
-
-                        {hasSubCategories ? (
-                          <span className="mt-0.5 block text-xs font-medium text-zinc-500">
-                            {root.children?.length} collections
-                          </span>
-                        ) : (
-                          <span className="mt-0.5 block text-xs font-medium text-zinc-500">
-                            Explore products
-                          </span>
-                        )}
-                      </span>
-
-                      {hasSubCategories ? (
-                        <span className="relative z-10 shrink-0 rounded-full bg-zinc-100 p-1.5">
-                          <IconChevron open={openRoot} />
-                        </span>
-                      ) : null}
-                    </button>
-
-                    {openRoot && hasSubCategories && (
-                      <div className="border-t border-black/10 bg-zinc-50/80 p-2">
-                        {root.children?.map((sub) => {
-                          const openSub = expandedSub === sub._id;
-                          const hasChildren = Boolean(sub.children?.length);
-
-                          return (
-                            <div key={sub._id} className="mb-1 last:mb-0">
-                              <button
-                                type="button"
-                                className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-bold text-zinc-800 transition-[background,box-shadow,color] duration-300 hover:bg-white hover:shadow-sm"
-                                onClick={() => {
-                                  if (!hasChildren) {
-                                    goToCategory({
-                                      root: root.name,
-                                      sub: sub.name,
-                                    });
-                                    return;
-                                  }
-
-                                  setExpandedSub(openSub ? null : sub._id);
-                                }}
-                              >
-                                <span className="truncate">{sub.name}</span>
-
-                                {hasChildren ? (
-                                  <IconChevron open={openSub} />
-                                ) : (
-                                  <span className="text-xs text-zinc-400">
-                                    View
-                                  </span>
-                                )}
-                              </button>
-
-                              {openSub && hasChildren && (
-                                <div className="ml-3 mt-1 grid gap-1 border-l border-black/10 pl-3">
-                                  {sub.children?.map((child) => (
-                                    <button
-                                      key={child._id}
-                                      type="button"
-                                      className="drawer-child-link rounded-xl px-3 py-2 text-left text-sm font-semibold text-zinc-600 transition-[background,color,box-shadow] duration-300 hover:bg-white hover:text-black hover:shadow-sm"
-                                      onClick={() =>
-                                        goToCategory({
-                                          root: root.name,
-                                          sub: sub.name,
-                                          child: child.name,
-                                        })
-                                      }
-                                    >
-                                      <span className="relative z-10">
-                                        {child.name}
-                                      </span>
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-
-              {categoryTree.length === 0 && (
-                <div className="rounded-2xl border border-dashed border-black/15 bg-zinc-50 px-4 py-5 text-center text-sm font-semibold text-zinc-500">
-                  No categories available
-                </div>
-              )}
-            </div>
-
-            <div className="mt-5">
-              <p className="mb-3 px-1 text-xs font-black uppercase tracking-[0.18em] text-zinc-400">
-                Quick Links
-              </p>
+                <Link
+                  href="/collections/all"
+                  onClick={closeMenu}
+                  className="drawer-safe-link inline-flex items-center justify-center rounded-sm border border-slate-950 bg-slate-950 px-3 py-2 text-xs font-black !text-white shadow-sm transition hover:border-amber-400 hover:!bg-amber-400 hover:!text-slate-950"
+                >
+                  View all
+                </Link>
+              </div>
 
               <div className="grid gap-2">
-                {[
-                  { label: "All Collection", href: "/collections/all" },
-                  { label: "Wishlist", href: "/wishlist" },
-                  { label: "Orders", href: "/orders" },
-                  { label: "Return & Exchange Policy", href: "/return-policy" },
-                  { label: "Support", href: "/support" },
-                ].map((link) => (
+                {categoryTree.map((root, index) => {
+                  const openRoot = expandedRoot === root._id;
+                  const hasSubCategories = Boolean(root.children?.length);
+
+                  return (
+                    <div
+                      key={root._id}
+                      className="overflow-hidden rounded-sm border border-slate-900/8 bg-white shadow-sm"
+                    >
+                      <button
+                        type="button"
+                        className="drawer-row group cursor-pointer flex w-full items-center gap-3 px-3 py-3 text-left transition hover:!bg-slate-950"
+                        onClick={() => {
+                          if (!hasSubCategories) {
+                            goToCategory({ root: root.name });
+                            return;
+                          }
+
+                          const next = openRoot ? null : root._id;
+                          setExpandedRoot(next);
+                          setExpandedSub(null);
+                        }}
+                      >
+                        <span className="drawer-row-index relative cursor-pointer z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border border-slate-900/8 bg-slate-100 text-xs font-black text-slate-500 transition group-hover:border-white/20 group-hover:!bg-white/15 group-hover:!text-white">
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+
+                        <span className="relative z-10 cursor-pointer min-w-0 flex-1">
+                          <span className="drawer-row-title cursor-pointer block truncate text-sm font-black text-slate-950 transition group-hover:!text-white">
+                            {root.name}
+                          </span>
+
+                          <span className="drawer-row-subtitle cursor-pointer mt-0.5 block truncate text-xs font-semibold text-slate-500 transition group-hover:!text-white/80">
+                            {hasSubCategories
+                              ? `${root.children?.length} sub categories`
+                              : "Explore products"}
+                          </span>
+                        </span>
+
+                        <span className="drawer-row-arrow relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-slate-100 text-slate-700 transition group-hover:!bg-white/15 group-hover:!text-white">
+                          {hasSubCategories ? <IconChevron open={openRoot} /> : "→"}
+                        </span>
+                      </button>
+
+                      {openRoot && hasSubCategories && (
+                        <div className="grid gap-1.5 border-t border-slate-900/8 bg-slate-50 p-2">
+                          {root.children?.map((sub) => {
+                            const openSub = expandedSub === sub._id;
+                            const hasChildren = Boolean(sub.children?.length);
+
+                            return (
+                              <div key={sub._id}>
+                                <button
+                                  type="button"
+                                  className="drawer-child-row group cursor-pointer flex w-full items-center justify-between rounded-sm bg-white px-3 py-2.5 text-left text-sm font-black text-slate-800 shadow-sm transition hover:!bg-slate-950 hover:!text-white"
+                                  onClick={() => {
+                                    if (!hasChildren) {
+                                      goToCategory({
+                                        root: root.name,
+                                        sub: sub.name,
+                                      });
+                                      return;
+                                    }
+
+                                    setExpandedSub(openSub ? null : sub._id);
+                                  }}
+                                >
+                                  <span className="relative z-10 min-w-0 truncate transition group-hover:!text-white">
+                                    {sub.name}
+                                  </span>
+
+                                  <span className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-black text-slate-500 transition group-hover:!bg-white/15 group-hover:!text-white">
+                                    {hasChildren ? <IconChevron open={openSub} /> : "→"}
+                                  </span>
+                                </button> 
+
+                                {openSub && hasChildren && (
+                                  <div className="ml-4 mt-1.5 grid gap-1.5 border-l border-slate-900/10 pl-3">
+                                    {sub.children?.map((child) => (
+                                      <button
+                                        key={child._id}
+                                        type="button"
+                                        className="rounded-sm px-3 py-2 cursor-pointer text-left text-sm font-bold text-slate-600 transition hover:!bg-slate-950 hover:!text-white hover:shadow-sm"
+                                        onClick={() =>
+                                          goToCategory({
+                                            root: root.name,
+                                            sub: sub.name,
+                                            child: child.name,
+                                          })
+                                        }
+                                      >
+                                        {child.name}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {categoryTree.length === 0 && (
+                  <div className="rounded-sm border border-dashed border-slate-900/15 bg-white px-4 py-6 text-center">
+                    <p className="text-sm font-black text-slate-600">
+                      No categories available
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-slate-400">
+                      Please check back soon.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* CUSTOMER AREA */}
+            <section className="drawer-enter mt-6" style={{ animationDelay: "150ms" }}>
+
+              <div className="grid gap-2">
+                {CUSTOMER_LINKS.map((link, index) => (
                   <Link
                     key={link.href}
                     href={link.href}
                     onClick={closeMenu}
-                    className="drawer-link-card group rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-bold !text-zinc-800 transition-[background,color,border-color,box-shadow] duration-300 hover:border-black hover:!bg-black hover:!text-white hover:shadow-lg"
+                    className="drawer-safe-link drawer-customer-row group flex items-center gap-3 rounded-sm border border-slate-900/8 bg-white p-3 shadow-sm transition hover:!bg-slate-950 hover:shadow-lg active:scale-[0.99]"
                   >
-                    <span className="relative z-10 block transition-colors duration-300 group-hover:!text-white">
-                      {link.label}
+                    <span className="drawer-row-index relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border border-slate-900/8 bg-slate-100 text-xs font-black text-slate-500 transition group-hover:border-white/20 group-hover:!bg-white/15 group-hover:!text-white">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+
+                    <span className="relative z-10 min-w-0 flex-1">
+                      <span className="drawer-row-title block truncate text-sm font-black text-slate-950 transition group-hover:!text-white">
+                        {link.label}
+                      </span>
+                      <span className="drawer-row-subtitle block truncate text-xs font-semibold text-slate-500 transition group-hover:!text-white/80">
+                        {link.subtitle}
+                      </span>
+                    </span>
+
+                    <span className="drawer-row-arrow relative z-10 text-lg leading-none text-slate-400 transition group-hover:translate-x-0.5 group-hover:!text-white">
+                      →
                     </span>
                   </Link>
                 ))}
               </div>
-            </div>
+            </section>
           </nav>
 
-          <div className="border-t border-black/10 px-5 py-4">
-            <div className="text-center">
+          {/* BOTTOM TRUST CARD */}
+          <div className="border-t border-slate-900/8 bg-white px-5 py-4">
               <div className="flex justify-center">
                 <RatingStars />
               </div>
 
-              <p className="mt-3 text-xs font-black uppercase tracking-[0.16em] text-zinc-900">
+              <p className="mt-3 text-xs font-black uppercase tracking-[0.16em] text-slate-950">
                 Loved by 7,00,000+ customers
               </p>
 
-              <p className="mt-1 text-xs font-medium text-zinc-500">
+              <p className="mt-1 text-xs font-semibold text-slate-500">
                 Trusted shopping, fast support, premium quality.
               </p>
-            </div>
           </div>
         </aside>
       </div>

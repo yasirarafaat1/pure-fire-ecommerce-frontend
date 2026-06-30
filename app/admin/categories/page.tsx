@@ -395,7 +395,7 @@ function CategoryModal({
 
           <div className="grid gap-4 md:grid-cols-2">
             <label className="grid gap-1.5 text-sm font-medium text-slate-700">
-              Name <span className="text-red-600">*</span>
+              <div className="flex items-center">Name<span className="text-red-600">*</span></div>
               <input
                 className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
                 value={form.name}
@@ -406,7 +406,7 @@ function CategoryModal({
             </label>
 
             <label className="grid gap-1.5 text-sm font-medium text-slate-700">
-              Slug
+              <div className="flex items-center">Slug<span className="text-red-600">*</span></div>
               <input
                 className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
                 value={form.slug}
