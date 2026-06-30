@@ -145,17 +145,57 @@ export default function BestSellers() {
         </div>
       )}
 
-      <div className="group flex items-center justify-center border border-gray-600 rounded-[5px] cursor-pointer p-2 mt-3 w-full max-w-md mx-auto text-black transition-all duration-200 hover:-translate-y-0.5 hover:bg-black hover:text-white hover:border-black">
-        <a href="/collections/best-seller" className="text-sm font-semibold">
+      <a
+        href="/collections/best-seller"
+        className="view-all-soft-cta group relative mx-auto mt-4 flex w-full max-w-md items-center justify-center gap-2 overflow-hidden rounded-[6px] border border-black/60 px-4 py-2.5 text-black transition-all duration-300 hover:-translate-y-0.5 hover:border-black hover:text-white hover:shadow-[0_10px_24px_rgba(0,0,0,0.12)] active:scale-[0.98]"
+      >
+        <span className="relative z-10 text-sm font-semibold transition-colors duration-300 group-hover:!text-white">
           View All
-        </a>
-        <BiRightArrowAlt className="text-current" />
-      </div>
+        </span>
+
+        <BiRightArrowAlt className="relative z-10 text-xl transition-transform duration-300 group-hover:translate-x-1 group-hover:!text-white" />
+      </a>
 
       <style jsx>{`
+        .view-all-soft-cta {
+          isolation: isolate;
+        }
+
+        .view-all-soft-cta::before {
+          content: "";
+          position: absolute;
+          left: -18px;
+          bottom: -18px;
+          z-index: 0;
+          width: 38px;
+          height: 38px;
+          border-radius: 999px;
+          background: #000;
+          transform: scale(0);
+          transform-origin: bottom left;
+          transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .view-all-soft-cta:hover::before {
+          transform: scale(13);
+        }
+
+        .view-all-soft-cta span,
+        .view-all-soft-cta :global(svg) {
+          position: relative;
+          z-index: 10;
+        }
+
         @media (max-width: 767px) {
           .best-seller-image-frame :global(img) {
             object-position: top center !important;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .view-all-soft-cta::before,
+          .view-all-soft-cta :global(svg) {
+            transition: none !important;
           }
         }
       `}</style>

@@ -20,6 +20,26 @@ const placeholders: Product[] = Array.from({ length: 5 }, (_, i) => ({
   product_image: [""],
 }));
 
+function getProductImage(product: Product) {
+  const raw = Array.isArray(product.product_image)
+    ? product.product_image[0] || ""
+    : "";
+
+  if (!raw) return "";
+
+  if (
+    raw.startsWith("http://") ||
+    raw.startsWith("https://") ||
+    raw.startsWith("/") ||
+    raw.startsWith("data:") ||
+    raw.startsWith("blob:")
+  ) {
+    return raw;
+  }
+
+  return `/${raw}`;
+}
+
 export default function TopProducts() {
   const [items, setItems] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,84 +108,123 @@ export default function TopProducts() {
     load();
   }, []);
 
-  const data = items.length ? items : [];
   const hasReal = items.length > 0;
 
-  const getCategoryLabel = (p: Product) => {
-    const direct = p.category || p.category_name || "";
+  const getCategoryLabel = (product: Product) => {
+    const direct = product.category || product.category_name || "";
+
     if (direct) return direct;
 
-    const catObj = p.catagory_id as any;
-    if (catObj && typeof catObj === "object" && catObj.name) return catObj.name;
+    const catObj = product.catagory_id as any;
 
-    const id = typeof p.catagory_id === "string" ? p.catagory_id : catObj?._id || "";
+    if (catObj && typeof catObj === "object" && catObj.name) {
+      return catObj.name;
+    }
+
+    const id =
+      typeof product.catagory_id === "string"
+        ? product.catagory_id
+        : catObj?._id || "";
+
     return categoryMap[String(id)] || "Category";
   };
 
   return (
-    <section className="min-h-[340px] max-w-6xl mx-4 md:mx-auto p-4 md:min-h-[360px] md:px-4 py-3 md:py-5 border border-black/10 rounded-[5px] bg-black/50 text-white">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Top Products</h2>
+    <section className="mx-4 my-4 overflow-hidden rounded-[14px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.16),transparent_32%),linear-gradient(135deg,#141414,#24201b_55%,#0b0b0b)] px-3 py-4 text-white shadow-[0_18px_50px_rgba(0,0,0,0.18)] md:mx-auto md:max-w-6xl md:px-5 md:py-5">
+      <div className="mb-4 flex items-end justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-black tracking-tight text-white md:text-2xl">
+            Top Products
+          </h2>
+        </div>
       </div>
 
       {loading && !hasReal ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 border border-black/10 rounded-[5px] p-3">
-          {placeholders.map((p) => (
-            <div key={p.product_id} className="rounded-[5px]">
-              <div className="w-full aspect-square bg-black/5 rounded-t-[5px] animate-pulse" />
-              <div className="p-3">
-                <div className="h-3 w-24 bg-black/5 rounded-[3px] animate-pulse" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {placeholders.map((product) => (
+            <div
+              key={product.product_id}
+              className="overflow-hidden rounded-[12px] border border-white/10 bg-white/95 p-2"
+            >
+              <div className="aspect-square w-full animate-pulse rounded-[10px] bg-black/5" />
+
+              <div className="grid gap-2 p-2">
+                <div className="h-3 w-20 animate-pulse rounded-full bg-black/10" />
+                <div className="h-3 w-full animate-pulse rounded-full bg-black/10" />
+                <div className="h-3 w-2/3 animate-pulse rounded-full bg-black/10" />
               </div>
             </div>
           ))}
         </div>
       ) : !hasReal ? (
-        <div className="border border-black/10 rounded-[5px] p-10 text-center text-sm text-white/70 w-full">
+        <div className="rounded-[12px] border border-white/12 bg-white/8 px-4 py-10 text-center text-sm font-semibold text-white/70">
           No top products yet. Check back soon.
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          {(hasReal ? data : placeholders).map((p) => {
-            const name = p.name || p.title || "product";
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {items.map((product, index) => {
+            const name = product.name || product.title || "Product";
+            const category = getCategoryLabel(product);
+            const image = getProductImage(product);
 
-            const card = (
-              <div className="rounded-[5px] pt-4">
-                <div className="w-full aspect-square bg-black/5 overflow-hidden rounded-[5px]">
-                  {p.product_image?.[0] ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={p.product_image[0]}
-                      alt={name}
-                      className="w-full h-full object-cover object-top"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-black/5 animate-pulse" />
-                  )}
-                </div>
-
-                <div className="p-3">
-                  <div className="text-sm font-semibold line-clamp-2">
-                    {hasReal ? getCategoryLabel(p) : "Loading..."}
+            return (
+              <a
+                key={product.product_id}
+                href={buildProductHref({ id: product.product_id, name })}
+                className="top-product-card group block overflow-hidden rounded-sm border border-white/10 bg-white text-black shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_38px_rgba(0,0,0,0.24)]"
+              >
+                <div className="relative overflow-hidden rounded-t-[12px] bg-[#f7f4ef]">
+                  <div className="top-product-image-frame relative aspect-square w-full">
+                    {image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={image}
+                        alt={name}
+                        className="h-full w-full object-contain object-top transition-[filter] duration-300 group-hover:brightness-[0.98]"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="h-full w-full animate-pulse rounded-[10px] bg-black/5" />
+                    )}
                   </div>
                 </div>
-              </div>
-            );
 
-            return hasReal ? (
-              <a
-                key={p.product_id}
-                href={buildProductHref({ id: p.product_id, name })}
-                className="block"
-              >
-                {card}
+                <div className="flex items-center justify-between gap-1 px-3 py-3">
+                  <p
+                    className="truncate text-[11px] font-black uppercase tracking-[0.15em] text-black/80"
+                    title={category}
+                  >
+                    {category}
+                  </p>
+                  <span className="leading-none text-black transition-transform duration-300 group-hover:translate-x-0.5">
+                    →
+                  </span>
+                </div>
               </a>
-            ) : (
-              <div key={p.product_id}>{card}</div>
             );
           })}
         </div>
       )}
+
+      <style jsx>{`
+        .top-product-card {
+          will-change: transform;
+        }
+
+        .top-product-image-frame :global(img) {
+          object-position: top center !important;
+        }
+
+        @media (max-width: 767px) {
+          .top-product-image-frame {
+            padding: 6px;
+          }
+
+          .top-product-image-frame :global(img) {
+            object-position: top center !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }
