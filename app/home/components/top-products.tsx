@@ -133,7 +133,7 @@ export default function TopProducts() {
     <section className="mx-4 my-4 overflow-hidden rounded-[14px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.16),transparent_32%),linear-gradient(135deg,#141414,#24201b_55%,#0b0b0b)] px-3 py-4 text-white shadow-[0_18px_50px_rgba(0,0,0,0.18)] md:mx-auto md:max-w-6xl md:px-5 md:py-5">
       <div className="mb-4 flex items-end justify-between gap-3">
         <div>
-          <h2 className="text-xl font-black tracking-tight text-white md:text-2xl">
+          <h2 className="text-xl font-800 text-white">
             Top Products
           </h2>
         </div>
@@ -162,7 +162,7 @@ export default function TopProducts() {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {items.map((product, index) => {
+          {items.map((product) => {
             const name = product.name || product.title || "Product";
             const category = getCategoryLabel(product);
             const image = getProductImage(product);
@@ -171,32 +171,32 @@ export default function TopProducts() {
               <a
                 key={product.product_id}
                 href={buildProductHref({ id: product.product_id, name })}
-                className="top-product-card group block overflow-hidden rounded-sm border border-white/10 bg-white text-black shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_38px_rgba(0,0,0,0.24)]"
+                className="group block"
               >
-                <div className="relative overflow-hidden rounded-t-[12px] bg-[#f7f4ef]">
-                  <div className="top-product-image-frame relative aspect-square w-full">
+                <div className="relative overflow-hidden">
+                  <div className="top-product-image-frame relative aspect-square w-full overflow-hidden rounded-[5px]">
                     {image ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={image}
                         alt={name}
-                        className="h-full w-full object-contain object-top transition-[filter] duration-300 group-hover:brightness-[0.98]"
+                        className="block h-full w-full object-cover object-top"
                         loading="lazy"
                       />
                     ) : (
-                      <div className="h-full w-full animate-pulse rounded-[10px] bg-black/5" />
+                      <div className="h-full w-full animate-pulse rounded-[10px] bg-white/10" />
                     )}
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between gap-1 px-3 py-3">
                   <p
-                    className="truncate text-[11px] font-black uppercase tracking-[0.15em] text-black/80"
+                    className="truncate text-[11px] font-black uppercase tracking-[0.15em] text-white"
                     title={category}
                   >
                     {category}
                   </p>
-                  <span className="leading-none text-black transition-transform duration-300 group-hover:translate-x-0.5">
+                  <span className="leading-none text-white transition-transform duration-300 group-hover:translate-x-0.5">
                     →
                   </span>
                 </div>
@@ -207,22 +207,14 @@ export default function TopProducts() {
       )}
 
       <style jsx>{`
-        .top-product-card {
-          will-change: transform;
+        .top-product-image-frame {
+          background: none !important;
         }
 
         .top-product-image-frame :global(img) {
+          aspect-ratio: 1 / 1;
           object-position: top center !important;
-        }
-
-        @media (max-width: 767px) {
-          .top-product-image-frame {
-            padding: 6px;
-          }
-
-          .top-product-image-frame :global(img) {
-            object-position: top center !important;
-          }
+          background: none !important;
         }
       `}</style>
     </section>
