@@ -90,6 +90,8 @@ export default function AssistantWidget() {
     };
   }, [addAssistantNotice]);
 
+  const isProductPage = pageContext.pageType === "product";
+
   return (
     <>
       <AssistantPanel
@@ -115,7 +117,11 @@ export default function AssistantWidget() {
         }
         onCancelReply={() => chat.setReplyTo(null)}
       />
-      <AssistantLauncher open={open} onClick={() => setOpen((value) => !value)} />
+      <AssistantLauncher
+        open={open}
+        onClick={() => setOpen((value) => !value)}
+        productPage={isProductPage}
+      />
     </>
   );
 }

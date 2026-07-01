@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Bot, Edit, MoreVertical } from "lucide-react";
 import AssistantInput from "./AssistantInput";
 import AssistantMessageList from "./AssistantMessageList";
@@ -58,6 +58,7 @@ export default function AssistantPanel({
   onCancelReply: () => void;
 }) {
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [mobileViewportHeight, setMobileViewportHeight] = useState(0);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -78,6 +79,30 @@ export default function AssistantPanel({
       body.classList.remove("assistant-panel-open");
     };
   }, [open]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const updateViewportHeight = () => {
+      const viewportHeight = window.visualViewport?.height || window.innerHeight;
+      setMobileViewportHeight(Math.max(360, Math.floor(viewportHeight - 8)));
+    };
+
+    updateViewportHeight();
+    window.visualViewport?.addEventListener("resize", updateViewportHeight);
+    window.visualViewport?.addEventListener("scroll", updateViewportHeight);
+    window.addEventListener("resize", updateViewportHeight);
+
+    return () => {
+      window.visualViewport?.removeEventListener("resize", updateViewportHeight);
+      window.visualViewport?.removeEventListener("scroll", updateViewportHeight);
+      window.removeEventListener("resize", updateViewportHeight);
+    };
+  }, []);
+
+  const panelStyle = {
+    "--assistant-panel-mobile-height": `${mobileViewportHeight || 680}px`,
+  } as CSSProperties;
 
   const toggleHistory = () => {
     setHistoryOpen((current) => {
@@ -117,7 +142,8 @@ export default function AssistantPanel({
         role="dialog"
         aria-modal="true"
         aria-label="Shopping Assistant"
-        className={`assistant-panel fixed inset-x-0 bottom-0 z-[44] mx-auto flex h-[88dvh] max-h-[780px] w-full flex-col overflow-hidden rounded-t-[22px] border border-black/10 bg-white shadow-[0_-22px_70px_rgba(0,0,0,0.22)] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] md:inset-auto md:bottom-8 md:right-4 md:mx-0 md:h-[min(680px,calc(100dvh-50px))] md:w-[410px] md:rounded-[4px] md:shadow-[0_28px_90px_rgba(0,0,0,0.24)] ${
+        style={panelStyle}
+        className={`assistant-panel fixed inset-x-0 bottom-0 z-[44] mx-auto flex h-[min(88dvh,var(--assistant-panel-mobile-height))] max-h-[var(--assistant-panel-mobile-height)] w-full flex-col overflow-hidden rounded-t-[22px] border border-black/10 bg-white shadow-[0_-22px_70px_rgba(0,0,0,0.22)] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] md:inset-auto md:bottom-8 md:right-4 md:mx-0 md:h-[min(680px,calc(100dvh-50px))] md:max-h-[780px] md:w-[410px] md:rounded-[4px] md:shadow-[0_28px_90px_rgba(0,0,0,0.24)] ${
           open
             ? "pointer-events-auto translate-y-0 scale-100 opacity-100 blur-0"
             : "pointer-events-none translate-y-[105%] scale-[0.98] opacity-0 blur-[1px] md:translate-y-8 md:scale-[0.94]"
@@ -351,6 +377,12 @@ export default function AssistantPanel({
           }
 
           @media (max-width: 767px) {
+            html.assistant-panel-open,
+            body.assistant-panel-open {
+              overflow: hidden !important;
+              overscroll-behavior: none;
+            }
+
             html.assistant-panel-open button[aria-label="Close assistant"],
             body.assistant-panel-open button[aria-label="Close assistant"],
             html.assistant-panel-open .assistant-launcher,
