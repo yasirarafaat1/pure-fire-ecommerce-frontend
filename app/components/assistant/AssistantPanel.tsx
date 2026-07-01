@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bot, Edit, MessageCircle, MoreVertical } from "lucide-react";
+import { Bot, Edit, MoreVertical } from "lucide-react";
 import AssistantInput from "./AssistantInput";
 import AssistantMessageList from "./AssistantMessageList";
 import type { AssistantMessage, AssistantSessionSummary } from "./types";
@@ -37,6 +37,9 @@ export default function AssistantPanel({
   onRefreshHistory,
   onOpenHistory,
   onStartNewChat,
+  replyTo,
+  onReply,
+  onCancelReply,
 }: {
   open: boolean;
   messages: AssistantMessage[];
@@ -50,6 +53,9 @@ export default function AssistantPanel({
   onRefreshHistory: () => void;
   onOpenHistory: (sessionId: string) => void;
   onStartNewChat: () => void;
+  replyTo?: AssistantMessage["replyTo"];
+  onReply: (message: AssistantMessage) => void;
+  onCancelReply: () => void;
 }) {
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -100,8 +106,9 @@ export default function AssistantPanel({
     <>
       <div
         aria-hidden="true"
+        data-close-cursor="true"
         onClick={onClose}
-        className={`fixed inset-0 z-[43] bg-black/25 backdrop-blur-[2px] transition-all duration-300 md:hidden ${
+        className={`fixed inset-0 z-[43] bg-black/25 transition-all duration-300 md:bg-transparent ${
           open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
         }`}
       />
@@ -110,7 +117,7 @@ export default function AssistantPanel({
         role="dialog"
         aria-modal="true"
         aria-label="Shopping Assistant"
-        className={`assistant-panel fixed inset-x-0 bottom-0 z-[44] mx-auto flex h-[88dvh] max-h-[780px] w-full flex-col overflow-hidden rounded-t-[22px] border border-black/10 bg-white shadow-[0_-22px_70px_rgba(0,0,0,0.22)] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] md:inset-auto md:bottom-20 md:right-4 md:mx-0 md:h-[min(680px,calc(100dvh-130px))] md:w-[410px] md:rounded-[4px] md:shadow-[0_28px_90px_rgba(0,0,0,0.24)] ${
+        className={`assistant-panel fixed inset-x-0 bottom-0 z-[44] mx-auto flex h-[88dvh] max-h-[780px] w-full flex-col overflow-hidden rounded-t-[22px] border border-black/10 bg-white shadow-[0_-22px_70px_rgba(0,0,0,0.22)] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] md:inset-auto md:bottom-8 md:right-4 md:mx-0 md:h-[min(680px,calc(100dvh-50px))] md:w-[410px] md:rounded-[4px] md:shadow-[0_28px_90px_rgba(0,0,0,0.24)] ${
           open
             ? "pointer-events-auto translate-y-0 scale-100 opacity-100 blur-0"
             : "pointer-events-none translate-y-[105%] scale-[0.98] opacity-0 blur-[1px] md:translate-y-8 md:scale-[0.94]"
@@ -121,7 +128,7 @@ export default function AssistantPanel({
             type="button"
             aria-label="Close chat history"
             onClick={() => setHistoryOpen(false)}
-            className="absolute inset-x-0 bottom-0 top-[74px] z-30 cursor-default bg-white/30 backdrop-blur-[3px]"
+            className="absolute inset-x-0 bottom-0 top-[74px] z-30 cursor-default bg-white/30"
           />
         ) : null}
 
@@ -223,12 +230,13 @@ export default function AssistantPanel({
                 error={error}
                 onSend={onSend}
                 onLookup={onLookup}
+                onReply={onReply}
               />
             </div>
           </main>
 
           <div className={`assistant-input-safe shrink-0 border-t border-black/10 bg-white transition duration-200 ${historyOpen ? "blur-[2px]" : ""}`}>
-            <AssistantInput disabled={loading} onSend={onSend} />
+            <AssistantInput disabled={loading} onSend={onSend} replyTo={replyTo} onCancelReply={onCancelReply} />
           </div>
         </div>
 

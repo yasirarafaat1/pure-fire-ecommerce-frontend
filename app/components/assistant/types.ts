@@ -143,6 +143,11 @@ export type AssistantMessage = {
   intent?: string | null;
   cards?: AssistantCard[];
   suggestions?: string[];
+  replyTo?: {
+    id: string;
+    role: "user" | "assistant" | "system" | "tool";
+    content: string;
+  } | null;
   createdAt?: string;
 };
 
@@ -154,6 +159,7 @@ export type AssistantApiResponse = {
   intent?: string;
   cards?: AssistantCard[];
   suggestions?: string[];
+  replyTo?: AssistantMessage["replyTo"];
 };
 
 export type AssistantSessionSummary = {

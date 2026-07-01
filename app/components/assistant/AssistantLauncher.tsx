@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Bot, MessageCircle, X } from "lucide-react";
-import { Roboto } from "next/font/google";
+import { Bot } from "lucide-react";
 
 export default function AssistantLauncher({
   open,
@@ -33,13 +32,13 @@ export default function AssistantLauncher({
     <button
       type="button"
       data-assistant-launcher="true"
-      aria-label={open ? "Close shopping assistant" : "Open shopping assistant"}
+      aria-label="Open shopping assistant"
       onClick={onClick}
       className={`assistant-launcher-button fixed bottom-5 right-4 z-[45] h-14 w-14 place-items-center rounded-full bg-green-700 text-white shadow-[0_18px_45px_rgba(15,23,42,0.28)] transition md:bottom-5 md:right-5 ${
-        open ? "hidden md:grid" : "grid"
+        open ? "hidden" : "grid"
       }`}
     >
-      {open ? <X size={22} /> : <Bot size={23} />}
+      <Bot size={23} />
     </button>
   );
 }

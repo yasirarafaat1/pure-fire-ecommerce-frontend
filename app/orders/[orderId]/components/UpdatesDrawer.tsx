@@ -29,6 +29,7 @@ export default function UpdatesDrawer({
     <div className="fixed inset-0 z-50 sm:hidden">
       <button
         type="button"
+        data-close-cursor="true"
         className={`absolute inset-0 bg-black/30 transition-opacity duration-200 ${
           open ? "opacity-100" : "opacity-0"
         }`}

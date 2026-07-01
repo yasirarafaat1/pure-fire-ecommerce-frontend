@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bot, MessageCircle, UserRound } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Bot, UserRound } from "lucide-react";
 import AssistantCardsRenderer from "./AssistantCardsRenderer";
 import AssistantTyping from "./AssistantTyping";
 import type { AssistantMessage } from "./types";
@@ -117,18 +118,25 @@ export default function AssistantMessageList({
   error,
   onSend,
   onLookup,
+  onReply,
 }: {
   messages: AssistantMessage[];
   loading: boolean;
   error: string;
   onSend: (value: string) => void;
   onLookup: (orderId: string) => void;
+  onReply: (message: AssistantMessage) => void;
 }) {
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
 
   const [activeTimeLabel, setActiveTimeLabel] = useState("");
+  const [replyMenu, setReplyMenu] = useState<{
+    message: AssistantMessage;
+    x: number;
+    y: number;
+  } | null>(null);
 
   const list = useMemo(() => messages as LooseMessage[], [messages]);
 
@@ -198,6 +206,17 @@ export default function AssistantMessageList({
     };
   }, [firstTimeLabel, list]);
 
+  useEffect(() => {
+    if (!replyMenu) return undefined;
+    const close = () => setReplyMenu(null);
+    window.addEventListener("click", close);
+    window.addEventListener("scroll", close, true);
+    return () => {
+      window.removeEventListener("click", close);
+      window.removeEventListener("scroll", close, true);
+    };
+  }, [replyMenu]);
+
   const visibleStickyLabel = activeTimeLabel || firstTimeLabel;
   const showStickyTime = Boolean(visibleStickyLabel);
 
@@ -212,6 +231,7 @@ export default function AssistantMessageList({
       <div className="grid gap-4">
         {list.map((message, index) => {
           const user = message.role === "user";
+          const messageKey = message.id || `${message.role}-${index}`;
           const previous = list[index - 1];
           const createTimeMarker = shouldCreateTimeMarker(message, previous, index);
           const date = getMessageDate(message);
@@ -219,7 +239,7 @@ export default function AssistantMessageList({
           const userAvatar = getUserAvatar(message);
 
           return (
-            <div key={message.id || `${message.role}-${index}`} className="grid gap-2">
+            <div key={messageKey} className="relative grid gap-2">
               {createTimeMarker ? (
                 <div
                   aria-hidden="true"
@@ -251,14 +271,63 @@ export default function AssistantMessageList({
                     className={`message-bubble ${
                       user ? "message-bubble-user" : "message-bubble-assistant"
                     }`}
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      setReplyMenu({
+                        message: {
+                          id: messageKey,
+                          role: message.role,
+                          content: message.content,
+                          intent: message.intent,
+                          cards: message.cards,
+                          suggestions: message.suggestions,
+                          createdAt: message.createdAt,
+                        },
+                        x: event.clientX,
+                        y: event.clientY,
+                      });
+                    }}
                   >
+                    {message.replyTo ? (
+                      <div
+                        className={`mb-2 rounded-[5px] border px-2 py-1 text-xs ${
+                          user
+                            ? "border-white/20 bg-white/10 text-white/80"
+                            : "border-slate-200 bg-slate-50 text-slate-500"
+                        }`}
+                      >
+                        <span className="block font-black">
+                          Reply to {message.replyTo.role === "user" ? "you" : "assistant"}
+                        </span>
+                        <span className="mt-0.5 block max-w-[210px] truncate font-semibold">
+                          {message.replyTo.content}
+                        </span>
+                      </div>
+                    ) : null}
                     <p className="whitespace-pre-wrap break-words text-[14px] leading-[1.55]">
                       {message.content}
                     </p>
                   </div>
 
                   {!user ? (
-                    <>
+                    <div
+                      onContextMenu={(event) => {
+                        event.preventDefault();
+                        setReplyMenu({
+                          message: {
+                            id: messageKey,
+                            role: message.role,
+                            content: message.content,
+                            intent: message.intent,
+                            cards: message.cards,
+                            suggestions: message.suggestions,
+                            createdAt: message.createdAt,
+                          },
+                          x: event.clientX,
+                          y: event.clientY,
+                        });
+                      }}
+                    >
                       <AssistantCardsRenderer
                         cards={message.cards || []}
                         onLookup={onLookup}
@@ -279,7 +348,7 @@ export default function AssistantMessageList({
                           ))}
                         </div>
                       ) : null}
-                    </>
+                    </div>
                   ) : null}
                 </div>
 
@@ -294,6 +363,7 @@ export default function AssistantMessageList({
                   </div>
                 ) : null}
               </div>
+
             </div>
           );
         })}
@@ -301,7 +371,7 @@ export default function AssistantMessageList({
         {loading ? (
           <div className="flex items-end gap-2">
             <div className="assistant-avatar assistant-avatar-bot">
-              <MessageCircle size={16} strokeWidth={2.5} />
+              <Bot size={16} strokeWidth={2.5} />
             </div>
 
             <AssistantTyping />
@@ -316,6 +386,32 @@ export default function AssistantMessageList({
 
         <div ref={bottomRef} />
       </div>
+
+      {typeof document !== "undefined" && replyMenu
+        ? createPortal(
+            <div
+              className="fixed z-[9999] overflow-hidden rounded-[6px] border border-black/10 bg-white shadow-[0_16px_42px_rgba(15,23,42,0.18)]"
+              style={{
+                left: Math.min(replyMenu.x, window.innerWidth - 124),
+                top: Math.min(replyMenu.y, window.innerHeight - 56),
+              }}
+              onClick={(event) => event.stopPropagation()}
+              onContextMenu={(event) => event.preventDefault()}
+            >
+              <button
+                type="button"
+                className="px-4 py-2 text-sm font-black text-slate-900 hover:bg-slate-100"
+                onClick={() => {
+                  onReply(replyMenu.message);
+                  setReplyMenu(null);
+                }}
+              >
+                Reply
+              </button>
+            </div>,
+            document.body,
+          )
+        : null}
 
       <style jsx>{`
         .assistant-message-list {

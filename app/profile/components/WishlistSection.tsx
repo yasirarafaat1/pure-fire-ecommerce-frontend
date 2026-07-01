@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { openCartModal } from "../../cart/cart-events";
-import { getUserToken } from "../../utils/auth";
+import { getUserToken, handleAuthExpiredResponse } from "../../utils/auth";
 import { buildProductHref } from "../../utils/productUrl";
 
 const API_BASE = "/api/user";
@@ -30,19 +30,13 @@ type Product = {
 type CartLine = { product_id?: string | number };
 type VariantSize = string | { label?: string; size?: string };
 
-const getEmail = () => {
-  const email = (localStorage.getItem("user_email") || "guest@purefire.local").trim();
-  localStorage.setItem("user_email", email);
-  return email;
-};
-
 export default function WishlistSection({ email }: { email: string }) {
   const [items, setItems] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [cartItems, setCartItems] = useState<CartLine[]>([]);
   const [cartId, setCartId] = useState("");
 
-  const loadWishlist = async () => {
+  const loadWishlist = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/wishlist/list`, {
@@ -51,13 +45,14 @@ export default function WishlistSection({ email }: { email: string }) {
         body: JSON.stringify({ email }),
       });
       const data = await res.json();
+      if (handleAuthExpiredResponse(res, data)) return;
       setItems(data?.products || []);
     } catch {
       setItems([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [email]);
 
   const pickDefaultVariant = (p: Product) => {
     const firstVariant = p.colorVariants?.[0];
@@ -89,6 +84,7 @@ export default function WishlistSection({ email }: { email: string }) {
       body: JSON.stringify(payload),
     });
     const data = await res.json();
+    if (handleAuthExpiredResponse(res, data)) return;
     if (data?.cart_id) localStorage.setItem("cart_id", data.cart_id);
     if (data?.cart_id) setCartId(data.cart_id);
     setCartItems(data?.items || []);
@@ -107,6 +103,7 @@ export default function WishlistSection({ email }: { email: string }) {
         body: JSON.stringify({ cart_id: id }),
       });
       const data = await res.json();
+      if (handleAuthExpiredResponse(res, data)) return;
       setCartItems(data?.items || []);
     } catch {
       setCartItems([]);
@@ -118,7 +115,10 @@ export default function WishlistSection({ email }: { email: string }) {
     await fetch(`${API_BASE}/wishlist/remove`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-user-token": getToken() },
-      body: JSON.stringify({ email: getEmail(), product_id: productId }),
+      body: JSON.stringify({ email, product_id: productId }),
+    }).then(async (res) => {
+      const data = await res.json().catch(() => ({}));
+      if (handleAuthExpiredResponse(res, data)) return;
     });
     loadWishlist();
     window.dispatchEvent(new Event("wishlist:updated"));
@@ -135,7 +135,7 @@ export default function WishlistSection({ email }: { email: string }) {
     const onUpdated = () => loadWishlist();
     window.addEventListener("wishlist:updated", onUpdated as EventListener);
     return () => window.removeEventListener("wishlist:updated", onUpdated as EventListener);
-  }, [email]);
+  }, [email, loadWishlist]);
 
   useEffect(() => {
     loadCart(cartId);
@@ -188,6 +188,7 @@ export default function WishlistSection({ email }: { email: string }) {
               <a href={href} className="block">
                 <div className="w-25 h-25 border border-black/10 rounded-[3px] bg-black/5 overflow-hidden">
                   {image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img src={image} alt={title} className="w-full h-full object-cover aspect-[3/4]" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-[10px] text-[var(--muted)]">

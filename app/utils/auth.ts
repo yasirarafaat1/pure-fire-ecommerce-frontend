@@ -14,6 +14,15 @@ export const writeCookie = (name: string, value: string, days = 15) => {
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}`;
 };
 
+const RESERVED_GUEST_EMAIL = "guest@purefire.local";
+
+const normalizeStoredEmail = (value: string | null | undefined) => {
+  const email = (value || "").trim();
+  if (!email || email === "undefined" || email === "null") return "";
+  if (email.toLowerCase() === RESERVED_GUEST_EMAIL) return "";
+  return email;
+};
+
 export const getUserToken = () => {
   if (typeof localStorage === "undefined") return "";
   const raw = (localStorage.getItem("user_token") || "").trim();
@@ -38,23 +47,23 @@ export const getUserToken = () => {
 
 export const getUserEmail = () => {
   if (typeof localStorage === "undefined") return "";
-  const raw = (localStorage.getItem("user_email") || "").trim();
-  const email = raw && raw !== "undefined" && raw !== "null" ? raw : "";
+  const email = normalizeStoredEmail(localStorage.getItem("user_email"));
   if (email) return email;
-  const sessionRaw = (sessionStorage.getItem("user_email") || "").trim();
-  const sessionEmail =
-    sessionRaw && sessionRaw !== "undefined" && sessionRaw !== "null" ? sessionRaw : "";
+  localStorage.removeItem("user_email");
+
+  const sessionEmail = normalizeStoredEmail(sessionStorage.getItem("user_email"));
   if (sessionEmail) {
     localStorage.setItem("user_email", sessionEmail);
     return sessionEmail;
   }
-  const cookieRaw = readCookie("user_email");
-  const cookieEmail =
-    cookieRaw && cookieRaw !== "undefined" && cookieRaw !== "null" ? cookieRaw : "";
+  sessionStorage.removeItem("user_email");
+
+  const cookieEmail = normalizeStoredEmail(readCookie("user_email"));
   if (cookieEmail) {
     localStorage.setItem("user_email", cookieEmail);
     return cookieEmail;
   }
+  writeCookie("user_email", "", -1);
   return "";
 };
 
@@ -82,4 +91,34 @@ export const clearUserAuth = () => {
   }
   writeCookie("user_token", "", -1);
   writeCookie("user_email", "", -1);
+};
+
+export const isAuthExpiredResponse = (status: number, message = "") => {
+  const normalized = String(message || "").toLowerCase();
+  return (
+    status === 401 ||
+    normalized.includes("session expired") ||
+    normalized.includes("unauthorized") ||
+    normalized.includes("auth error")
+  );
+};
+
+export const logoutExpiredUser = (next = "/profile") => {
+  clearUserAuth();
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("wishlist:updated"));
+    window.dispatchEvent(new Event("cart:updated"));
+    window.dispatchEvent(new Event("auth:changed"));
+    window.location.replace(`/login?next=${encodeURIComponent(next)}`);
+  }
+};
+
+export const handleAuthExpiredResponse = (
+  response: Response,
+  data?: { message?: string },
+  next = "/profile",
+) => {
+  if (!isAuthExpiredResponse(response.status, data?.message || "")) return false;
+  logoutExpiredUser(next);
+  return true;
 };

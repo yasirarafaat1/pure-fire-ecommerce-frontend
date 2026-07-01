@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { FaFemale, FaMale, FaUser } from "react-icons/fa";
-import { getUserToken } from "../../utils/auth";
+import { getUserToken, handleAuthExpiredResponse } from "../../utils/auth";
 
 type Profile = { email: string; name: string; gender: string };
 
 const getToken = () => getUserToken();
+const errorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
 
 export default function ProfileForm({ email }: { email: string }) {
   const [loading, setLoading] = useState(false);
@@ -30,6 +32,7 @@ export default function ProfileForm({ email }: { email: string }) {
           body: JSON.stringify({ email }),
         });
         const data = await res.json();
+        if (handleAuthExpiredResponse(res, data)) return;
         if (!res.ok || !data.status) throw new Error(data.message || "Failed to load profile");
         if (active) {
           const next = {
@@ -41,8 +44,8 @@ export default function ProfileForm({ email }: { email: string }) {
           setDraft({ name: next.name, gender: next.gender });
           setEditing(!(next.name || next.gender));
         }
-      } catch (err: any) {
-        if (active) setError(err.message || "Failed to load profile");
+      } catch (err: unknown) {
+        if (active) setError(errorMessage(err, "Failed to load profile"));
       } finally {
         if (active) setLoading(false);
       }
@@ -82,6 +85,7 @@ export default function ProfileForm({ email }: { email: string }) {
         body: JSON.stringify({ email: profile.email, name: normalizedName, gender: draft.gender }),
       });
       const data = await res.json();
+      if (handleAuthExpiredResponse(res, data)) return;
       if (!res.ok || !data.status) throw new Error(data.message || "Failed to save");
       const next = {
         email: data.profile?.email || profile.email,
@@ -92,8 +96,8 @@ export default function ProfileForm({ email }: { email: string }) {
       setDraft({ name: next.name, gender: next.gender });
       setEditing(false);
       setInfo("Profile updated.");
-    } catch (err: any) {
-      setError(err.message || "Failed to save");
+    } catch (err: unknown) {
+      setError(errorMessage(err, "Failed to save"));
     } finally {
       setSaving(false);
     }
@@ -107,6 +111,30 @@ export default function ProfileForm({ email }: { email: string }) {
         if (editing && hasChanges && !saving) saveProfile();
       }}
     >
+      {loading ? (
+        <div className="grid gap-4">
+          <div className="flex items-center gap-4">
+            <div className="h-16 w-16 animate-pulse rounded-full bg-black/10" />
+            <div className="h-4 w-44 animate-pulse rounded bg-black/10" />
+          </div>
+          <div className="grid gap-2">
+            <div className="h-3 w-20 animate-pulse rounded bg-black/10" />
+            <div className="h-11 animate-pulse rounded-[5px] border border-black/10 bg-black/5" />
+          </div>
+          <div className="grid gap-2">
+            <div className="h-3 w-16 animate-pulse rounded bg-black/10" />
+            <div className="h-11 animate-pulse rounded-[5px] border border-black/10 bg-black/5" />
+          </div>
+          <div className="flex gap-2">
+            <div className="h-10 w-20 animate-pulse rounded-[5px] bg-black/10" />
+            <div className="h-10 w-20 animate-pulse rounded-[5px] bg-black/10" />
+            <div className="h-10 w-20 animate-pulse rounded-[5px] bg-black/10" />
+          </div>
+        </div>
+      ) : null}
+
+      {!loading ? (
+        <>
       <div className="flex items-center gap-4">
         <div className="w-16 h-16 rounded-full border border-black/20 flex items-center justify-center text-xl">
           {avatarIcon}
@@ -157,7 +185,6 @@ export default function ProfileForm({ email }: { email: string }) {
         )}
       </div>
 
-      {loading && <div className="text-sm text-[var(--muted)]">Loading profile...</div>}
       {error && <div className="text-sm text-red-600">{error}</div>}
       {info && <div className="text-sm text-green-700">{info}</div>}
 
@@ -195,6 +222,8 @@ export default function ProfileForm({ email }: { email: string }) {
           </button>
         )}
       </div>
+        </>
+      ) : null}
     </form>
   );
 }

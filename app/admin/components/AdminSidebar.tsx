@@ -109,6 +109,7 @@ export default function AdminSidebar({
       {open && (
         <button
           aria-label="Close admin navigation"
+          data-close-cursor="true"
           className="fixed inset-0 z-40 bg-slate-950/40 lg:hidden"
           onClick={onClose}
         />

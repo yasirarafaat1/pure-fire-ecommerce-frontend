@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { CreditCard, Minus, Plus, ShoppingCart } from "lucide-react";
 import { getUserEmail, getUserToken, setUserAuth } from "../../../utils/auth";
-import type { ProductAssistantCard as ProductCardType } from "../types";
+import type { AssistantCard, ProductAssistantCard as ProductCardType } from "../types";
 
 const money = (value?: number) => `Rs ${Number(value || 0).toLocaleString("en-IN")}`;
 
@@ -101,6 +101,7 @@ export default function ProductAssistantCard({ card }: { card: ProductCardType }
   const [addressId, setAddressId] = useState<string | number | null>(null);
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [addressMode, setAddressMode] = useState<"saved" | "new">("new");
+  const [addressConfirmed, setAddressConfirmed] = useState(false);
   const [addressesLoading, setAddressesLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [buyMessage, setBuyMessage] = useState("");
@@ -108,6 +109,19 @@ export default function ProductAssistantCard({ card }: { card: ProductCardType }
   const stock = Number(card.stock || 0);
   const hasStock = stock > 0;
   const total = useMemo(() => Number(card.price || 0) * quantity, [card.price, quantity]);
+
+  const sendBotNotice = (content: string, suggestions: string[] = [], cards: AssistantCard[] = []) => {
+    window.dispatchEvent(new CustomEvent("assistant:notice", { detail: { content, suggestions, cards } }));
+  };
+
+  const selectSavedAddress = (row: SavedAddress, rowId: string | number) => {
+    setAddressId(rowId);
+    setAddressConfirmed(false);
+    sendBotNotice(
+      `Delivery address selected: ${[row.address, row.city, row.state, row.pinCode].filter(Boolean).join(", ")}. Please confirm Yes or No.`,
+      ["Yes", "No", "Create new address"],
+    );
+  };
 
   useEffect(() => {
     if (buyOpen) setEmail(getUserEmail());
@@ -134,6 +148,7 @@ export default function ProductAssistantCard({ card }: { card: ProductCardType }
       setSavedAddresses(rows);
       const firstId = rows[0]?.address_id || rows[0]?.id || null;
       setAddressId(firstId);
+      setAddressConfirmed(false);
       setAddressMode(firstId ? "saved" : "new");
     } catch {
       setSavedAddresses([]);
@@ -255,9 +270,11 @@ export default function ProductAssistantCard({ card }: { card: ProductCardType }
       const savedRow = data.address || (Array.isArray(data.data) ? data.data[0] : data.data);
       const savedId = savedRow?.address_id || savedRow?.id || null;
       setAddressId(savedId);
+      setAddressConfirmed(false);
       await loadSavedAddresses();
       setAddressMode("saved");
-      setBuyMessage("Address saved. Opening payment...");
+      sendBotNotice("New delivery address saved. Please confirm it before placing the order.", ["Yes", "No"]);
+      setBuyMessage("Address saved. Please confirm it.");
       return savedId;
     } catch (error) {
       setBuyError(error instanceof Error ? error.message : "Failed to save address");
@@ -288,6 +305,10 @@ export default function ProductAssistantCard({ card }: { card: ProductCardType }
     }
     if (addressMode === "saved" && !selectedAddressId) {
       setBuyError("Please select a delivery address.");
+      return;
+    }
+    if (!addressConfirmed) {
+      setBuyError("Please confirm the selected address first.");
       return;
     }
     if (!selectedAddressId) return;
@@ -328,13 +349,35 @@ export default function ProductAssistantCard({ card }: { card: ProductCardType }
           const verifyJson = (await verifyResponse.json()) as ApiResponse;
           if (!verifyResponse.ok || verifyJson.status === false) {
             setBuyError(verifyJson.message || "Payment verification failed.");
+            sendBotNotice("Payment verification failed. Your order was not confirmed.", ["Try again", "Support"]);
             setLoading(false);
             return;
           }
           setBuyMessage(`Order placed successfully. Order ID: #${verifyJson.order_id || ""}`);
+          sendBotNotice(
+            `Order placed successfully. You can open order #${verifyJson.order_id || ""} from this card.`,
+            ["Track order", "My orders", "Find products"],
+            [
+              {
+                type: "order",
+                orderId: verifyJson.order_id || "",
+                status: "confirmed",
+                paymentStatus: "paid",
+                total,
+                itemCount: quantity,
+                isLimited: false,
+                actions: [{ label: "View Order", type: "link", href: `/orders/${verifyJson.order_id || ""}` }],
+              },
+            ],
+          );
           setLoading(false);
         },
-        modal: { ondismiss: () => setLoading(false) },
+        modal: {
+          ondismiss: () => {
+            sendBotNotice("Payment was closed before completion. No confirmed order was created.", ["Place order", "Support"]);
+            setLoading(false);
+          },
+        },
         theme: { color: "#000000" },
       });
       checkout.open();
@@ -419,21 +462,22 @@ export default function ProductAssistantCard({ card }: { card: ProductCardType }
                       onClick={() => {
                         setAddressMode("new");
                         setAddressId(null);
+                        setAddressConfirmed(false);
                       }}
                       className="text-xs font-black text-slate-950 underline"
                     >
                       Create new
                     </button>
                   </div>
-                  <div className="grid gap-2">
-                    {savedAddresses.slice(0, 4).map((row, index) => {
+                  <div className="assistant-address-list grid max-h-64 gap-2 overflow-y-auto pr-1">
+                    {savedAddresses.map((row, index) => {
                       const rowId = row.address_id || row.id || index;
                       const selected = String(addressId || "") === String(rowId);
                       return (
                         <button
                           key={String(rowId)}
                           type="button"
-                          onClick={() => setAddressId(rowId)}
+                          onClick={() => selectSavedAddress(row, rowId)}
                           className={`rounded-[6px] border p-2 text-left transition ${selected ? "border-slate-950 bg-white shadow-sm" : "border-black/10 bg-white/70 hover:bg-white"
                             }`}
                         >
@@ -447,7 +491,32 @@ export default function ProductAssistantCard({ card }: { card: ProductCardType }
                       );
                     })}
                   </div>
-                  <button type="button" disabled={loading || !addressId} onClick={payNow} className="btn btn-primary py-2 text-xs">
+                  {addressId ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAddressConfirmed(true);
+                          sendBotNotice("Address confirmed. You can place the order now.", ["Place order"]);
+                        }}
+                        className="btn btn-primary py-2 text-xs"
+                      >
+                        Yes
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAddressConfirmed(false);
+                          setAddressId(null);
+                          sendBotNotice("Okay, please select another address or create a new one.", ["Create new address"]);
+                        }}
+                        className="btn btn-ghost py-2 text-xs"
+                      >
+                        No
+                      </button>
+                    </div>
+                  ) : null}
+                  <button type="button" disabled={loading || !addressId || !addressConfirmed} onClick={payNow} className="btn btn-primary py-2 text-xs">
                     {loading ? "Processing..." : "Place Order"}
                   </button>
                 </div>
@@ -461,6 +530,7 @@ export default function ProductAssistantCard({ card }: { card: ProductCardType }
                       onClick={() => {
                         const firstId = savedAddresses[0]?.address_id || savedAddresses[0]?.id || null;
                         setAddressId(addressId || firstId);
+                        setAddressConfirmed(false);
                         setAddressMode("saved");
                       }}
                       className="justify-self-start text-xs font-black text-slate-950 underline"
@@ -508,6 +578,17 @@ export default function ProductAssistantCard({ card }: { card: ProductCardType }
 
         .assistant-order-input::placeholder {
           color: #94a3b8;
+        }
+
+        .assistant-address-list {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+
+        .assistant-address-list::-webkit-scrollbar {
+          display: none;
+          width: 0;
+          height: 0;
         }
       `}</style>
     </div>

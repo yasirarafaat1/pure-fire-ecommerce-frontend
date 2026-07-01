@@ -9,7 +9,7 @@ import OrdersSection from "./components/OrdersSection";
 import WishlistSection from "./components/WishlistSection";
 import AddressesSection from "./components/AddressesSection";
 import SettingsSection from "./components/SettingsSection";
-import { getUserEmail, getUserToken } from "../utils/auth";
+import { getUserEmail, getUserToken, logoutExpiredUser } from "../utils/auth";
 
 type SectionKey = "profile" | "orders" | "wishlist" | "addresses" | "settings";
 
@@ -59,7 +59,9 @@ export default function ProfilePage() {
     const handleAuth = () => {
       if (tryAuth()) {
         window.clearInterval(intervalId);
+        return;
       }
+      if (authReady) logoutExpiredUser(next);
     };
 
     window.addEventListener("auth:changed", handleAuth as EventListener);
@@ -70,7 +72,7 @@ export default function ProfilePage() {
       window.removeEventListener("auth:changed", handleAuth as EventListener);
       window.removeEventListener("storage", handleAuth as EventListener);
     };
-  }, []);
+  }, [authReady, pathname, router]);
 
   const heading = useMemo(() => {
     const hit = sections.find((s) => s.key === active);
@@ -80,8 +82,29 @@ export default function ProfilePage() {
   if (!authReady) {
     return (
       <main className="max-w-6xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-center py-16 text-sm text-[var(--muted)]">
-          Loading...
+        <div className="grid gap-6 md:grid-cols-[260px_1fr] items-start">
+          <aside className="hidden md:grid gap-2 rounded-[5px] border border-black/10 bg-white p-3">
+            <div className="h-4 w-24 animate-pulse rounded bg-black/10" />
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div key={index} className="h-9 animate-pulse rounded-[5px] border border-black/10 bg-black/5" />
+            ))}
+          </aside>
+          <section className="rounded-[5px] border border-black/10 bg-white p-5">
+            <div className="h-5 w-28 animate-pulse rounded bg-black/10" />
+            <div className="mt-6 flex items-center gap-4">
+              <div className="h-16 w-16 animate-pulse rounded-full bg-black/10" />
+              <div className="h-4 w-40 animate-pulse rounded bg-black/10" />
+            </div>
+            <div className="mt-6 grid gap-4">
+              <div className="h-11 animate-pulse rounded-[5px] border border-black/10 bg-black/5" />
+              <div className="h-11 animate-pulse rounded-[5px] border border-black/10 bg-black/5" />
+              <div className="flex gap-2">
+                <div className="h-10 w-20 animate-pulse rounded-[5px] bg-black/10" />
+                <div className="h-10 w-20 animate-pulse rounded-[5px] bg-black/10" />
+                <div className="h-10 w-20 animate-pulse rounded-[5px] bg-black/10" />
+              </div>
+            </div>
+          </section>
         </div>
       </main>
     );

@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { assistantGet, assistantPost } from "../assistant-api";
-import type { AssistantApiResponse, AssistantMessage, AssistantSessionSummary } from "../types";
+import type { AssistantApiResponse, AssistantCard, AssistantMessage, AssistantSessionSummary } from "../types";
 
 const initialMessage: AssistantMessage = {
   id: "welcome",
@@ -32,8 +32,12 @@ export const useAssistantChat = ({
   const [historyLoading, setHistoryLoading] = useState(false);
   const [error, setError] = useState("");
   const [sessions, setSessions] = useState<AssistantSessionSummary[]>([]);
+  const [replyTo, setReplyTo] = useState<AssistantMessage["replyTo"]>(null);
 
-  const appendAssistantResponse = (data: AssistantApiResponse) => {
+  const appendAssistantResponse = (
+    data: AssistantApiResponse,
+    fallbackReplyTo?: AssistantMessage["replyTo"],
+  ) => {
     setMessages((current) => [
       ...current,
       {
@@ -43,11 +47,13 @@ export const useAssistantChat = ({
         intent: data.intent,
         cards: data.cards || [],
         suggestions: data.suggestions || [],
+        replyTo: data.replyTo || fallbackReplyTo || null,
+        createdAt: new Date().toISOString(),
       },
     ]);
   };
 
-  const addAssistantNotice = useCallback((content: string, suggestions: string[] = []) => {
+  const addAssistantNotice = useCallback((content: string, suggestions: string[] = [], cards: AssistantCard[] = []) => {
     const trimmed = content.trim();
     if (!trimmed) return;
     setMessages((current) => [
@@ -56,7 +62,7 @@ export const useAssistantChat = ({
         id: `assistant_notice_${Date.now()}`,
         role: "assistant",
         content: trimmed,
-        cards: [],
+        cards,
         suggestions,
       },
     ]);
@@ -67,10 +73,16 @@ export const useAssistantChat = ({
       const trimmed = text.trim();
       if (!trimmed || loading) return;
       setError("");
-      setMessages((current) => [
-        ...current,
-        { id: `user_${Date.now()}`, role: "user", content: trimmed },
-      ]);
+      const userMessage: AssistantMessage = {
+        id: `user_${Date.now()}`,
+        role: "user",
+        content: trimmed,
+        replyTo,
+        createdAt: new Date().toISOString(),
+      };
+      setMessages((current) => [...current, userMessage]);
+      const activeReplyTo = replyTo;
+      setReplyTo(null);
       setLoading(true);
       try {
         const activeSessionId = sessionId || (await ensureSession());
@@ -81,16 +93,21 @@ export const useAssistantChat = ({
           context: {
             currentPath: pathname || "/",
             cartId: localStorage.getItem("cart_id") || "",
+            replyTo: activeReplyTo,
           },
         });
-        appendAssistantResponse(data);
+        appendAssistantResponse(data, {
+          id: userMessage.id,
+          role: "user",
+          content: userMessage.content,
+        });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Assistant failed");
       } finally {
         setLoading(false);
       }
     },
-    [ensureSession, guestId, loading, pathname, sessionId],
+    [ensureSession, guestId, loading, pathname, replyTo, sessionId],
   );
 
   const lookupOrder = useCallback(
@@ -98,6 +115,13 @@ export const useAssistantChat = ({
       const trimmed = orderId.trim();
       if (!trimmed || loading) return;
       setError("");
+      const userMessage: AssistantMessage = {
+        id: `user_${Date.now()}`,
+        role: "user",
+        content: `Track order ${trimmed}`,
+        createdAt: new Date().toISOString(),
+      };
+      setMessages((current) => [...current, userMessage]);
       setLoading(true);
       try {
         const activeSessionId = sessionId || (await ensureSession());
@@ -106,7 +130,11 @@ export const useAssistantChat = ({
           guestId,
           orderId: trimmed,
         });
-        appendAssistantResponse(data);
+        appendAssistantResponse(data, {
+          id: userMessage.id,
+          role: "user",
+          content: userMessage.content,
+        });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Order lookup failed");
       } finally {
@@ -155,6 +183,7 @@ export const useAssistantChat = ({
             intent: message.intent,
             cards: message.cards || [],
             suggestions: message.suggestions || [],
+            replyTo: message.replyTo || (message as { metadata?: { replyTo?: AssistantMessage["replyTo"] } }).metadata?.replyTo || null,
             createdAt: message.createdAt,
           }));
         setActiveSession(nextSessionId);
@@ -196,7 +225,9 @@ export const useAssistantChat = ({
       openHistory,
       startNewChat,
       addAssistantNotice,
+      replyTo,
+      setReplyTo,
     }),
-    [addAssistantNotice, error, historyLoading, loading, lookupOrder, messages, openHistory, refreshSessions, sendMessage, sessions, startNewChat],
+    [addAssistantNotice, error, historyLoading, loading, lookupOrder, messages, openHistory, refreshSessions, replyTo, sendMessage, sessions, startNewChat],
   );
 };

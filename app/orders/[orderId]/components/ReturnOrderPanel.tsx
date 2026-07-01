@@ -2,13 +2,20 @@
 
 import { useState } from "react";
 import { getUserToken } from "../../../utils/auth";
+import type { Order } from "./orderUtils";
 
 const API_BASE = "/api/user";
+
+type ReturnOrderResponse = {
+  status?: boolean;
+  message?: string;
+  order?: Partial<Order>;
+};
 
 type Props = {
   orderId: string;
   disabled?: boolean;
-  onReturned: (order: any) => void;
+  onReturned: (order: Partial<Order>) => void;
 };
 
 export default function ReturnOrderPanel({ orderId, disabled, onReturned }: Props) {
@@ -29,12 +36,12 @@ export default function ReturnOrderPanel({ orderId, disabled, onReturned }: Prop
         },
         body: JSON.stringify({ order_id: orderId }),
       });
-      const data = await res.json();
+      const data = (await res.json()) as ReturnOrderResponse;
       if (!res.ok || !data.status) throw new Error(data.message || "Failed to request return");
       onReturned(data.order || { status: "return_requested" });
       setOpen(false);
-    } catch (err: any) {
-      setError(err.message || "Unable to request return.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Unable to request return.");
     } finally {
       setLoading(false);
     }
@@ -56,6 +63,7 @@ export default function ReturnOrderPanel({ orderId, disabled, onReturned }: Prop
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <button
             type="button"
+            data-close-cursor="true"
             className="absolute inset-0 bg-black/30"
             onClick={() => setOpen(false)}
             aria-label="Close dialog"

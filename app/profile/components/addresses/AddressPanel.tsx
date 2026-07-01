@@ -27,7 +27,13 @@ export default function AddressPanel({
 
   return (
     <div className="fixed inset-0 z-50">
-      <button className="absolute inset-0 bg-black/30" onClick={onClose} aria-label="Close address panel" />
+      <button
+        type="button"
+        data-close-cursor="true"
+        className="absolute inset-0 bg-black/30"
+        onClick={onClose}
+        aria-label="Close address panel"
+      />
       <aside className="absolute right-0 top-0 h-full w-[95%] md:w-[60%] bg-white text-black border-l border-black/15 p-5 overflow-y-auto">
         <div className="flex items-center justify-between border-b border-black/10 pb-3 mb-4">
           <div className="text-sm font-semibold">{title}</div>

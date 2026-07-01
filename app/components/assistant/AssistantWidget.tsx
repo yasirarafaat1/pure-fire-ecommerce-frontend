@@ -5,7 +5,7 @@ import AssistantLauncher from "./AssistantLauncher";
 import AssistantPanel from "./AssistantPanel";
 import { useAssistantChat } from "./hooks/useAssistantChat";
 import { useAssistantSession } from "./hooks/useAssistantSession";
-import type { ProductAssistantCard } from "./types";
+import type { AssistantCard, ProductAssistantCard } from "./types";
 
 export default function AssistantWidget() {
   const [open, setOpen] = useState(false);
@@ -20,6 +20,12 @@ export default function AssistantWidget() {
   const { addAssistantNotice } = chat;
 
   useEffect(() => {
+    const addNotice = (event: Event) => {
+      const detail = (event as CustomEvent<{ content?: string; suggestions?: string[]; cards?: AssistantCard[] }>).detail;
+      if (!detail?.content) return;
+      addAssistantNotice(detail.content, detail.suggestions || [], detail.cards || []);
+    };
+
     const addFromAssistant = async (event: Event) => {
       const detail = (event as CustomEvent<ProductAssistantCard>).detail;
       if (!detail?.productId) return;
@@ -71,8 +77,12 @@ export default function AssistantWidget() {
       }
     };
 
+    window.addEventListener("assistant:notice", addNotice as EventListener);
     window.addEventListener("assistant:add-to-cart", addFromAssistant as EventListener);
-    return () => window.removeEventListener("assistant:add-to-cart", addFromAssistant as EventListener);
+    return () => {
+      window.removeEventListener("assistant:notice", addNotice as EventListener);
+      window.removeEventListener("assistant:add-to-cart", addFromAssistant as EventListener);
+    };
   }, [addAssistantNotice]);
 
   return (
@@ -90,6 +100,15 @@ export default function AssistantWidget() {
         onRefreshHistory={chat.refreshSessions}
         onOpenHistory={chat.openHistory}
         onStartNewChat={chat.startNewChat}
+        replyTo={chat.replyTo}
+        onReply={(message) =>
+          chat.setReplyTo({
+            id: message.id,
+            role: message.role,
+            content: message.content,
+          })
+        }
+        onCancelReply={() => chat.setReplyTo(null)}
       />
       <AssistantLauncher open={open} onClick={() => setOpen((value) => !value)} />
     </>

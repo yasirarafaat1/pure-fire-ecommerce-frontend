@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import AddressList from "./addresses/AddressList";
 import AddressPanel from "./addresses/AddressPanel";
 import { AddressItem, AddressPayload } from "./addresses/types";
-import { getUserToken } from "../../utils/auth";
+import { getUserToken, handleAuthExpiredResponse } from "../../utils/auth";
 
 const API_BASE = "/api/user";
 const getToken = () => getUserToken();
+const errorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
 
 export default function AddressesSection({ email }: { email: string }) {
   const [addresses, setAddresses] = useState<AddressItem[]>([]);
@@ -17,7 +19,7 @@ export default function AddressesSection({ email }: { email: string }) {
   const [panelAddress, setPanelAddress] = useState<AddressItem | null>(null);
   const [error, setError] = useState("");
 
-  const loadAddresses = async () => {
+  const loadAddresses = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -27,19 +29,20 @@ export default function AddressesSection({ email }: { email: string }) {
         body: JSON.stringify({ email }),
       });
       const data = await res.json();
+      if (handleAuthExpiredResponse(res, data)) return;
       if (!res.ok || !data.status) throw new Error(data.message || "Failed to load addresses");
       setAddresses(data.addresses || []);
-    } catch (err: any) {
-      setError(err.message || "Failed to load addresses");
+    } catch (err: unknown) {
+      setError(errorMessage(err, "Failed to load addresses"));
     } finally {
       setLoading(false);
     }
-  };
+  }, [email]);
 
   useEffect(() => {
     if (!email) return;
     loadAddresses();
-  }, [email]);
+  }, [email, loadAddresses]);
 
   const openForAdd = () => {
     setPanelMode("add");
@@ -67,11 +70,12 @@ export default function AddressesSection({ email }: { email: string }) {
         body: JSON.stringify(id ? { ...payload, address_id: id } : payload),
       });
       const data = await res.json();
+      if (handleAuthExpiredResponse(res, data)) return { ok: false, message: "Session expired" };
       if (!res.ok || !data.status) return { ok: false, message: data.message || "Failed to save address" };
       await loadAddresses();
       return { ok: true };
-    } catch (err: any) {
-      return { ok: false, message: err.message || "Failed to save address" };
+    } catch (err: unknown) {
+      return { ok: false, message: errorMessage(err, "Failed to save address") };
     }
   };
 

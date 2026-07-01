@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { openCartModal } from "../cart/cart-events";
@@ -11,9 +11,7 @@ import { buildProductHref } from "../utils/productUrl";
 const API_BASE = "/api/user";
 
 const getEmail = () => {
-  const email = getUserEmail() || "guest@purefire.local";
-  localStorage.setItem("user_email", email);
-  return email;
+  return getUserEmail();
 };
 const getToken = () => getUserToken();
 
@@ -47,13 +45,19 @@ export default function WishlistPage() {
   const [cartItems, setCartItems] = useState<CartLine[]>([]);
   const [authReady, setAuthReady] = useState(false);
 
-  const loadWishlist = async () => {
+  const loadWishlist = useCallback(async () => {
+    const email = getEmail();
+    if (!email) {
+      setItems([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/wishlist/list`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-user-token": getToken() },
-        body: JSON.stringify({ email: getEmail() }),
+        body: JSON.stringify({ email }),
       });
       const data = await res.json();
       setItems(data?.products || []);
@@ -62,7 +66,7 @@ export default function WishlistPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const token = getToken();
@@ -76,7 +80,7 @@ export default function WishlistPage() {
     const onUpdated = () => loadWishlist();
     window.addEventListener("wishlist:updated", onUpdated as EventListener);
     return () => window.removeEventListener("wishlist:updated", onUpdated as EventListener);
-  }, []);
+  }, [loadWishlist, pathname, router]);
 
   useEffect(() => {
     if (!authReady) return;

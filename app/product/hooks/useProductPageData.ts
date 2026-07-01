@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { normalizeProduct } from "../utils/productHelpers";
 import { cachedFetch, getCachedJson } from "../../utils/cachedFetch";
-import { getUserToken } from "../../utils/auth";
+import { getUserEmail, getUserToken } from "../../utils/auth";
 
 const API_BASE = "/api/user";
 const getToken = () => getUserToken();
@@ -132,8 +132,11 @@ export const useProductPageData = ({
 
         const token = getToken();
         if (token) {
-          const email = (localStorage.getItem("user_email") || "guest@purefire.local").trim();
-          localStorage.setItem("user_email", email);
+          const email = getUserEmail();
+          if (!email) {
+            setWishlistIds(new Set<string>());
+            return;
+          }
           const wishRes = await fetch(`${API_BASE}/wishlist/list`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-user-token": token },

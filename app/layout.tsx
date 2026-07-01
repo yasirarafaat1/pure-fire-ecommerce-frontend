@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Bodoni_Moda, Geist_Mono, Manrope } from "next/font/google";
 import "./globals.css";
+import CloseCursorOverlay from "./components/CloseCursorOverlay";
 import PublicFrame from "./components/PublicFrame";
 import { defaultMetadata, siteConfig } from "./config/metadata";
 
@@ -121,6 +122,7 @@ export default function RootLayout({
         className={`${manrope.variable} ${geistMono.variable} ${bodoniModa.variable} antialiased`}
       >
         <PublicFrame>{children}</PublicFrame>
+        <CloseCursorOverlay />
       </body>
     </html>
   );

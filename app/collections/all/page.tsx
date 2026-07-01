@@ -85,6 +85,7 @@ function CollectionsPage() {
         aria-hidden={!mobileFilterOpen}
       >
         <button
+          data-close-cursor="true"
           className={`absolute inset-0 bg-black/30 transition-opacity duration-300 ${
             mobileFilterOpen ? "opacity-100" : "opacity-0"
           }`}

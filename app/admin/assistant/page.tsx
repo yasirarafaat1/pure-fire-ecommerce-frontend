@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BotMessageSquare,
   Clock3,
-  Eye,
   MessageSquareText,
   RefreshCw,
   Search,
@@ -142,7 +141,7 @@ function ChatViewModal({
         type="button"
         aria-label="Close chat view overlay"
         onClick={onClose}
-        className="absolute inset-0 bg-slate-950/55 backdrop-blur-sm"
+        className="absolute inset-0 bg-slate-950/55"
       />
 
       <div className="absolute inset-x-0 bottom-0 flex max-h-[92dvh] min-h-[82dvh] flex-col overflow-hidden rounded-t-3xl border border-white/20 bg-white shadow-[0_-24px_90px_rgba(15,23,42,0.32)] md:inset-6 md:mx-auto md:h-[calc(100dvh-48px)] md:min-h-0 md:w-[min(1120px,calc(100vw-48px))] md:rounded-[4px]">
@@ -384,12 +383,18 @@ export default function AdminAssistantPage() {
   }, [load]);
 
   useEffect(() => {
-    if (!selectedSessionId) {
-      setDetail(null);
-      return undefined;
-    }
-
     let active = true;
+
+    if (!selectedSessionId) {
+      const timer = window.setTimeout(() => {
+        if (active) setDetail(null);
+      }, 0);
+
+      return () => {
+        active = false;
+        window.clearTimeout(timer);
+      };
+    }
 
     const timer = window.setTimeout(() => {
       setDetailLoading(true);

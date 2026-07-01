@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { getUserEmail, getUserToken } from "../../utils/auth";
+import Link from "next/link";
+import { getUserEmail, getUserToken, handleAuthExpiredResponse } from "../../utils/auth";
 
 const API_BASE = "/api/user";
 
@@ -50,6 +51,9 @@ const formatStatus = (value?: string) => {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 };
 
+const errorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
 export default function OrdersSection({ email }: Props) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,11 +86,12 @@ export default function OrdersSection({ email }: Props) {
           signal: controller.signal,
         });
         const data = await res.json();
+        if (handleAuthExpiredResponse(res, data)) return;
         if (!res.ok || !data.status) throw new Error(data.message || "Failed to load orders");
         if (active) setOrders(Array.isArray(data.orders) ? data.orders : []);
-      } catch (err: any) {
-        if (!active || err?.name === "AbortError") return;
-        setError("Unable to load orders right now.");
+      } catch (err: unknown) {
+        if (!active || (err instanceof DOMException && err.name === "AbortError")) return;
+        setError(errorMessage(err, "Unable to load orders right now."));
       } finally {
         if (active) setLoading(false);
       }
@@ -135,9 +140,9 @@ export default function OrdersSection({ email }: Props) {
           Your order history will appear here once you place an order.
         </div>
         <div>
-          <a href="/collections/all" className="btn btn-ghost px-4 py-2">
+          <Link href="/collections/all" className="btn btn-ghost px-4 py-2">
             Continue shopping
-          </a>
+          </Link>
         </div>
       </div>
     );

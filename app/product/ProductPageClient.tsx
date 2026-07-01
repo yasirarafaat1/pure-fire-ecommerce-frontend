@@ -200,11 +200,11 @@ export default function ProductPageClient() {
     if (!requireAuth()) return;
     if (!product?.product_id) return;
 
-    const email = (
-      localStorage.getItem("user_email") || "guest@purefire.local"
-    ).trim();
-
-    localStorage.setItem("user_email", email);
+    const email = getUserEmail();
+    if (!email) {
+      router.push(`/login?next=${encodeURIComponent(nextUrl || "/")}`);
+      return;
+    }
 
     const isWishlisted = wishlistIds.has(String(product.product_id));
     const endpoint = isWishlisted ? "/wishlist/remove" : "/wishlist/add";

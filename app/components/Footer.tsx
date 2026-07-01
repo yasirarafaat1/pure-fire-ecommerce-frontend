@@ -28,15 +28,15 @@ const links = {
   ],
   help: [
     { label: "Orders", href: "/orders" },
-    { label: "Returns & Exchange", href: "/return-policy" },
     { label: "Support", href: "/support" },
     { label: "Shipping Info", href: "/shipping-info" },
+    { label: "Contact", href: "/contact" }
   ],
   policy: [
     { label: "Privacy Policy", href: "/privacy-policy" },
     { label: "Terms & Conditions", href: "/terms-and-conditions" },
     { label: "Refund Policy", href: "/refund-policy" },
-    { label: "Contact", href: "/contact" },
+    { label: "Returns & Exchange", href: "/return-policy" }
   ],
 };
 

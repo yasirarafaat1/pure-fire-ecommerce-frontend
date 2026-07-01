@@ -1,19 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { writeCookie } from "../../utils/auth";
+import { clearUserAuth } from "../../utils/auth";
 
 export default function SettingsSection({ email }: { email: string }) {
   const router = useRouter();
   const handleLogout = () => {
-    localStorage.removeItem("user_token");
-    localStorage.removeItem("user_email");
-    if (typeof sessionStorage !== "undefined") {
-      sessionStorage.removeItem("user_token");
-      sessionStorage.removeItem("user_email");
-    }
-    writeCookie("user_token", "", -1);
-    writeCookie("user_email", "", -1);
+    clearUserAuth();
     window.dispatchEvent(new Event("wishlist:updated"));
     window.dispatchEvent(new Event("cart:updated"));
     window.dispatchEvent(new Event("auth:changed"));

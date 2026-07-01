@@ -47,7 +47,8 @@ export default function CartDrawer({
     <div className={`fixed inset-0 z-50 ${open ? "pointer-events-auto" : "pointer-events-none"}`}>
       <button
         aria-label="Close cart"
-        className={`absolute inset-0 bg-slate-950/35 backdrop-blur-md transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0"}`}
+        data-close-cursor="true"
+        className={`absolute inset-0 bg-slate-950/35 transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0"}`}
         onClick={onClose}
         type="button"
       />

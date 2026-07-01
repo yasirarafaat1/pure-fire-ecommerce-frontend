@@ -2,13 +2,20 @@
 
 import { useState } from "react";
 import { getUserToken } from "../../../utils/auth";
+import type { Order } from "./orderUtils";
 
 const API_BASE = "/api/user";
+
+type CancelOrderResponse = {
+  status?: boolean;
+  message?: string;
+  order?: Partial<Order>;
+};
 
 type Props = {
   orderId: string;
   disabled?: boolean;
-  onCancelled: (order: any) => void;
+  onCancelled: (order: Partial<Order>) => void;
 };
 
 export default function CancelOrderPanel({ orderId, disabled, onCancelled }: Props) {
@@ -29,12 +36,12 @@ export default function CancelOrderPanel({ orderId, disabled, onCancelled }: Pro
         },
         body: JSON.stringify({ order_id: orderId }),
       });
-      const data = await res.json();
+      const data = (await res.json()) as CancelOrderResponse;
       if (!res.ok || !data.status) throw new Error(data.message || "Failed to cancel");
       onCancelled(data.order || { status: "cancelled", payment_status: "cancelled" });
       setOpen(false);
-    } catch (err: any) {
-      setError(err.message || "Unable to cancel right now.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Unable to cancel right now.");
     } finally {
       setLoading(false);
     }
@@ -56,6 +63,7 @@ export default function CancelOrderPanel({ orderId, disabled, onCancelled }: Pro
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <button
             type="button"
+            data-close-cursor="true"
             className="absolute inset-0 bg-black/30"
             onClick={() => setOpen(false)}
             aria-label="Close dialog"

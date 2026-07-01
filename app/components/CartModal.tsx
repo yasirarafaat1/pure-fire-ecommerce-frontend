@@ -84,7 +84,7 @@ export default function CartModal({ open, onClose }: Props) {
   useEffect(() => {
     if (!open) return;
     const loadWishlist = async () => {
-      const email = (localStorage.getItem("user_email") || "guest@purefire.local").trim();
+      const email = (localStorage.getItem("user_email") || "").trim();
       localStorage.setItem("user_email", email);
       try {
         const response = await fetch(`${API_BASE}/wishlist/list`, {
@@ -157,7 +157,7 @@ export default function CartModal({ open, onClose }: Props) {
 
   const toggleWishlist = async (item: CartItem) => {
     if (!requireAuth()) return;
-    const email = (localStorage.getItem("user_email") || "guest@purefire.local").trim();
+    const email = (localStorage.getItem("user_email") || "").trim();
     const endpoint = wishlistIds.has(String(item.id)) ? "/wishlist/remove" : "/wishlist/add";
     const response = await fetch(`${API_BASE}${endpoint}`, {
       method: "POST",

@@ -857,8 +857,9 @@ export default function HomeNavbar({ onOpenCart }: Props) {
         <button
           type="button"
           aria-label="Close menu overlay"
+          data-close-cursor="true"
           onClick={closeMenu}
-          className={`absolute inset-0 bg-slate-950/55 backdrop-blur-[4px] transition-opacity duration-300 ${
+          className={`absolute inset-0 bg-slate-950/55 transition-opacity duration-300 ${
             menuOpen ? "opacity-100" : "opacity-0"
           }`}
         />
