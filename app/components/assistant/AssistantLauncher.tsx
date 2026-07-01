@@ -15,7 +15,7 @@ export default function AssistantLauncher({
       data-assistant-launcher="true"
       aria-label={open ? "Close shopping assistant" : "Open shopping assistant"}
       onClick={onClick}
-      className={`assistant-launcher-button fixed bottom-5 right-4 z-[45] h-14 w-14 place-items-center rounded-full bg-slate-950 text-white shadow-[0_18px_45px_rgba(15,23,42,0.28)] transition hover:bg-amber-400 hover:text-slate-950 active:scale-95 md:bottom-2 md:right-4 ${
+      className={`assistant-launcher-button fixed bottom-5 right-4 z-[45] h-14 w-14 place-items-center rounded-full bg-slate-950 text-white shadow-[0_18px_45px_rgba(15,23,42,0.28)] transition hover:bg-amber-400 hover:text-slate-950 active:scale-95 md:bottom-5 md:right-5 ${
         open ? "hidden md:grid" : "grid"
       }`}
     >
