@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CreditCard, Minus, Plus, ShoppingCart } from "lucide-react";
 import { getUserEmail, getUserToken, setUserAuth } from "../../../utils/auth";
 import type { AssistantCard, ProductAssistantCard as ProductCardType } from "../types";
@@ -41,28 +41,41 @@ type ApiResponse = {
   amount?: number;
   currency?: string;
   order_id?: string | number;
+  local_order_id?: string | number;
 };
 
-type RazorpayResponse = {
+type RazorpayPaymentResponse = {
   razorpay_order_id: string;
   razorpay_payment_id: string;
   razorpay_signature: string;
 };
 
-type RazorpayOptions = {
-  key?: string;
-  amount?: number;
-  currency?: string;
-  name: string;
-  description: string;
-  order_id?: string;
-  prefill: { email: string };
-  handler: (response: RazorpayResponse) => Promise<void>;
-  modal: { ondismiss: () => void };
-  theme: { color: string };
+type RazorpayFailureResponse = {
+  error?: {
+    description?: string;
+    reason?: string;
+  };
 };
 
-type RazorpayConstructor = new (options: RazorpayOptions) => { open: () => void };
+type RazorpayInstance = {
+  open: () => void;
+  on?: (event: "payment.failed", handler: (response: RazorpayFailureResponse) => void) => void;
+};
+
+type RazorpayConstructor = new (options: Record<string, unknown>) => RazorpayInstance;
+
+const getRazorpay = () => (window as Window & { Razorpay?: RazorpayConstructor }).Razorpay;
+
+const loadRazorpay = () =>
+  new Promise<boolean>((resolve) => {
+    if (typeof window === "undefined") return resolve(false);
+    if (getRazorpay()) return resolve(true);
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
 
 const emptyAddress: AddressPayload = {
   FullName: "",
@@ -78,17 +91,7 @@ const emptyAddress: AddressPayload = {
   addressType: "Home",
 };
 
-const loadRazorpay = () =>
-  new Promise<boolean>((resolve) => {
-    if (typeof window === "undefined") return resolve(false);
-    const win = window as Window & { Razorpay?: RazorpayConstructor };
-    if (win.Razorpay) return resolve(true);
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
+const pendingCheckoutKey = "assistant_pending_checkout";
 
 export default function ProductAssistantCard({ card }: { card: ProductCardType }) {
   const [cartStatus, setCartStatus] = useState("");
@@ -106,6 +109,10 @@ export default function ProductAssistantCard({ card }: { card: ProductCardType }
   const [loading, setLoading] = useState(false);
   const [buyMessage, setBuyMessage] = useState("");
   const [buyError, setBuyError] = useState("");
+  const payNowRef = useRef<((options?: {
+    selectedAddressIdOverride?: string | number | null;
+    skipAddressConfirmation?: boolean;
+  }) => Promise<void>) | null>(null);
   const stock = Number(card.stock || 0);
   const hasStock = stock > 0;
   const total = useMemo(() => Number(card.price || 0) * quantity, [card.price, quantity]);
@@ -114,9 +121,35 @@ export default function ProductAssistantCard({ card }: { card: ProductCardType }
     window.dispatchEvent(new CustomEvent("assistant:notice", { detail: { content, suggestions, cards } }));
   };
 
+  const buildBuyNowPayload = (nextQuantity = quantity) => ({
+    product_id: card.productId,
+    title: card.title,
+    qty: nextQuantity,
+    quantity: nextQuantity,
+    price: card.price,
+    mrp: card.mrp || card.price,
+    image: card.image,
+    color: "",
+    size: "",
+  });
+
+  const persistPendingCheckout = (rowId: string | number | null, nextQuantity = quantity) => {
+    if (!rowId) return;
+    localStorage.setItem(
+      pendingCheckoutKey,
+      JSON.stringify({
+        product: buildBuyNowPayload(nextQuantity),
+        addressId: String(rowId),
+        productTitle: card.title,
+        createdAt: Date.now(),
+      }),
+    );
+  };
+
   const selectSavedAddress = (row: SavedAddress, rowId: string | number) => {
     setAddressId(rowId);
     setAddressConfirmed(false);
+    persistPendingCheckout(rowId);
     sendBotNotice(
       `Delivery address selected: ${[row.address, row.city, row.state, row.pinCode].filter(Boolean).join(", ")}. Please confirm Yes or No.`,
       ["Yes", "No", "Create new address"],
@@ -284,7 +317,13 @@ export default function ProductAssistantCard({ card }: { card: ProductCardType }
     }
   };
 
-  const payNow = async () => {
+  const payNow = async ({
+    selectedAddressIdOverride,
+    skipAddressConfirmation = false,
+  }: {
+    selectedAddressIdOverride?: string | number | null;
+    skipAddressConfirmation?: boolean;
+  } = {}) => {
     setBuyError("");
     setBuyMessage("");
     if (!hasStock) {
@@ -299,7 +338,7 @@ export default function ProductAssistantCard({ card }: { card: ProductCardType }
       setBuyError("Please verify email OTP first.");
       return;
     }
-    let selectedAddressId = addressId;
+    let selectedAddressId = selectedAddressIdOverride ?? addressId;
     if (addressMode === "new") {
       selectedAddressId = await saveAddress();
     }
@@ -307,7 +346,7 @@ export default function ProductAssistantCard({ card }: { card: ProductCardType }
       setBuyError("Please select a delivery address.");
       return;
     }
-    if (!addressConfirmed) {
+    if (!skipAddressConfirmation && !addressConfirmed) {
       setBuyError("Please confirm the selected address first.");
       return;
     }
@@ -321,18 +360,29 @@ export default function ProductAssistantCard({ card }: { card: ProductCardType }
           "x-user-token": getUserToken(),
         },
         body: JSON.stringify({
-          items: [{ product_id: card.productId, quantity }],
+          items: [{ product_id: card.productId, quantity, color: "", size: "" }],
           address_id: selectedAddressId,
           email: getUserEmail(),
         }),
       });
       const orderJson = (await orderResponse.json()) as ApiResponse;
-      if (!orderResponse.ok || orderJson.status === false) throw new Error(orderJson.message || "Failed to create payment order");
+      if (!orderResponse.ok || orderJson.status === false) {
+        throw new Error(orderJson.message || "Failed to create payment order");
+      }
+
       const ready = await loadRazorpay();
       if (!ready) throw new Error("Payment checkout failed to load");
-      const win = window as Window & { Razorpay?: RazorpayConstructor };
-      if (!win.Razorpay) throw new Error("Payment checkout unavailable");
-      const checkout = new win.Razorpay({
+
+      const Razorpay = getRazorpay();
+      if (!Razorpay) throw new Error("Payment checkout unavailable");
+
+      setBuyMessage("Payment window opened. Complete payment to place the order.");
+      sendBotNotice("Payment window opened. Complete payment to place the order.", [
+        "Payment help",
+        "Support",
+      ]);
+
+      const checkout = new Razorpay({
         key: orderJson.key,
         amount: orderJson.amount,
         currency: orderJson.currency || "INR",
@@ -340,7 +390,7 @@ export default function ProductAssistantCard({ card }: { card: ProductCardType }
         description: card.title,
         order_id: orderJson.order?.id,
         prefill: { email: getUserEmail() },
-        handler: async (response) => {
+        handler: async (response: RazorpayPaymentResponse) => {
           const verifyResponse = await fetch("/api/user/payment-success", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -348,25 +398,29 @@ export default function ProductAssistantCard({ card }: { card: ProductCardType }
           });
           const verifyJson = (await verifyResponse.json()) as ApiResponse;
           if (!verifyResponse.ok || verifyJson.status === false) {
-            setBuyError(verifyJson.message || "Payment verification failed.");
-            sendBotNotice("Payment verification failed. Your order was not confirmed.", ["Try again", "Support"]);
+            const message = verifyJson.message || "Payment verification failed. Your order was not confirmed.";
+            setBuyError(message);
+            sendBotNotice(message, ["Try again", "Support"]);
             setLoading(false);
             return;
           }
-          setBuyMessage(`Order placed successfully. Order ID: #${verifyJson.order_id || ""}`);
+
+          const confirmedOrderId = verifyJson.order_id || orderJson.local_order_id || "";
+          localStorage.removeItem(pendingCheckoutKey);
+          setBuyMessage(`Order placed successfully. Order ID: #${confirmedOrderId}`);
           sendBotNotice(
-            `Order placed successfully. You can open order #${verifyJson.order_id || ""} from this card.`,
+            `Order placed successfully. You can open order #${confirmedOrderId} from this card.`,
             ["Track order", "My orders", "Find products"],
             [
               {
                 type: "order",
-                orderId: verifyJson.order_id || "",
+                orderId: confirmedOrderId,
                 status: "confirmed",
                 paymentStatus: "paid",
                 total,
                 itemCount: quantity,
                 isLimited: false,
-                actions: [{ label: "View Order", type: "link", href: `/orders/${verifyJson.order_id || ""}` }],
+                actions: [{ label: "View Order", type: "link", href: `/orders/${confirmedOrderId}` }],
               },
             ],
           );
@@ -374,11 +428,19 @@ export default function ProductAssistantCard({ card }: { card: ProductCardType }
         },
         modal: {
           ondismiss: () => {
-            sendBotNotice("Payment was closed before completion. No confirmed order was created.", ["Place order", "Support"]);
+            setBuyError("Payment was closed before completion. Your order was not confirmed.");
+            sendBotNotice("Payment was closed before completion. Your order was not confirmed.", ["Try again", "Support"]);
             setLoading(false);
           },
         },
         theme: { color: "#000000" },
+      });
+
+      checkout.on?.("payment.failed", (response) => {
+        const message = response.error?.description || response.error?.reason || "Payment failed. Please try again.";
+        setBuyError(message);
+        sendBotNotice(message, ["Try again", "Support"]);
+        setLoading(false);
       });
       checkout.open();
     } catch (error) {
@@ -386,6 +448,21 @@ export default function ProductAssistantCard({ card }: { card: ProductCardType }
       setLoading(false);
     }
   };
+  payNowRef.current = payNow;
+
+  useEffect(() => {
+    const onConfirmCheckout = (event: Event) => {
+      const detail = (event as CustomEvent<{ productId?: string | number; addressId?: string | number }>).detail;
+      if (String(detail?.productId || "") !== String(card.productId)) return;
+      const nextAddressId = detail?.addressId || addressId;
+      setAddressId(nextAddressId || null);
+      setAddressConfirmed(true);
+      payNowRef.current?.({ selectedAddressIdOverride: nextAddressId || null, skipAddressConfirmation: true });
+    };
+
+    window.addEventListener("assistant:confirm-checkout", onConfirmCheckout as EventListener);
+    return () => window.removeEventListener("assistant:confirm-checkout", onConfirmCheckout as EventListener);
+  }, [addressId, card.productId]);
 
   return (
     <div className="overflow-hidden rounded-[5px] border border-black/10 bg-white">
@@ -497,11 +574,16 @@ export default function ProductAssistantCard({ card }: { card: ProductCardType }
                         type="button"
                         onClick={() => {
                           setAddressConfirmed(true);
-                          sendBotNotice("Address confirmed. You can place the order now.", ["Place order"]);
+                          sendBotNotice("Address confirmed. Opening payment here.", [
+                            "Payment help",
+                            "Shipping policy",
+                          ]);
+                          payNow({ selectedAddressIdOverride: addressId, skipAddressConfirmation: true });
                         }}
+                        disabled={loading}
                         className="btn btn-primary py-2 text-xs"
                       >
-                        Yes
+                        {loading ? "Opening..." : "Yes"}
                       </button>
                       <button
                         type="button"
@@ -516,9 +598,6 @@ export default function ProductAssistantCard({ card }: { card: ProductCardType }
                       </button>
                     </div>
                   ) : null}
-                  <button type="button" disabled={loading || !addressId || !addressConfirmed} onClick={payNow} className="btn btn-primary py-2 text-xs">
-                    {loading ? "Processing..." : "Place Order"}
-                  </button>
                 </div>
               ) : null}
 
@@ -550,8 +629,8 @@ export default function ProductAssistantCard({ card }: { card: ProductCardType }
                     <input value={address.state} onChange={(event) => setAddress((value) => ({ ...value, state: event.target.value }))} placeholder="State" className="assistant-order-input" />
                   </div>
                   <input value={address.pinCode} onChange={(event) => setAddress((value) => ({ ...value, pinCode: event.target.value.replace(/\D/g, "").slice(0, 6) }))} placeholder="Pincode" className="assistant-order-input" />
-                  <button type="button" disabled={loading} onClick={payNow} className="btn btn-primary py-2 text-xs">
-                    {loading ? "Processing..." : "Place Order"}
+                  <button type="button" disabled={loading} onClick={() => payNow({ skipAddressConfirmation: true })} className="btn btn-primary py-2 text-xs">
+                    {loading ? "Processing..." : "Save & continue to payment"}
                   </button>
                 </div>
               ) : null}

@@ -5,6 +5,51 @@ import { assistantGet, assistantPost } from "../assistant-api";
 import { buildAssistantWelcomeMessage } from "../pageContext";
 import type { AssistantApiResponse, AssistantCard, AssistantMessage, AssistantPageContext, AssistantSessionSummary } from "../types";
 
+const pendingCheckoutKey = "assistant_pending_checkout";
+
+type PendingCheckout = {
+  product?: {
+    product_id?: string | number;
+    title?: string;
+    qty?: number;
+    quantity?: number;
+    price?: number;
+    mrp?: number;
+    image?: string;
+    color?: string;
+    size?: string;
+  };
+  addressId?: string;
+  productTitle?: string;
+  createdAt?: number;
+};
+
+const readPendingCheckout = (): PendingCheckout | null => {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = localStorage.getItem(pendingCheckoutKey);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PendingCheckout;
+    if (!parsed?.product?.product_id || !parsed.addressId) return null;
+    if (parsed.createdAt && Date.now() - parsed.createdAt > 30 * 60 * 1000) {
+      localStorage.removeItem(pendingCheckoutKey);
+      return null;
+    }
+    return parsed;
+  } catch {
+    localStorage.removeItem(pendingCheckoutKey);
+    return null;
+  }
+};
+
+const isConfirmCheckoutReply = (value: string) =>
+  /^(yes|y|haan|ha|han|ji|ok|okay|confirm|haan ji|place order|pay now|payment|proceed|continue|order karo|order kar do)$/i.test(
+    value.trim(),
+  );
+const isNoReply = (value: string) => /^(no|n|nahi|nahin|cancel|change|badlo)$/i.test(value.trim());
+const isCreateAddressReply = (value: string) => /create\s+new\s+address|new\s+address|address\s+create/i.test(value);
+
 export const useAssistantChat = ({
   sessionId,
   guestId,
@@ -91,16 +136,61 @@ export const useAssistantChat = ({
       setMessages((current) => [...current, userMessage]);
       const activeReplyTo = replyTo;
       setReplyTo(null);
+
+      const pendingCheckout = readPendingCheckout();
+      if (pendingCheckout && isConfirmCheckoutReply(trimmed)) {
+        const pendingProductId = pendingCheckout.product?.product_id;
+        if (!pendingProductId) {
+          localStorage.removeItem(pendingCheckoutKey);
+          addAssistantNotice("This checkout session expired. Please tap Buy Now again.", ["Buy now", "Find products"]);
+          return;
+        }
+
+        addAssistantNotice(
+          `Address confirmed for ${pendingCheckout.productTitle || "this product"}. Opening payment now.`,
+          ["Payment help", "Shipping policy"],
+        );
+        window.dispatchEvent(
+          new CustomEvent("assistant:confirm-checkout", {
+            detail: {
+              productId: pendingProductId,
+              addressId: pendingCheckout.addressId,
+            },
+          }),
+        );
+        return;
+      }
+
+      if (pendingCheckout && isNoReply(trimmed)) {
+        localStorage.removeItem(pendingCheckoutKey);
+        addAssistantNotice("Okay, please select another address from the product card or create a new one.", [
+          "Create new address",
+          "Payment help",
+        ]);
+        return;
+      }
+
+      if (pendingCheckout && isCreateAddressReply(trimmed)) {
+        localStorage.removeItem(pendingCheckoutKey);
+        addAssistantNotice("Use the Create new option inside the product card to add a delivery address.", [
+          "Payment help",
+          "Shipping policy",
+        ]);
+        return;
+      }
+
       setLoading(true);
       try {
         const activeSessionId = sessionId || (await ensureSession());
+        const livePath =
+          typeof window !== "undefined" ? window.location.pathname || pageContext.currentPath : pageContext.currentPath;
         const data = await assistantPost<AssistantApiResponse>("/message", {
           sessionId: activeSessionId,
           guestId,
           message: trimmed,
           context: {
             ...pageContext,
-            currentPath: pageContext.currentPath || "/",
+            currentPath: livePath || "/",
             cartId: localStorage.getItem("cart_id") || "",
             replyTo: activeReplyTo,
           },
@@ -116,7 +206,7 @@ export const useAssistantChat = ({
         setLoading(false);
       }
     },
-    [ensureSession, guestId, loading, pageContext, replyTo, sessionId],
+    [addAssistantNotice, ensureSession, guestId, loading, pageContext, replyTo, sessionId],
   );
 
   const lookupOrder = useCallback(

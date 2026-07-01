@@ -1,31 +1,17 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AddressList from "./components/AddressList";
 import CheckoutPayment from "./components/CheckoutPayment";
 import AddressPanel from "../profile/components/addresses/AddressPanel";
-import { AddressPayload } from "../profile/components/addresses/types";
+import { AddressItem, AddressPayload } from "../profile/components/addresses/types";
 import { getUserEmail, getUserToken } from "../utils/auth";
 
 const API_BASE = "/api/user";
 
-type Address = {
-  id?: string | number;
-  address_id?: number | string;
-  FullName?: string;
-  phone1?: string;
-  phone2?: string;
-  email?: string;
-  country?: string;
-  state?: string;
-  city?: string;
-  district?: string;
-  pinCode?: string;
-  address?: string;
-  address_line2?: string;
-  addressType?: string;
-};
+type Address = Partial<AddressItem> & { id?: string | number };
 
 type CartItem = {
   product_id?: number | string;
@@ -95,9 +81,18 @@ export default function CheckoutPage() {
         const addrJson = addrRes.ok ? await addrRes.json() : { addresses: [] };
         const cartJson = cartRes.ok ? await cartRes.json() : { items: [] };
         const addrList = addrJson.addresses || addrJson.data || [];
+        const preferredAddressId = localStorage.getItem("checkout_selected_address_id") || "";
         setAddresses(addrList);
-        if (addrList.length && !selectedAddress) {
-          setSelectedAddress(addrList[0].address_id || addrList[0].id);
+        if (addrList.length) {
+          const preferred = preferredAddressId
+            ? addrList.find((row: Address) => String(row.address_id || row.id) === String(preferredAddressId))
+            : null;
+          const fallbackAddressId = preferred
+            ? preferred.address_id || preferred.id || null
+            : addrList[0].address_id || addrList[0].id;
+          setSelectedAddress((current) =>
+            current || fallbackAddressId,
+          );
         }
         if (buyNowItem) {
           setIsBuyNow(true);
@@ -106,8 +101,8 @@ export default function CheckoutPage() {
           setIsBuyNow(false);
           setCartItems(cartJson.items || []);
         }
-      } catch (e: any) {
-        setError(e?.message || "Failed to load checkout data");
+      } catch (error: unknown) {
+        setError(error instanceof Error ? error.message : "Failed to load checkout data");
       } finally {
         setLoading(false);
       }
@@ -153,8 +148,8 @@ export default function CheckoutPage() {
         setSelectedAddress(list[0].address_id || list[0].id);
       }
       return { ok: true };
-    } catch (err: any) {
-      return { ok: false, message: err.message || "Failed to save address" };
+    } catch (error: unknown) {
+      return { ok: false, message: error instanceof Error ? error.message : "Failed to save address" };
     }
   };
 
@@ -191,7 +186,7 @@ export default function CheckoutPage() {
       <main className="max-w-6xl mx-auto p-4 md:p-6">
         <div className="border border-black/20 rounded-[5px] p-10 text-center">
           <p className="text-sm text-[var(--muted)]">Your cart is empty.</p>
-          <a href="/" className="btn btn-ghost mt-4">Continue shopping</a>
+          <Link href="/" className="btn btn-ghost mt-4">Continue shopping</Link>
         </div>
       </main>
     );
@@ -233,7 +228,7 @@ export default function CheckoutPage() {
       <AddressPanel
         open={panelOpen}
         mode={panelMode}
-        address={panelAddress as any}
+        address={panelAddress as AddressItem | null}
         email={getUserEmail()}
         onClose={() => setPanelOpen(false)}
         onSave={handleSaveAddress}

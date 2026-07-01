@@ -26,10 +26,36 @@ type Props = {
   mode?: "cart" | "buy_now";
 };
 
+type RazorpayResponse = {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+};
+
+type RazorpayFailureResponse = {
+  error?: {
+    description?: string;
+    reason?: string;
+    metadata?: {
+      order_id?: string;
+      payment_id?: string;
+    };
+  };
+};
+
+type RazorpayInstance = {
+  open: () => void;
+  on?: (event: "payment.failed", handler: (response: RazorpayFailureResponse) => void) => void;
+};
+
+type RazorpayConstructor = new (options: Record<string, unknown>) => RazorpayInstance;
+
+const getRazorpay = () => (window as Window & { Razorpay?: RazorpayConstructor }).Razorpay;
+
 const loadRazorpay = () =>
   new Promise<boolean>((resolve) => {
     if (typeof window === "undefined") return resolve(false);
-    if ((window as any).Razorpay) return resolve(true);
+    if (getRazorpay()) return resolve(true);
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
     script.onload = () => resolve(true);
@@ -86,7 +112,7 @@ export default function CheckoutPayment({ items, selectedAddress, onSuccess, onE
         description: "Order payment",
         order_id: orderJson.order?.id,
         prefill: { email: getUserEmail() },
-        handler: async (response: any) => {
+        handler: async (response: RazorpayResponse) => {
           const verifyRes = await fetch(`${API_BASE}/payment-success`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -110,9 +136,11 @@ export default function CheckoutPayment({ items, selectedAddress, onSuccess, onE
             } else {
               localStorage.removeItem("buy_now_item");
             }
+            localStorage.removeItem("checkout_selected_address_id");
+            localStorage.removeItem("checkout_started_from_assistant");
             onSuccess(verifyJson.order_id || orderJson.local_order_id);
           } else {
-            onError("Payment verification failed.");
+            onError("Payment failed: verification was not confirmed.");
             setPaying(false);
           }
         },
@@ -120,12 +148,18 @@ export default function CheckoutPayment({ items, selectedAddress, onSuccess, onE
           ondismiss: () => setPaying(false),
         },
         theme: { color: "#000000" },
-      } as any;
+      };
 
-      const rzp = new (window as any).Razorpay(options);
+      const Razorpay = getRazorpay();
+      if (!Razorpay) throw new Error("Razorpay checkout unavailable");
+      const rzp = new Razorpay(options);
+      rzp.on?.("payment.failed", (response) => {
+        onError(response.error?.description || response.error?.reason || "Payment failed. Please try again.");
+        setPaying(false);
+      });
       rzp.open();
-    } catch (err: any) {
-      onError(err.message || "Payment failed");
+    } catch (err: unknown) {
+      onError(err instanceof Error ? err.message : "Payment failed");
       setPaying(false);
     }
   };

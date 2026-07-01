@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FaStar } from "react-icons/fa6";
+import { cachedFetch, getCachedJson } from "../utils/cachedFetch";
 import { getUserToken } from "../utils/auth";
 import HoverImage from "./HoverImage";
 import { buildProductHref } from "../utils/productUrl";
@@ -18,10 +19,12 @@ type Product = {
   category?: string;
   category_name?: string;
   catagory_id?: { name?: string };
+  status?: string;
 };
 
 const API_BASE = "/api/user";
 const SUGGESTED_ENDPOINT = `${API_BASE}/suggested-products`;
+const PUBLIC_FALLBACK_ENDPOINT = `${API_BASE}/show-product?limit=12`;
 const SUGGESTED_CACHE_TTL = 600000;
 const placeholders = Array.from({ length: 4 }, (_, idx) => idx);
 
@@ -73,6 +76,29 @@ async function fetchSuggestedProducts(token: string) {
   }
 }
 
+function getProductList(data: unknown): Product[] {
+  if (!data || typeof data !== "object") return [];
+  const payload = data as { products?: Product[]; data?: Product[] };
+  if (Array.isArray(payload.products)) return payload.products;
+  if (Array.isArray(payload.data)) return payload.data;
+  return [];
+}
+
+async function fetchPublicFallbackProducts() {
+  const cached = getCachedJson(PUBLIC_FALLBACK_ENDPOINT);
+  const cachedProducts = getProductList(cached?.data).filter(
+    (product) => !product.status || product.status === "published",
+  );
+
+  if (cachedProducts.length) return cachedProducts.slice(0, 8);
+
+  const response = await cachedFetch(PUBLIC_FALLBACK_ENDPOINT, undefined, 600000, true);
+  const data = await response.json();
+  return getProductList(data)
+    .filter((product) => !product.status || product.status === "published")
+    .slice(0, 8);
+}
+
 export default function SuggestedProducts({ items }: { items?: Product[] }) {
   const [suggested, setSuggested] = useState<Product[]>(items || []);
   const [loading, setLoading] = useState(false);
@@ -93,8 +119,9 @@ export default function SuggestedProducts({ items }: { items?: Product[] }) {
         const token = getUserToken();
 
         if (!token) {
-          setSuggested([]);
-          seededRef.current = false;
+          const fallbackProducts = await fetchPublicFallbackProducts();
+          setSuggested(fallbackProducts);
+          seededRef.current = fallbackProducts.length > 0;
           return;
         }
 
@@ -108,7 +135,12 @@ export default function SuggestedProducts({ items }: { items?: Product[] }) {
         const res = await fetchSuggestedProducts(token);
 
         const data = await res.json();
-        const products = Array.isArray(data?.products) ? data.products : [];
+        let products = getProductList(data);
+
+        if (!res.ok || !products.length) {
+          products = await fetchPublicFallbackProducts();
+        }
+
         setSuggested(products);
         if (products.length) {
           writeSuggestedCache(token, products);
