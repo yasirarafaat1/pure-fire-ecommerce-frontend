@@ -8,6 +8,7 @@ import {
   FiShield,
   FiTruck,
 } from "react-icons/fi";
+import { RatingStars } from "./navbar-icons";
 
 type Feature = {
   title: string;
@@ -45,9 +46,7 @@ export default function QualityMarquee() {
       <div className="min-h-[200px] max-w-6xl mx-auto px-4 py-12">
         <div className="flex flex-col items-center text-center gap-3 py-5">
           <div className="flex items-center gap-1 text-black">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <FaStar key={i} className="text-black" />
-            ))}
+            <RatingStars />
           </div>
 
           <div className="text-xs tracking-[0.25em] uppercase font-semibold">

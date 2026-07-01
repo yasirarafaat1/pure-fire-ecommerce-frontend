@@ -14,7 +14,6 @@ import {
   IconCart,
   IconChevron,
   IconClose,
-  IconMenu,
   IconSearch,
   IconSupport,
   IconUser,
@@ -321,46 +320,30 @@ export default function HomeNavbar({ onOpenCart }: Props) {
           }
         }
 
-       @keyframes cartPulse {
-  0%,
-  100% {
-    transform: translate(44%, -44%) scale(1);
-  }
+        @keyframes cartPulse {
+          0%,
+          100% {
+            transform: translate(44%, -44%) scale(1);
+          }
 
-  50% {
-    transform: translate(44%, -44%) scale(1.08);
-  }
-}
+          50% {
+            transform: translate(44%, -44%) scale(1.08);
+          }
+        }
 
-.nav-cart-button {
-  overflow: visible !important;
-}
+        @keyframes premiumMenuFloat {
+          0% {
+            transform: translateX(0);
+          }
 
-.cart-badge {
-  top: 0 !important;
-  right: 0 !important;
-  min-width: 19px !important;
-  height: 19px !important;
-  min-height: 19px !important;
-  padding: 0 5px !important;
-  border-radius: 999px !important;
-  border: 2px solid #ffffff;
-  background: #facc15;
-  color: #0f172a !important;
-  box-shadow:
-    0 8px 18px rgba(15, 23, 42, 0.18),
-    0 0 0 1px rgba(15, 23, 42, 0.05);
-  line-height: 1 !important;
-  pointer-events: none;
-  transform: translate(44%, -44%);
-  animation: cartPulse 2.35s ease-in-out infinite;
-}
+          42% {
+            transform: translateX(-1.5px);
+          }
 
-.nav-cart-button:hover .cart-badge {
-  background: #facc15;
-  color: #0f172a !important;
-  border-color: #ffffff;
-}
+          100% {
+            transform: translateX(0);
+          }
+        }
 
         .nav-shell {
           position: sticky;
@@ -402,6 +385,10 @@ export default function HomeNavbar({ onOpenCart }: Props) {
           transform: translateZ(0);
         }
 
+        .nav-cart-button {
+          overflow: visible !important;
+        }
+
         .nav-action::after,
         .drawer-close::after,
         .drawer-search-button::after,
@@ -439,6 +426,9 @@ export default function HomeNavbar({ onOpenCart }: Props) {
           position: relative;
           z-index: 2;
           display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: currentColor;
           transition:
             transform 430ms cubic-bezier(0.22, 1, 0.36, 1),
             color 260ms ease;
@@ -457,20 +447,87 @@ export default function HomeNavbar({ onOpenCart }: Props) {
           transform-origin: center;
         }
 
+        .premium-menu-icon {
+          position: relative;
+          display: inline-block;
+          width: 22px;
+          height: 16px;
+          flex: 0 0 auto;
+          overflow: visible;
+          color: currentColor;
+        }
+
+        .premium-menu-line {
+          position: absolute;
+          right: 0;
+          display: block;
+          height: 2px;
+          border-radius: 999px;
+          background: currentColor;
+          opacity: 1;
+          transform-origin: right center;
+          box-shadow: 0 0 0 0 currentColor;
+          transition:
+            width 520ms cubic-bezier(0.22, 1, 0.36, 1),
+            transform 520ms cubic-bezier(0.22, 1, 0.36, 1),
+            opacity 320ms ease;
+        }
+
+        .premium-menu-line::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          background: currentColor;
+          opacity: 0;
+          transform: translateX(9px) scaleX(0.36);
+          transform-origin: right center;
+          transition:
+            opacity 420ms ease,
+            transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .premium-menu-line-1 {
+          top: 1px;
+          width: 19px;
+        }
+
+        .premium-menu-line-2 {
+          top: 7px;
+          width: 14px;
+        }
+
+        .premium-menu-line-3 {
+          top: 13px;
+          width: 22px;
+        }
+
         .nav-menu-button:hover .nav-icon-glyph {
           transform: scale(1.04);
         }
 
-        .nav-menu-button:hover .nav-icon-glyph svg > *:nth-child(1) {
-          transform: translateX(-3px);
+        .nav-menu-button:hover .premium-menu-icon {
+          animation: premiumMenuFloat 620ms cubic-bezier(0.22, 1, 0.36, 1);
         }
 
-        .nav-menu-button:hover .nav-icon-glyph svg > *:nth-child(2) {
-          transform: translateX(3.5px);
+        .nav-menu-button:hover .premium-menu-line-1 {
+          width: 13px;
+          transform: translateX(-6px);
         }
 
-        .nav-menu-button:hover .nav-icon-glyph svg > *:nth-child(3) {
-          transform: translateX(-2px);
+        .nav-menu-button:hover .premium-menu-line-2 {
+          width: 22px;
+          transform: translateX(2px);
+        }
+
+        .nav-menu-button:hover .premium-menu-line-3 {
+          width: 15px;
+          transform: translateX(-4px);
+        }
+
+        .nav-menu-button:hover .premium-menu-line::after {
+          opacity: 0.34;
+          transform: translateX(6px) scaleX(0.72);
         }
 
         .nav-search-button:hover .nav-icon-glyph {
@@ -545,7 +602,29 @@ export default function HomeNavbar({ onOpenCart }: Props) {
         }
 
         .cart-badge {
+          top: 0 !important;
+          right: 0 !important;
+          min-width: 19px !important;
+          height: 19px !important;
+          min-height: 19px !important;
+          padding: 0 5px !important;
+          border-radius: 999px !important;
+          border: 2px solid #ffffff;
+          background: #facc15;
+          color: #0f172a !important;
+          box-shadow:
+            0 8px 18px rgba(15, 23, 42, 0.18),
+            0 0 0 1px rgba(15, 23, 42, 0.05);
+          line-height: 1 !important;
+          pointer-events: none;
+          transform: translate(44%, -44%);
           animation: cartPulse 2.35s ease-in-out infinite;
+        }
+
+        .nav-cart-button:hover .cart-badge {
+          background: #facc15;
+          color: #0f172a !important;
+          border-color: #ffffff;
         }
 
         .drawer-panel {
@@ -608,6 +687,13 @@ export default function HomeNavbar({ onOpenCart }: Props) {
           .nav-left-label {
             display: none;
           }
+
+          .nav-menu-button {
+            width: 42px;
+            justify-content: center;
+            padding-left: 0;
+            padding-right: 0;
+          }
         }
 
         @media (max-width: 360px) {
@@ -623,7 +709,8 @@ export default function HomeNavbar({ onOpenCart }: Props) {
           .drawer-row::after,
           .drawer-child-row::after,
           .drawer-customer-row::after,
-          .cart-badge {
+          .cart-badge,
+          .premium-menu-icon {
             animation: none !important;
           }
 
@@ -631,7 +718,9 @@ export default function HomeNavbar({ onOpenCart }: Props) {
           .nav-icon-glyph svg > *,
           .nav-brand-logo,
           .nav-brand-text,
-          .drawer-child-row {
+          .drawer-child-row,
+          .premium-menu-line,
+          .premium-menu-line::after {
             transition: none !important;
           }
         }
@@ -647,11 +736,16 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                   onClick={() => setMenuOpen(true)}
                   aria-label="Open menu"
                   aria-expanded={menuOpen}
-                  className="nav-action cursor-pointer nav-menu-button inline-flex h-9 items-center gap-2 rounded-sm bg-slate-950 px-3 text-sm font-black text-white transition active:scale-[0.97]"
+                  className="nav-action nav-menu-button inline-flex h-9 cursor-pointer items-center gap-2 rounded-sm bg-slate-950 px-3 text-sm font-black text-white transition active:scale-[0.97]"
                 >
-                  <span className="nav-icon-glyph">
-                    <IconMenu />
+                  <span className="nav-icon-glyph" aria-hidden="true">
+                    <span className="premium-menu-icon">
+                      <span className="premium-menu-line premium-menu-line-1" />
+                      <span className="premium-menu-line premium-menu-line-2" />
+                      <span className="premium-menu-line premium-menu-line-3" />
+                    </span>
                   </span>
+
                   <span className="nav-left-label relative z-10">Menu</span>
                 </button>
 
@@ -659,12 +753,11 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                   type="button"
                   onClick={startSearch}
                   aria-label="Search"
-                  className="nav-action cursor-pointer nav-search-button inline-flex h-9 items-center gap-2 rounded-sm bg-slate-100 px-3 text-sm font-bold text-slate-700 transition hover:bg-amber-100 hover:text-slate-950 active:scale-[0.97]"
+                  className="nav-action nav-search-button inline-flex h-9 cursor-pointer items-center gap-2 rounded-sm bg-slate-100 px-3 text-sm font-bold text-slate-700 transition hover:bg-amber-100 hover:text-slate-950 active:scale-[0.97]"
                 >
                   <span className="nav-icon-glyph text-slate-800">
                     <IconSearch />
                   </span>
-                  {/* <span className="relative z-10 hidden sm:inline">Search</span> */}
                 </button>
               </>
             ) : (
@@ -714,7 +807,7 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                 type="button"
                 aria-label="Cart"
                 onClick={onOpenCart}
-                className="nav-action nav-cart-button cursor-pointer relative inline-flex h-10 w-10 items-center justify-center rounded-sm border border-slate-900/10 bg-white text-slate-950 shadow-[0_8px_24px_rgba(15,23,42,0.07)] transition hover:bg-slate-950 hover:text-white active:scale-[0.96]"
+                className="nav-action nav-cart-button relative inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-sm border border-slate-900/10 bg-white text-slate-950 shadow-[0_8px_24px_rgba(15,23,42,0.07)] transition hover:bg-slate-950 hover:text-white active:scale-[0.96]"
               >
                 <span className="nav-icon-glyph">
                   <IconCart />
@@ -731,7 +824,7 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                 type="button"
                 aria-label="Profile"
                 onClick={goToProfile}
-                className="nav-action nav-user-button cursor-pointer inline-flex h-10 w-10 items-center justify-center rounded-sm border border-slate-900/10 bg-white text-slate-950 shadow-[0_8px_24px_rgba(15,23,42,0.07)] transition hover:bg-slate-950 hover:text-white active:scale-[0.96]"
+                className="nav-action nav-user-button inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-sm border border-slate-900/10 bg-white text-slate-950 shadow-[0_8px_24px_rgba(15,23,42,0.07)] transition hover:bg-slate-950 hover:text-white active:scale-[0.96]"
               >
                 <span className="nav-icon-glyph">
                   <IconUser />
@@ -742,7 +835,7 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                 type="button"
                 aria-label="24x7 Support"
                 onClick={() => router.push("/support")}
-                className="nav-action hidden cursor-pointer h-10 items-center gap-2 rounded-sm bg-slate-950 px-4 text-sm font-black text-white shadow-[0_12px_28px_rgba(15,23,42,0.16)] transition hover:bg-amber-400 hover:text-slate-950 active:scale-[0.98] sm:inline-flex"
+                className="nav-action hidden h-10 cursor-pointer items-center gap-2 rounded-sm bg-slate-950 px-4 text-sm font-black text-white shadow-[0_12px_28px_rgba(15,23,42,0.16)] transition hover:bg-amber-400 hover:text-slate-950 active:scale-[0.98] sm:inline-flex"
               >
                 <span className="relative z-10 inline-flex items-center gap-2">
                   <IconSupport />
@@ -757,23 +850,25 @@ export default function HomeNavbar({ onOpenCart }: Props) {
       </header>
 
       <div
-        className={`fixed inset-0 z-50 transition-all duration-300 ${menuOpen ? "pointer-events-auto visible" : "pointer-events-none invisible"
-          }`}
+        className={`fixed inset-0 z-50 transition-all duration-300 ${
+          menuOpen ? "pointer-events-auto visible" : "pointer-events-none invisible"
+        }`}
       >
         <button
           type="button"
           aria-label="Close menu overlay"
           onClick={closeMenu}
-          className={`absolute inset-0 bg-slate-950/55 backdrop-blur-[4px] transition-opacity duration-300 ${menuOpen ? "opacity-100" : "opacity-0"
-            }`}
+          className={`absolute inset-0 bg-slate-950/55 backdrop-blur-[4px] transition-opacity duration-300 ${
+            menuOpen ? "opacity-100" : "opacity-0"
+          }`}
         />
 
         <aside
-          className={`drawer-panel absolute left-0 top-0 flex h-full w-[92vw] max-w-[420px] flex-col overflow-hidden rounded-r-sm border-r border-white/30 bg-[#fbfaf7] transition-transform duration-500 ease-out ${menuOpen ? "translate-x-0" : "-translate-x-full"
-            }`}
+          className={`drawer-panel absolute left-0 top-0 flex h-full w-[92vw] max-w-[420px] flex-col overflow-hidden rounded-r-sm border-r border-white/30 bg-[#fbfaf7] transition-transform duration-500 ease-out ${
+            menuOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
           onClick={(event) => event.stopPropagation()}
         >
-          {/* HEADER */}
           <div className="border-b border-slate-900/8 bg-white px-5 pb-4 pt-4">
             <div className="drawer-enter flex items-center justify-between gap-4">
               <Link
@@ -807,7 +902,7 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                 type="button"
                 aria-label="Close menu"
                 onClick={closeMenu}
-                className="drawer-close cursor-pointer inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border border-slate-900/10 bg-slate-100 text-slate-950 transition hover:bg-slate-950 hover:text-white active:scale-[0.96]"
+                className="drawer-close inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-sm border border-slate-900/10 bg-slate-100 text-slate-950 transition hover:bg-slate-950 hover:text-white active:scale-[0.96]"
               >
                 <span className="relative z-10">
                   <IconClose />
@@ -815,7 +910,6 @@ export default function HomeNavbar({ onOpenCart }: Props) {
               </button>
             </div>
 
-            {/* SEARCH */}
             <form
               onSubmit={submitDrawerSearch}
               className="drawer-enter mt-4"
@@ -847,10 +941,8 @@ export default function HomeNavbar({ onOpenCart }: Props) {
           </div>
 
           <nav className="drawer-scroll flex-1 overflow-y-auto px-4 py-4">
-            {/* SHOP BY CATEGORY */}
             <section className="drawer-enter" style={{ animationDelay: "110ms" }}>
               <div className="mb-3 flex items-end justify-between px-1">
-
                 <Link
                   href="/collections/all"
                   onClick={closeMenu}
@@ -872,7 +964,7 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                     >
                       <button
                         type="button"
-                        className="drawer-row group cursor-pointer flex w-full items-center gap-3 px-3 py-3 text-left transition hover:!bg-slate-950"
+                        className="drawer-row group flex w-full cursor-pointer items-center gap-3 px-3 py-3 text-left transition hover:!bg-slate-950"
                         onClick={() => {
                           if (!hasSubCategories) {
                             goToCategory({ root: root.name });
@@ -884,16 +976,16 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                           setExpandedSub(null);
                         }}
                       >
-                        <span className="drawer-row-index relative cursor-pointer z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border border-slate-900/8 bg-slate-100 text-xs font-black text-slate-500 transition group-hover:border-white/20 group-hover:!bg-white/15 group-hover:!text-white">
+                        <span className="drawer-row-index relative z-10 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-sm border border-slate-900/8 bg-slate-100 text-xs font-black text-slate-500 transition group-hover:border-white/20 group-hover:!bg-white/15 group-hover:!text-white">
                           {String(index + 1).padStart(2, "0")}
                         </span>
 
-                        <span className="relative z-10 cursor-pointer min-w-0 flex-1">
-                          <span className="drawer-row-title cursor-pointer block truncate text-sm font-black text-slate-950 transition group-hover:!text-white">
+                        <span className="relative z-10 min-w-0 flex-1 cursor-pointer">
+                          <span className="drawer-row-title block cursor-pointer truncate text-sm font-black text-slate-950 transition group-hover:!text-white">
                             {root.name}
                           </span>
 
-                          <span className="drawer-row-subtitle cursor-pointer mt-0.5 block truncate text-xs font-semibold text-slate-500 transition group-hover:!text-white/80">
+                          <span className="drawer-row-subtitle mt-0.5 block cursor-pointer truncate text-xs font-semibold text-slate-500 transition group-hover:!text-white/80">
                             {hasSubCategories
                               ? `${root.children?.length} sub categories`
                               : "Explore products"}
@@ -901,11 +993,15 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                         </span>
 
                         <span className="drawer-row-arrow relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-slate-100 text-slate-700 transition group-hover:!bg-white/15 group-hover:!text-white">
-                          {hasSubCategories ? <IconChevron open={openRoot} /> : "→"}
+                          {hasSubCategories ? (
+                            <IconChevron open={openRoot} />
+                          ) : (
+                            "→"
+                          )}
                         </span>
                       </button>
 
-                      {openRoot && hasSubCategories && (
+                      {openRoot && hasSubCategories ? (
                         <div className="grid gap-1.5 border-t border-slate-900/8 bg-slate-50 p-2">
                           {root.children?.map((sub) => {
                             const openSub = expandedSub === sub._id;
@@ -915,7 +1011,7 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                               <div key={sub._id}>
                                 <button
                                   type="button"
-                                  className="drawer-child-row group cursor-pointer flex w-full items-center justify-between rounded-sm bg-white px-3 py-2.5 text-left text-sm font-black text-slate-800 shadow-sm transition hover:!bg-slate-950 hover:!text-white"
+                                  className="drawer-child-row group flex w-full cursor-pointer items-center justify-between rounded-sm bg-white px-3 py-2.5 text-left text-sm font-black text-slate-800 shadow-sm transition hover:!bg-slate-950 hover:!text-white"
                                   onClick={() => {
                                     if (!hasChildren) {
                                       goToCategory({
@@ -933,17 +1029,21 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                                   </span>
 
                                   <span className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-black text-slate-500 transition group-hover:!bg-white/15 group-hover:!text-white">
-                                    {hasChildren ? <IconChevron open={openSub} /> : "→"}
+                                    {hasChildren ? (
+                                      <IconChevron open={openSub} />
+                                    ) : (
+                                      "→"
+                                    )}
                                   </span>
                                 </button>
 
-                                {openSub && hasChildren && (
+                                {openSub && hasChildren ? (
                                   <div className="ml-4 mt-1.5 grid gap-1.5 border-l border-slate-900/10 pl-3">
                                     {sub.children?.map((child) => (
                                       <button
                                         key={child._id}
                                         type="button"
-                                        className="rounded-sm px-3 py-2 cursor-pointer text-left text-sm font-bold text-slate-600 transition hover:!bg-slate-950 hover:!text-white hover:shadow-sm"
+                                        className="cursor-pointer rounded-sm px-3 py-2 text-left text-sm font-bold text-slate-600 transition hover:!bg-slate-950 hover:!text-white hover:shadow-sm"
                                         onClick={() =>
                                           goToCategory({
                                             root: root.name,
@@ -956,17 +1056,17 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                                       </button>
                                     ))}
                                   </div>
-                                )}
+                                ) : null}
                               </div>
                             );
                           })}
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   );
                 })}
 
-                {categoryTree.length === 0 && (
+                {categoryTree.length === 0 ? (
                   <div className="rounded-sm border border-dashed border-slate-900/15 bg-white px-4 py-6 text-center">
                     <p className="text-sm font-black text-slate-600">
                       No categories available
@@ -975,13 +1075,11 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                       Please check back soon.
                     </p>
                   </div>
-                )}
+                ) : null}
               </div>
             </section>
 
-            {/* CUSTOMER AREA */}
             <section className="drawer-enter mt-6" style={{ animationDelay: "150ms" }}>
-
               <div className="grid gap-2">
                 {CUSTOMER_LINKS.map((link, index) => (
                   <Link
@@ -1012,7 +1110,6 @@ export default function HomeNavbar({ onOpenCart }: Props) {
             </section>
           </nav>
 
-          {/* BOTTOM TRUST CARD */}
           <div className="border-t border-slate-900/8 bg-white px-5 py-4">
             <div className="flex justify-center">
               <RatingStars />
