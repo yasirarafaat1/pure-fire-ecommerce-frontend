@@ -1,6 +1,8 @@
 "use client";
 
-import { MessageCircle, X } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { Bot, MessageCircle, X } from "lucide-react";
+import { Roboto } from "next/font/google";
 
 export default function AssistantLauncher({
   open,
@@ -9,17 +11,35 @@ export default function AssistantLauncher({
   open: boolean;
   onClick: () => void;
 }) {
+  const autoOpenedRef = useRef(false);
+
+  useEffect(() => {
+    if (autoOpenedRef.current) return;
+
+    autoOpenedRef.current = true;
+
+    if (open) return;
+
+    const timer = window.setTimeout(() => {
+      onClick();
+    }, 450);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [open, onClick]);
+
   return (
     <button
       type="button"
       data-assistant-launcher="true"
       aria-label={open ? "Close shopping assistant" : "Open shopping assistant"}
       onClick={onClick}
-      className={`assistant-launcher-button fixed bottom-5 right-4 z-[45] h-14 w-14 place-items-center rounded-full bg-amber-400 text-white shadow-[0_18px_45px_rgba(15,23,42,0.28)] transition hover:bg-slate-950 active:scale-95 md:bottom-5 md:right-5 ${
+      className={`assistant-launcher-button fixed bottom-5 right-4 z-[45] h-14 w-14 place-items-center rounded-full bg-green-700 text-white shadow-[0_18px_45px_rgba(15,23,42,0.28)] transition md:bottom-5 md:right-5 ${
         open ? "hidden md:grid" : "grid"
       }`}
     >
-      {open ? <X size={22} /> : <MessageCircle size={23} />}
+      {open ? <X size={22} /> : <Bot size={23} />}
     </button>
   );
 }

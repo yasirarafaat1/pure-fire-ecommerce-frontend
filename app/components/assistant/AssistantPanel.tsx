@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Edit, MessageCircle, MoreVertical } from "lucide-react";
+import { Bot, Edit, MessageCircle, MoreVertical } from "lucide-react";
 import AssistantInput from "./AssistantInput";
 import AssistantMessageList from "./AssistantMessageList";
 import type { AssistantMessage, AssistantSessionSummary } from "./types";
@@ -131,8 +131,8 @@ export default function AssistantPanel({
 
             <div className="relative z-10 flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
-                <div className="assistant-brand-icon relative grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-[4px] bg-slate-950 text-white shadow-[0_12px_26px_rgba(15,23,42,0.22)] ring-1 ring-black/10">
-                  <MessageCircle size={22} strokeWidth={2.45} />
+                <div className="assistant-brand-icon relative grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-[4px] bg-green-700 text-white shadow-[0_12px_26px_rgba(15,23,42,0.22)] ring-1 ring-black/10">
+                  <Bot size={22} strokeWidth={2.45} />
                 </div>
 
                 <div className="min-w-0">

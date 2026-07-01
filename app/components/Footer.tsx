@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   FiFacebook,
   FiInstagram,
@@ -46,7 +46,7 @@ const headingClass =
   "footer-column-title text-[11px] font-black uppercase tracking-[0.22em] text-slate-950";
 
 const linkClass =
-  "footer-link group relative inline-flex w-fit items-center text-sm font-semibold text-slate-500 transition-colors duration-300 hover:text-slate-950";
+  "footer-link group relative inline-flex w-fit items-center gap-2 rounded-full text-sm font-semibold text-slate-500 hover:text-slate-950";
 
 function FooterColumn({
   title,
@@ -60,7 +60,7 @@ function FooterColumn({
   return (
     <div
       className="footer-reveal footer-column"
-      style={{ "--footer-delay": `${delay}ms` } as React.CSSProperties}
+      style={{ "--footer-delay": `${delay}ms` } as CSSProperties}
     >
       <div className={headingClass}>{title}</div>
 
@@ -69,10 +69,12 @@ function FooterColumn({
           <li
             key={item.label}
             className="footer-link-row"
-            style={{ "--link-delay": `${index * 55}ms` } as React.CSSProperties}
+            style={{ "--link-delay": `${index * 55}ms` } as CSSProperties}
           >
             <a href={item.href} className={linkClass}>
-              <span>{item.label}</span>
+              <span className="footer-link-dot" />
+              <span className="footer-link-text">{item.label}</span>
+              <span className="footer-link-arrow">→</span>
             </a>
           </li>
         ))}
@@ -95,26 +97,10 @@ export default function Footer() {
 
   const socialLinks = useMemo(
     () => [
-      {
-        label: "Instagram",
-        href: social.instagram,
-        icon: <FiInstagram />,
-      },
-      {
-        label: "Facebook",
-        href: social.facebook,
-        icon: <FiFacebook />,
-      },
-      {
-        label: "YouTube",
-        href: social.youtube,
-        icon: <FiYoutube />,
-      },
-      {
-        label: "Twitter",
-        href: social.twitter,
-        icon: <FiTwitter />,
-      },
+      { label: "Instagram", href: social.instagram, icon: <FiInstagram /> },
+      { label: "Facebook", href: social.facebook, icon: <FiFacebook /> },
+      { label: "YouTube", href: social.youtube, icon: <FiYoutube /> },
+      { label: "Twitter", href: social.twitter, icon: <FiTwitter /> },
     ],
     [social.facebook, social.instagram, social.twitter, social.youtube],
   );
@@ -130,7 +116,6 @@ export default function Footer() {
 
   useEffect(() => {
     const footer = footerRef.current;
-
     if (!footer) return undefined;
 
     const observer = new IntersectionObserver(
@@ -140,14 +125,10 @@ export default function Footer() {
           observer.disconnect();
         }
       },
-      {
-        threshold: 0.16,
-        rootMargin: "0px 0px -80px 0px",
-      },
+      { threshold: 0.16, rootMargin: "0px 0px -80px 0px" },
     );
 
     observer.observe(footer);
-
     return () => observer.disconnect();
   }, []);
 
@@ -160,33 +141,36 @@ export default function Footer() {
     >
       <div className="footer-glow footer-glow-left" />
       <div className="footer-glow footer-glow-right" />
-
       <div className="footer-line" />
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-5 lg:px-8 lg:py-10">
         <div className="grid gap-9 lg:grid-cols-[1.35fr_0.8fr_0.8fr_0.8fr] lg:gap-12">
           <div
             className="footer-reveal footer-brand-block"
-            style={{ "--footer-delay": "0ms" } as React.CSSProperties}
+            style={{ "--footer-delay": "0ms" } as CSSProperties}
           >
             <a
               href="/"
               aria-label={`${settings.storeName} home`}
-              className="footer-brand group inline-flex max-w-full items-center gap-2"
+              className="footer-brand group inline-flex max-w-full items-center gap-3"
             >
-              <span className="footer-logo-wrap">
+              <span
+                className="footer-logo-wrap relative grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full border border-slate-900/10 bg-white"
+                style={{ width: 44, height: 44, minWidth: 44, minHeight: 44 }}
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={logoSrc}
                   alt={settings.storeName}
                   width={44}
                   height={44}
-                  className="h-full w-full rounded-full object-cover"
+                  className="block h-11 w-11 max-w-none rounded-full object-cover"
+                  style={{ width: 44, height: 44 }}
                   onError={() => setLogoSrc("/favicon.png")}
                 />
               </span>
 
-              <span className="footer-brand-name w-full truncate text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
+              <span className="footer-brand-name min-w-0 max-w-[240px] truncate text-2xl font-black tracking-tight text-slate-950 sm:max-w-[320px] sm:text-3xl">
                 {settings.storeName}
               </span>
             </a>
@@ -197,34 +181,22 @@ export default function Footer() {
 
             <div className="mt-6 grid gap-3 text-sm">
               {settings.supportEmail ? (
-                <a
-                  href={`mailto:${settings.supportEmail}`}
-                  className="footer-contact-link group"
-                >
-                  <span className="footer-contact-icon">
-                    <FiMail />
-                  </span>
+                <a href={`mailto:${settings.supportEmail}`} className="footer-contact-link group">
+                  <span className="footer-contact-icon"><FiMail /></span>
                   <span className="min-w-0 truncate">{settings.supportEmail}</span>
                 </a>
               ) : null}
 
               {settings.supportPhone ? (
-                <a
-                  href={`tel:${settings.supportPhone}`}
-                  className="footer-contact-link group"
-                >
-                  <span className="footer-contact-icon">
-                    <FiPhone />
-                  </span>
+                <a href={`tel:${settings.supportPhone}`} className="footer-contact-link group">
+                  <span className="footer-contact-icon"><FiPhone /></span>
                   <span className="min-w-0 truncate">{settings.supportPhone}</span>
                 </a>
               ) : null}
 
               {settings.address ? (
                 <div className="footer-contact-link">
-                  <span className="footer-contact-icon">
-                    <FiMapPin />
-                  </span>
+                  <span className="footer-contact-icon"><FiMapPin /></span>
                   <span className="min-w-0 leading-5">{settings.address}</span>
                 </div>
               ) : null}
@@ -242,9 +214,7 @@ export default function Footer() {
                     target="_blank"
                     rel="noreferrer"
                     className="footer-social"
-                    style={
-                      { "--social-delay": `${index * 70}ms` } as React.CSSProperties
-                    }
+                    style={{ "--social-delay": `${index * 70}ms` } as CSSProperties}
                   >
                     <span className="relative z-10">{item.icon}</span>
                   </a>
@@ -260,7 +230,7 @@ export default function Footer() {
 
         <div
           className="footer-bottom footer-reveal mt-8 flex flex-col gap-4 border-t border-black/10 pt-5 text-xs font-semibold text-slate-500 md:flex-row md:items-center md:justify-between"
-          style={{ "--footer-delay": "360ms" } as React.CSSProperties}
+          style={{ "--footer-delay": "360ms" } as CSSProperties}
         >
           <span className="text-center md:text-left">
             Copyright © {year} {settings.storeName}. All rights reserved.
@@ -271,15 +241,16 @@ export default function Footer() {
               <span
                 key={item}
                 className="footer-trust-pill"
-                style={
-                  { "--trust-delay": `${index * 80}ms` } as React.CSSProperties
-                }
+                style={{ "--trust-delay": `${index * 80}ms` } as CSSProperties}
               >
                 {item}
               </span>
             ))}
           </div>
-          <p>Developed by <b>Akamify</b> </p>
+
+          <p className="text-center md:text-right">
+            Developed by <b>Akamify</b>
+          </p>
         </div>
       </div>
 
@@ -298,12 +269,7 @@ export default function Footer() {
           z-index: 2;
           height: 1px;
           width: min(1180px, calc(100% - 32px));
-          background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(15, 23, 42, 0.22),
-            transparent
-          );
+          background: linear-gradient(90deg, transparent, rgba(15, 23, 42, 0.22), transparent);
           transform: translateX(-50%) scaleX(0);
           transform-origin: center;
           transition: transform 1100ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -389,16 +355,6 @@ export default function Footer() {
         }
 
         .footer-logo-wrap {
-          position: relative;
-          display: grid;
-          width: 44px;
-          height: 44px;
-          flex: 0 0 auto;
-          place-items: center;
-          overflow: hidden;
-          border-radius: 999px;
-          border: 1px solid rgba(15, 23, 42, 0.1);
-          background: #ffffff;
           box-shadow:
             0 14px 34px rgba(15, 23, 42, 0.12),
             inset 0 1px 0 rgba(255, 255, 255, 0.9);
@@ -412,12 +368,7 @@ export default function Footer() {
           content: "";
           position: absolute;
           inset: -55%;
-          background: linear-gradient(
-            115deg,
-            transparent 35%,
-            rgba(255, 255, 255, 0.7),
-            transparent 65%
-          );
+          background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.7), transparent 65%);
           transform: translateX(-120%) rotate(18deg);
           transition: transform 850ms cubic-bezier(0.22, 1, 0.36, 1);
         }
@@ -571,18 +522,42 @@ export default function Footer() {
           transform: translateX(0);
         }
 
+        .footer-link::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          z-index: -1;
+          border-radius: 999px;
+          background: rgba(15, 23, 42, 0.055);
+          transform: scaleX(0.72);
+          opacity: 0;
+          transition:
+            opacity 260ms ease,
+            transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
         .footer-link::after {
           content: "";
           position: absolute;
-          left: 0;
-          bottom: -4px;
+          left: 22px;
+          right: 0;
+          bottom: 0;
           height: 1px;
-          width: 100%;
           border-radius: 999px;
           background: currentColor;
           transform: scaleX(0);
           transform-origin: right;
-          transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+          transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .footer-link:hover {
+          padding-left: 8px;
+          padding-right: 10px;
+        }
+
+        .footer-link:hover::before {
+          opacity: 1;
+          transform: scaleX(1);
         }
 
         .footer-link:hover::after {
@@ -590,12 +565,43 @@ export default function Footer() {
           transform-origin: left;
         }
 
-        .footer-link span {
-          transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+        .footer-link-dot {
+          width: 5px;
+          height: 5px;
+          flex: 0 0 auto;
+          border-radius: 999px;
+          background: currentColor;
+          opacity: 0.35;
+          transform: scale(0.7);
+          transition:
+            opacity 300ms ease,
+            transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
         }
 
-        .footer-link:hover span {
-          transform: translateX(4px);
+        .footer-link:hover .footer-link-dot {
+          opacity: 1;
+          transform: scale(1);
+        }
+
+        .footer-link-text {
+          transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .footer-link:hover .footer-link-text {
+          transform: translateX(3px);
+        }
+
+        .footer-link-arrow {
+          opacity: 0;
+          transform: translateX(-8px);
+          transition:
+            opacity 300ms ease,
+            transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .footer-link:hover .footer-link-arrow {
+          opacity: 1;
+          transform: translateX(0);
         }
 
         .footer-trust-pill {
@@ -632,7 +638,7 @@ export default function Footer() {
 
         @media (max-width: 767px) {
           .footer-brand-name {
-            max-width: 240px;
+            max-width: 230px;
           }
 
           .footer-reveal {
@@ -658,8 +664,11 @@ export default function Footer() {
           .footer-column-title::after,
           .footer-link-row,
           .footer-link,
+          .footer-link::before,
           .footer-link::after,
-          .footer-link span,
+          .footer-link-dot,
+          .footer-link-text,
+          .footer-link-arrow,
           .footer-trust-pill {
             transition: none !important;
             animation: none !important;
@@ -669,6 +678,123 @@ export default function Footer() {
           }
         }
       `}</style>
+      <style jsx global>{`
+  .premium-footer .footer-link {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    padding: 6px 2px;
+    transition:
+      color 280ms ease,
+      padding 360ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .premium-footer .footer-link::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.07);
+    opacity: 0;
+    transform: translateX(-12px) scaleX(0.72);
+    transform-origin: left center;
+    transition:
+      opacity 300ms ease,
+      transform 430ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .premium-footer .footer-link::after {
+    content: "";
+    position: absolute;
+    left: 26px;
+    right: 12px;
+    bottom: 4px;
+    z-index: 1;
+    height: 1px;
+    border-radius: 999px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: right center;
+    transition: transform 430ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .premium-footer .footer-link:hover {
+    padding-left: 10px;
+    padding-right: 12px;
+    transform: translateX(2px);
+  }
+
+  .premium-footer .footer-link:hover::before {
+    opacity: 1;
+    transform: translateX(0) scaleX(1);
+  }
+
+  .premium-footer .footer-link:hover::after {
+    transform: scaleX(1);
+    transform-origin: left center;
+  }
+
+  .premium-footer .footer-link-dot {
+    width: 5px;
+    height: 5px;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: currentColor;
+    opacity: 0.25;
+    transform: scale(0.55);
+    transition:
+      opacity 320ms ease,
+      transform 430ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .premium-footer .footer-link:hover .footer-link-dot {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .premium-footer .footer-link-text {
+    position: relative;
+    z-index: 2;
+    transition:
+      transform 430ms cubic-bezier(0.22, 1, 0.36, 1),
+      letter-spacing 320ms ease;
+  }
+
+  .premium-footer .footer-link:hover .footer-link-text {
+    transform: translateX(3px);
+    letter-spacing: -0.01em;
+  }
+
+  .premium-footer .footer-link-arrow {
+    position: relative;
+    z-index: 2;
+    opacity: 0;
+    transform: translateX(-10px);
+    transition:
+      opacity 320ms ease,
+      transform 430ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .premium-footer .footer-link:hover .footer-link-arrow {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .premium-footer .footer-link,
+    .premium-footer .footer-link::before,
+    .premium-footer .footer-link::after,
+    .premium-footer .footer-link-dot,
+    .premium-footer .footer-link-text,
+    .premium-footer .footer-link-arrow {
+      transition: none !important;
+      transform: none !important;
+      opacity: 1 !important;
+    }
+  }
+`}</style>
     </footer>
   );
 }

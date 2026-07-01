@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MessageCircle, UserRound } from "lucide-react";
+import { Bot, MessageCircle, UserRound } from "lucide-react";
 import AssistantCardsRenderer from "./AssistantCardsRenderer";
 import AssistantTyping from "./AssistantTyping";
 import type { AssistantMessage } from "./types";
@@ -236,7 +236,7 @@ export default function AssistantMessageList({
               >
                 {!user ? (
                   <div className="assistant-avatar assistant-avatar-bot">
-                    <MessageCircle size={16} strokeWidth={2.5} />
+                    <Bot size={16} strokeWidth={2.5} />
                   </div>
                 ) : null}
 
@@ -369,7 +369,7 @@ export default function AssistantMessageList({
         }
 
         .assistant-avatar-bot {
-          background: #020617;
+          background: rgb(23, 143, 23);
           color: #ffffff;
           box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
         }
