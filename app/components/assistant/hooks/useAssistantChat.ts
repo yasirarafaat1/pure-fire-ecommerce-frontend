@@ -1,17 +1,9 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { assistantGet, assistantPost } from "../assistant-api";
-import type { AssistantApiResponse, AssistantCard, AssistantMessage, AssistantSessionSummary } from "../types";
-
-const initialMessage: AssistantMessage = {
-  id: "welcome",
-  role: "assistant",
-  content: "Hi, I can help you find products, track orders, and answer shopping questions.",
-  suggestions: ["Find products", "Track order", "Best sellers", "Return policy"],
-  cards: [],
-};
+import { buildAssistantWelcomeMessage } from "../pageContext";
+import type { AssistantApiResponse, AssistantCard, AssistantMessage, AssistantPageContext, AssistantSessionSummary } from "../types";
 
 export const useAssistantChat = ({
   sessionId,
@@ -19,15 +11,17 @@ export const useAssistantChat = ({
   ensureSession,
   startNewSession,
   setActiveSession,
+  pageContext,
 }: {
   sessionId: string;
   guestId: string;
   ensureSession: () => Promise<string>;
   startNewSession: () => Promise<string>;
   setActiveSession: (sessionId: string) => void;
+  pageContext: AssistantPageContext;
 }) => {
-  const pathname = usePathname();
-  const [messages, setMessages] = useState<AssistantMessage[]>([initialMessage]);
+  const welcomeMessage = useMemo(() => buildAssistantWelcomeMessage(pageContext), [pageContext]);
+  const [messages, setMessages] = useState<AssistantMessage[]>([welcomeMessage]);
   const [loading, setLoading] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [error, setError] = useState("");
@@ -68,6 +62,20 @@ export const useAssistantChat = ({
     ]);
   }, []);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setMessages((current) => {
+        if (current.length === 1 && current[0]?.id?.startsWith("welcome_")) {
+          return [welcomeMessage];
+        }
+
+        return current;
+      });
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [welcomeMessage]);
+
   const sendMessage = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
@@ -91,7 +99,8 @@ export const useAssistantChat = ({
           guestId,
           message: trimmed,
           context: {
-            currentPath: pathname || "/",
+            ...pageContext,
+            currentPath: pageContext.currentPath || "/",
             cartId: localStorage.getItem("cart_id") || "",
             replyTo: activeReplyTo,
           },
@@ -107,7 +116,7 @@ export const useAssistantChat = ({
         setLoading(false);
       }
     },
-    [ensureSession, guestId, loading, pathname, replyTo, sessionId],
+    [ensureSession, guestId, loading, pageContext, replyTo, sessionId],
   );
 
   const lookupOrder = useCallback(
@@ -129,6 +138,7 @@ export const useAssistantChat = ({
           sessionId: activeSessionId,
           guestId,
           orderId: trimmed,
+          context: pageContext,
         });
         appendAssistantResponse(data, {
           id: userMessage.id,
@@ -141,7 +151,7 @@ export const useAssistantChat = ({
         setLoading(false);
       }
     },
-    [ensureSession, guestId, loading, sessionId],
+    [ensureSession, guestId, loading, pageContext, sessionId],
   );
 
   const refreshSessions = useCallback(async () => {
@@ -187,14 +197,14 @@ export const useAssistantChat = ({
             createdAt: message.createdAt,
           }));
         setActiveSession(nextSessionId);
-        setMessages(mapped.length ? mapped : [initialMessage]);
+        setMessages(mapped.length ? mapped : [welcomeMessage]);
       } catch (err) {
         setError(err instanceof Error ? err.message : "History failed");
       } finally {
         setHistoryLoading(false);
       }
     },
-    [guestId, setActiveSession],
+    [guestId, setActiveSession, welcomeMessage],
   );
 
   const startNewChat = useCallback(async () => {
@@ -203,14 +213,14 @@ export const useAssistantChat = ({
     try {
       const nextSessionId = await startNewSession();
       setActiveSession(nextSessionId);
-      setMessages([initialMessage]);
+      setMessages([welcomeMessage]);
       await refreshSessions();
     } catch (err) {
       setError(err instanceof Error ? err.message : "New chat failed");
     } finally {
       setHistoryLoading(false);
     }
-  }, [refreshSessions, setActiveSession, startNewSession]);
+  }, [refreshSessions, setActiveSession, startNewSession, welcomeMessage]);
 
   return useMemo(
     () => ({

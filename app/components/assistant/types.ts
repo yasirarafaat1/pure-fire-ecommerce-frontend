@@ -151,6 +151,28 @@ export type AssistantMessage = {
   createdAt?: string;
 };
 
+export type AssistantPageContext = {
+  pageType:
+    | "home"
+    | "product"
+    | "collection"
+    | "profile"
+    | "orders"
+    | "order_detail"
+    | "wishlist"
+    | "checkout"
+    | "policy"
+    | "support";
+  currentPath: string;
+  title: string;
+  welcome: string;
+  suggestions: string[];
+  productId?: string;
+  productTitle?: string;
+  collectionSlug?: string;
+  orderId?: string;
+};
+
 export type AssistantApiResponse = {
   status: boolean;
   sessionId?: string;

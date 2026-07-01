@@ -42,7 +42,7 @@ export default function NewArrivals() {
         );
 
         if (cachedPublished.length) {
-          setItems(cachedPublished.slice(0, 8));
+          setItems(cachedPublished.slice(0, 10));
           setLoading(false);
           seededRef.current = true;
         }
@@ -61,7 +61,7 @@ export default function NewArrivals() {
           (p: any) => !p?.status || p.status === "published",
         );
 
-        setItems(published.slice(0, 8));
+        setItems(published.slice(0, 10));
       } catch {
         setItems([]);
       } finally {
@@ -83,7 +83,7 @@ export default function NewArrivals() {
       </div>
 
       {loading && !hasReal ? (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border border-black/10 rounded-[5px] p-3">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 border border-black/10 rounded-[5px] p-3">
           {placeholders.map((p) => (
             <div key={p.product_id} className="bg-white rounded-[5px]">
               <div className="w-full aspect-square md:aspect-[3/4] bg-black/5 rounded-t-[5px] animate-pulse" />

@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import AssistantLauncher from "./AssistantLauncher";
 import AssistantPanel from "./AssistantPanel";
 import { useAssistantChat } from "./hooks/useAssistantChat";
 import { useAssistantSession } from "./hooks/useAssistantSession";
+import { getAssistantPageContext } from "./pageContext";
 import type { AssistantCard, ProductAssistantCard } from "./types";
 
 export default function AssistantWidget() {
+  const pathname = usePathname() || "/";
   const [open, setOpen] = useState(false);
+  const pageContext = useMemo(() => getAssistantPageContext(pathname), [pathname]);
   const session = useAssistantSession(open);
   const chat = useAssistantChat({
     sessionId: session.sessionId,
@@ -16,6 +20,7 @@ export default function AssistantWidget() {
     ensureSession: session.start,
     startNewSession: session.startNew,
     setActiveSession: session.setActiveSession,
+    pageContext,
   });
   const { addAssistantNotice } = chat;
 
