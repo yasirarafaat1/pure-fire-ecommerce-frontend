@@ -11,7 +11,7 @@ import type { AssistantCard, ProductAssistantCard } from "./types";
 
 export default function AssistantWidget() {
   const pathname = usePathname() || "/";
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const pageContext = useMemo(() => getAssistantPageContext(pathname), [pathname]);
   const session = useAssistantSession(open);
   const chat = useAssistantChat({
