@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Navbar from "../home/components/navbar";
+import AssistantWidget from "./assistant/AssistantWidget";
 import CartModal from "./CartModal";
 import Footer from "./Footer";
 
@@ -39,6 +40,7 @@ export default function PublicFrame({ children }: { children: React.ReactNode })
         </div>
       </main>
       {showFooter && <Footer />}
+      <AssistantWidget />
       <CartModal open={cartOpen} onClose={() => setCartOpen(false)} />
     </div>
   );

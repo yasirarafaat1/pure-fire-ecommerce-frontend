@@ -7,6 +7,7 @@ import type { ComponentType } from "react";
 import {
   Activity,
   BarChart3,
+  BotMessageSquare,
   Boxes,
   ChevronLeft,
   ChevronRight,
@@ -63,6 +64,7 @@ const sections: { label: string; items: Item[] }[] = [
     label: "Customers",
     items: [
       { label: "Customers", href: "/admin/customers", icon: Contact },
+      { label: "Assistant Chats", href: "/admin/assistant", icon: BotMessageSquare },
       { label: "Reviews", href: "/admin/reviews", icon: Star },
     ],
   },

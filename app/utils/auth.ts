@@ -70,3 +70,16 @@ export const setUserAuth = (token: string, email: string) => {
   writeCookie("user_token", token || "");
   writeCookie("user_email", email || "");
 };
+
+export const clearUserAuth = () => {
+  if (typeof localStorage !== "undefined") {
+    localStorage.removeItem("user_token");
+    localStorage.removeItem("user_email");
+  }
+  if (typeof sessionStorage !== "undefined") {
+    sessionStorage.removeItem("user_token");
+    sessionStorage.removeItem("user_email");
+  }
+  writeCookie("user_token", "", -1);
+  writeCookie("user_email", "", -1);
+};

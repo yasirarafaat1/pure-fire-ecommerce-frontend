@@ -321,16 +321,46 @@ export default function HomeNavbar({ onOpenCart }: Props) {
           }
         }
 
-        @keyframes cartPulse {
-          0%,
-          100% {
-            transform: scale(1);
-          }
+       @keyframes cartPulse {
+  0%,
+  100% {
+    transform: translate(44%, -44%) scale(1);
+  }
 
-          50% {
-            transform: scale(1.08);
-          }
-        }
+  50% {
+    transform: translate(44%, -44%) scale(1.08);
+  }
+}
+
+.nav-cart-button {
+  overflow: visible !important;
+}
+
+.cart-badge {
+  top: 0 !important;
+  right: 0 !important;
+  min-width: 19px !important;
+  height: 19px !important;
+  min-height: 19px !important;
+  padding: 0 5px !important;
+  border-radius: 999px !important;
+  border: 2px solid #ffffff;
+  background: #facc15;
+  color: #0f172a !important;
+  box-shadow:
+    0 8px 18px rgba(15, 23, 42, 0.18),
+    0 0 0 1px rgba(15, 23, 42, 0.05);
+  line-height: 1 !important;
+  pointer-events: none;
+  transform: translate(44%, -44%);
+  animation: cartPulse 2.35s ease-in-out infinite;
+}
+
+.nav-cart-button:hover .cart-badge {
+  background: #facc15;
+  color: #0f172a !important;
+  border-color: #ffffff;
+}
 
         .nav-shell {
           position: sticky;
@@ -691,7 +721,7 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                 </span>
 
                 {cartCount > 0 && (
-                  <span className="cart-badge absolute -right-1 -top-1 z-10 flex min-h-5 min-w-5 items-center justify-center rounded-sm bg-amber-400 px-1.5 text-[10px] font-black leading-none text-slate-950 ring-2 ring-white">
+                  <span className="cart-badge absolute z-20 flex items-center justify-center text-[10px] font-black leading-none">
                     {cartCount > 99 ? "99+" : cartCount}
                   </span>
                 )}
@@ -905,7 +935,7 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                                   <span className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-black text-slate-500 transition group-hover:!bg-white/15 group-hover:!text-white">
                                     {hasChildren ? <IconChevron open={openSub} /> : "→"}
                                   </span>
-                                </button> 
+                                </button>
 
                                 {openSub && hasChildren && (
                                   <div className="ml-4 mt-1.5 grid gap-1.5 border-l border-slate-900/10 pl-3">
@@ -984,17 +1014,17 @@ export default function HomeNavbar({ onOpenCart }: Props) {
 
           {/* BOTTOM TRUST CARD */}
           <div className="border-t border-slate-900/8 bg-white px-5 py-4">
-              <div className="flex justify-center">
-                <RatingStars />
-              </div>
+            <div className="flex justify-center">
+              <RatingStars />
+            </div>
 
-              <p className="mt-3 text-xs font-black uppercase tracking-[0.16em] text-slate-950">
-                Loved by 7,00,000+ customers
-              </p>
+            <p className="mt-3 text-xs font-black uppercase tracking-[0.16em] text-slate-950">
+              Loved by 7,00,000+ customers
+            </p>
 
-              <p className="mt-1 text-xs font-semibold text-slate-500">
-                Trusted shopping, fast support, premium quality.
-              </p>
+            <p className="mt-1 text-xs font-semibold text-slate-500">
+              Trusted shopping, fast support, premium quality.
+            </p>
           </div>
         </aside>
       </div>
