@@ -95,7 +95,7 @@ export default function ProductWizard({ product, onSaved, onClose }: Props) {
       const fallbackSizes = Array.isArray(product.sizes) ? product.sizes : [];
       setVariants(
         product.colorVariants.map((cv: ProductColorVariant, idx: number) => ({
-          id: `${cv.color}-${idx}`,
+          id: `variant-${product.product_id || "edit"}-${idx}`,
           color: cv.color,
           price: cv.price ? cv.price.toString() : "",
           discountedPrice: cv.discountedPrice ? cv.discountedPrice.toString() : "",

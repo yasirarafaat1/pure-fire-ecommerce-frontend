@@ -14,6 +14,8 @@ type SubmitInput = {
   variants: VariantForm[];
 };
 
+const isPersistedMediaUrl = (url: string) => /^https?:\/\//i.test(url);
+
 export async function submitProduct({
   product,
   form,
@@ -44,14 +46,16 @@ export async function submitProduct({
     : variants.map((variant, index) => ({ ...variant, primary: index === 0 }));
   const processed = withPrimary.map((variant) => {
     const imagePreviews = variant.imagePreviews || [];
+    const existingImages = imagePreviews.filter(isPersistedMediaUrl);
+    const existingVideo = variant.videoPreview && isPersistedMediaUrl(variant.videoPreview) ? variant.videoPreview : "";
     return {
       color: variant.color.trim(),
       price: Number(variant.price) || 0,
       discountedPrice: Number(variant.discountedPrice || variant.price) || 0,
-      imageCount: variant.imagesFiles.length + imagePreviews.length,
+      imageCount: variant.imagesFiles.length,
       hasVideo: Boolean(variant.videoFile || variant.videoPreview),
-      images: variant.imagesFiles.length ? [] : imagePreviews,
-      video: variant.videoPreview || "",
+      images: existingImages,
+      video: existingVideo,
       sizes: toSizePayload(variant.sizes),
       primary: Boolean(variant.primary),
     };
