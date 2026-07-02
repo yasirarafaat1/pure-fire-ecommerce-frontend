@@ -5,6 +5,7 @@ import type { EditProduct, ProductFormState } from "./product-editor-types";
 
 type SubmitInput = {
   product?: EditProduct | null;
+  draftIdOverride?: number | null;
   form: ProductFormState;
   categoryId: string;
   status: "draft" | "published";
@@ -12,12 +13,14 @@ type SubmitInput = {
   description: string;
   highlights: Array<{ key: string; value: string }>;
   variants: VariantForm[];
+  omitNewFiles?: boolean;
 };
 
 const isPersistedMediaUrl = (url: string) => /^https?:\/\//i.test(url);
 
 export async function submitProduct({
   product,
+  draftIdOverride,
   form,
   categoryId,
   status,
@@ -25,6 +28,7 @@ export async function submitProduct({
   description,
   highlights,
   variants,
+  omitNewFiles = false,
 }: SubmitInput) {
   const fd = new FormData();
   Object.entries(form).forEach(([key, value]) => {
@@ -52,8 +56,8 @@ export async function submitProduct({
       color: variant.color.trim(),
       price: Number(variant.price) || 0,
       discountedPrice: Number(variant.discountedPrice || variant.price) || 0,
-      imageCount: variant.imagesFiles.length,
-      hasVideo: Boolean(variant.videoFile || variant.videoPreview),
+      imageCount: omitNewFiles ? 0 : variant.imagesFiles.length,
+      hasVideo: Boolean((omitNewFiles ? null : variant.videoFile) || existingVideo),
       images: existingImages,
       video: existingVideo,
       sizes: toSizePayload(variant.sizes),
@@ -74,14 +78,19 @@ export async function submitProduct({
   fd.set("selling_price", String(primary.discountedPrice || primary.price));
   fd.set("quantity", String(totalQuantity || Number(form.quantity) || 0));
   fd.append("colorVariants", JSON.stringify(processed));
-  withPrimary.forEach((variant) => {
-    variant.imagesFiles.forEach((file) => fd.append("variantImages", file));
-    if (variant.videoFile) fd.append("variantVideos", variant.videoFile);
-  });
+  if (!omitNewFiles) {
+    withPrimary.forEach((variant) => {
+      variant.imagesFiles.forEach((file) => fd.append("variantImages", file));
+      if (variant.videoFile) fd.append("variantVideos", variant.videoFile);
+    });
+  }
 
   let path = "/products";
   let method: "POST" | "PATCH" = "POST";
-  if (product?.draft_id) {
+  if (draftIdOverride) {
+    path = `/products/drafts/${draftIdOverride}`;
+    method = "PATCH";
+  } else if (product?.draft_id) {
     path = `/products/drafts/${product.draft_id}`;
     method = "PATCH";
   } else if (!product && status === "draft") {
@@ -90,5 +99,9 @@ export async function submitProduct({
     path = `/products/${product.product_id}`;
     method = "PATCH";
   }
-  await adminApi.request(path, { method, body: fd });
+  return adminApi.request<{
+    status?: boolean;
+    draft?: { draft_id?: number };
+    product?: { product_id?: number; draft_id?: number };
+  }>(path, { method, body: fd });
 }

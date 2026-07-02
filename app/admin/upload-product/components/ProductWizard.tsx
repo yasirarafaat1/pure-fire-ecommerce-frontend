@@ -16,6 +16,7 @@ import type {
 import { submitProduct } from "./product-submit";
 import {
   validateProductDetails,
+  validateProductUploadSize,
   validateProductVariants,
 } from "./product-validation";
 
@@ -24,6 +25,7 @@ const steps = [{ id: 1, label: "Category" }, { id: 2, label: "Details" }, { id: 
 const minHighlights = 6, maxHighlights = 10;
 export default function ProductWizard({ product, onSaved, onClose }: Props) {
   const initializedProductKeyRef = useRef<string>("");
+  const lastAutosavedKeyRef = useRef<string>("");
   const [active, setActive] = useState(1);
   const [tree, setTree] = useState<CategoryNode[]>([]);
   const [level1, setLevel1] = useState("");
@@ -32,6 +34,8 @@ export default function ProductWizard({ product, onSaved, onClose }: Props) {
   const [categoryId, setCategoryId] = useState("");
   const [message, setMessage] = useState("");
   const [busyAction, setBusyAction] = useState<null | "draft" | "published">(null);
+  const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [autosavedDraftId, setAutosavedDraftId] = useState<number | null>(product?.draft_id || null);
   const [form, setForm] = useState<ProductFormState>({ name: "", sku: "", price: "", selling_price: "", quantity: "", colors: "", sizes: "" });
   const [descriptionHtml, setDescriptionHtml] = useState("");
   const [keyHighlights, setKeyHighlights] = useState<{ key: string; value: string }[]>(Array.from({ length: minHighlights }, () => ({ key: "", value: "" })));
@@ -127,6 +131,11 @@ export default function ProductWizard({ product, onSaved, onClose }: Props) {
     else if (stage === "media" || stage === "variants" || stage === "pricing" || stage === "complete") setActive(3);
   }, [product, tree]);
 
+  useEffect(() => {
+    setAutosavedDraftId(product?.draft_id || null);
+    lastAutosavedKeyRef.current = "";
+  }, [product?.draft_id, product?.product_id]);
+
   const level1Options = tree;
   const level2Options = useMemo(() => (level1 ? findNode(tree, level1)?.children || [] : []), [tree, level1]);
   const level3Options = useMemo(() => (level2 ? findNode(tree, level2)?.children || [] : []), [tree, level2]);
@@ -150,6 +159,91 @@ export default function ProductWizard({ product, onSaved, onClose }: Props) {
       sizes: Array.from(new Set(variants.flatMap((v) => toSizePayload(v.sizes).map((s) => s.label)))).join(", "),
     }));
   }, [variants]);
+
+  const autosaveKey = useMemo(() => {
+    const variantPayload = variants.map((variant) => ({
+      color: variant.color,
+      price: variant.price,
+      discountedPrice: variant.discountedPrice,
+      sizes: variant.sizes,
+      primary: variant.primary,
+      images: (variant.imagePreviews || []).filter((url) => /^https?:\/\//i.test(url)),
+      video: variant.videoPreview && /^https?:\/\//i.test(variant.videoPreview) ? variant.videoPreview : "",
+    }));
+
+    return JSON.stringify({
+      active,
+      categoryId,
+      form,
+      descriptionHtml,
+      keyHighlights,
+      variants: variantPayload,
+    });
+  }, [active, categoryId, descriptionHtml, form, keyHighlights, variants]);
+
+  const hasAutosaveContent = useMemo(
+    () =>
+      Boolean(
+        categoryId ||
+          form.name.trim() ||
+          form.sku.trim() ||
+          descriptionHtml.replace(/<[^>]+>/g, "").trim() ||
+          keyHighlights.some((item) => item.key.trim() || item.value.trim()) ||
+          variants.some(
+            (variant) =>
+              variant.color.trim() ||
+              variant.price.trim() ||
+              variant.discountedPrice.trim() ||
+              variant.sizes.some((size) => size.label.trim() || size.stock.trim())
+          )
+      ),
+    [categoryId, descriptionHtml, form.name, form.sku, keyHighlights, variants]
+  );
+
+  useEffect(() => {
+    const autosaveEnabled = !product?.product_id || Boolean(product?.draft_id || autosavedDraftId);
+    if (!autosaveEnabled || !hasAutosaveContent || busyAction) return undefined;
+    if (autosaveKey === lastAutosavedKeyRef.current) return undefined;
+
+    const timer = window.setTimeout(async () => {
+      setAutosaveStatus("saving");
+      try {
+        const response = await submitProduct({
+          product,
+          draftIdOverride: autosavedDraftId,
+          form,
+          categoryId,
+          status: "draft",
+          activeStep: active,
+          description: descriptionHtml,
+          highlights: keyHighlights,
+          variants,
+          omitNewFiles: true,
+        });
+        const nextDraftId = response.draft?.draft_id || response.product?.draft_id || autosavedDraftId;
+        if (nextDraftId) setAutosavedDraftId(nextDraftId);
+        lastAutosavedKeyRef.current = autosaveKey;
+        setAutosaveStatus("saved");
+      } catch {
+        setAutosaveStatus("error");
+      }
+    }, 2000);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    active,
+    autosaveKey,
+    autosavedDraftId,
+    busyAction,
+    categoryId,
+    descriptionHtml,
+    form,
+    hasAutosaveContent,
+    keyHighlights,
+    product,
+    variants,
+  ]);
+
   const handleInput = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
 
   const renderInput = (key: keyof typeof form, label: string, placeholder: string, asTextArea = false) => (
@@ -183,13 +277,16 @@ export default function ProductWizard({ product, onSaved, onClose }: Props) {
 
     const vErr = validateVariants();
     if (vErr) return setMessage(vErr);
+    const uploadErr = validateProductUploadSize(variants);
+    if (uploadErr) return setMessage(uploadErr);
 
     if (status === "published" && !form.name.trim()) return setMessage("Missing: name");
 
     setBusyAction(status);
     try {
-      await submitProduct({
+      const response = await submitProduct({
         product,
+        draftIdOverride: autosavedDraftId,
         form,
         categoryId,
         status,
@@ -198,11 +295,38 @@ export default function ProductWizard({ product, onSaved, onClose }: Props) {
         highlights: keyHighlights,
         variants,
       });
+      const nextDraftId = response.draft?.draft_id || response.product?.draft_id || null;
+      if (status === "draft" && nextDraftId) setAutosavedDraftId(nextDraftId);
       setMessage(status === "published" ? "Published successfully." : "Draft saved.");
       onSaved?.();
       onClose?.();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Server error. Check backend.");
+      const message = error instanceof Error ? error.message : "Server error. Check backend.";
+      const canAutoSaveDraft = status === "published" && (!product || product.draft_id);
+      if (canAutoSaveDraft) {
+        try {
+          await submitProduct({
+            product,
+            draftIdOverride: autosavedDraftId,
+            form,
+            categoryId,
+            status: "draft",
+            activeStep: active,
+            description: descriptionHtml,
+            highlights: keyHighlights,
+            variants,
+            omitNewFiles: true,
+          });
+          setMessage(`Publish failed: ${message}. Saved as draft.`);
+          onSaved?.();
+          return;
+        } catch (draftError) {
+          const draftMessage = draftError instanceof Error ? draftError.message : "Draft save failed.";
+          setMessage(`Publish failed: ${message}. Auto draft save failed: ${draftMessage}`);
+          return;
+        }
+      }
+      setMessage(message);
     } finally {
       setBusyAction(null);
     }
@@ -291,6 +415,15 @@ export default function ProductWizard({ product, onSaved, onClose }: Props) {
         onPublish={() => submit("published")}
         onRequireCategory={() => setMessage("Select category, sub category, sub child.")}
       />
+      {(!product?.product_id || autosavedDraftId) && autosaveStatus !== "idle" ? (
+        <p className="mt-3 text-xs font-semibold text-[var(--muted)]">
+          {autosaveStatus === "saving"
+            ? "Autosaving draft..."
+            : autosaveStatus === "saved"
+              ? "Draft autosaved."
+              : "Autosave failed. Use Save Draft before leaving."}
+        </p>
+      ) : null}
       {message && <p className="mt-3 text-sm text-[var(--muted)]">{message}</p>}
       {!publishReady && !message && (
         <p className="mt-3 text-sm text-[var(--muted)]">{publishBlockReason}</p>

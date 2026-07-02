@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 import { VariantForm, blankVariant } from "./variant-utils";
+import {
+  PRODUCT_IMAGE_MAX_BYTES,
+  PRODUCT_VIDEO_MAX_BYTES,
+  formatBytes,
+} from "./product-validation";
 
 type Props = { variants: VariantForm[]; setVariants: (next: VariantForm[]) => void; sku: string; setSku: (v: string) => void };
 
@@ -16,6 +21,7 @@ const toColorInputValue = (value: string) => {
 
 export default function StepVariants({ variants, setVariants, sku, setSku }: Props) {
   const [preview, setPreview] = useState<null | { type: "image" | "video"; src: string; label: string }>(null);
+  const [mediaError, setMediaError] = useState("");
 
   const update = (id: string, patch: Partial<VariantForm>) =>
     setVariants(variants.map((v) => (v.id === id ? { ...v, ...patch } : v)));
@@ -52,6 +58,24 @@ export default function StepVariants({ variants, setVariants, sku, setSku }: Pro
 
   const onImagesChange = (id: string, files: FileList | null) => {
     const arr = files ? Array.from(files) : [];
+    const current = variants.find((variant) => variant.id === id);
+    if (!arr.length || !current) return;
+    const nextCount = (current.imagePreviews || []).length + arr.length;
+    const invalid = arr.find((file) => !file.type.startsWith("image/"));
+    const oversized = arr.find((file) => file.size > PRODUCT_IMAGE_MAX_BYTES);
+    if (nextCount > 10) {
+      setMediaError("Maximum 10 images are allowed for one color.");
+      return;
+    }
+    if (invalid) {
+      setMediaError(`${invalid.name} is not a valid image file.`);
+      return;
+    }
+    if (oversized) {
+      setMediaError(`${oversized.name} is ${formatBytes(oversized.size)}. Image limit is ${formatBytes(PRODUCT_IMAGE_MAX_BYTES)}.`);
+      return;
+    }
+    setMediaError("");
     const previews = arr.map((f) => URL.createObjectURL(f));
     setVariants(
       variants.map((v) =>
@@ -92,6 +116,15 @@ export default function StepVariants({ variants, setVariants, sku, setSku }: Pro
     );
 
   const onVideoChange = (id: string, file: File | null) => {
+    if (file && !file.type.startsWith("video/")) {
+      setMediaError(`${file.name} is not a valid video file.`);
+      return;
+    }
+    if (file && file.size > PRODUCT_VIDEO_MAX_BYTES) {
+      setMediaError(`${file.name} is ${formatBytes(file.size)}. Video limit is ${formatBytes(PRODUCT_VIDEO_MAX_BYTES)}.`);
+      return;
+    }
+    setMediaError("");
     update(id, { videoFile: file, videoPreview: file ? URL.createObjectURL(file) : "" });
   };
 
@@ -106,6 +139,12 @@ export default function StepVariants({ variants, setVariants, sku, setSku }: Pro
           + Add color
         </button>
       </div>
+
+      {mediaError ? (
+        <div className="rounded-[6px] border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+          {mediaError}
+        </div>
+      ) : null}
 
       <div className="grid gap-4">
         {variants.map((v, idx) => (

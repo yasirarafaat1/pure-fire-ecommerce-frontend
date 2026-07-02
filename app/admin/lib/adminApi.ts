@@ -20,9 +20,11 @@ const parseResponse = async <T>(response: Response): Promise<T> => {
     : await response.text();
   if (!response.ok) {
     const message =
-      typeof payload === "object" && payload && "message" in payload
-        ? String(payload.message)
-        : `Request failed with status ${response.status}`;
+      response.status === 413
+        ? "Upload is too large. Reduce image/video size and try again."
+        : typeof payload === "object" && payload && "message" in payload
+          ? String(payload.message)
+          : `Request failed with status ${response.status}`;
     throw new AdminApiError(message, response.status);
   }
   return payload as T;
