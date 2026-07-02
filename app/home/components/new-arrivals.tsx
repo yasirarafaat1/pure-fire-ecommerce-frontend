@@ -76,31 +76,35 @@ export default function NewArrivals() {
   const hasReal = items.length > 0;
 
   return (
-    <section className="min-h-[350px] max-w-6xl mx-auto p-4 md:min-h-[520px] md:p-2 py-3 md:py-5">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold border-b border-gray-600">
+    <section className="new-arrivals-section mx-auto min-h-[350px] max-w-6xl p-4 py-3 md:min-h-[520px] md:p-2 md:py-5">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="border-b border-gray-600 text-lg font-semibold">
           New Arrivals
         </h2>
       </div>
 
       {loading && !hasReal ? (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 rounded-[5px]">
+        <div className="grid grid-cols-2 gap-3 rounded-[5px] sm:grid-cols-4">
           {placeholders.map((p) => (
-            <div key={p.product_id} className="bg-white rounded-[5px] overflow-hidden">
-              <div className="w-full aspect-square md:aspect-[3/4] bg-black/5 rounded-[5px] animate-pulse" />
-              <div className="p-3 grid gap-2">
-                <div className="h-3 w-4/5 bg-black/5 rounded-[3px] animate-pulse" />
-                <div className="h-3 w-1/2 bg-black/5 rounded-[3px] animate-pulse" />
+            <div
+              key={p.product_id}
+              className="overflow-hidden rounded-[5px] bg-white"
+            >
+              <div className="aspect-square w-full animate-pulse rounded-[5px] bg-black/5 md:aspect-[3/4]" />
+
+              <div className="grid gap-2 p-3">
+                <div className="h-3 w-4/5 animate-pulse rounded-[3px] bg-black/5" />
+                <div className="h-3 w-1/2 animate-pulse rounded-[3px] bg-black/5" />
               </div>
             </div>
           ))}
         </div>
       ) : !hasReal ? (
-        <div className="border border-black/10 rounded-[5px] p-10 text-center text-sm text-[var(--muted)] w-full">
+        <div className="w-full rounded-[5px] border border-black/10 p-10 text-center text-sm text-[var(--muted)]">
           No new arrivals yet.
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {items.map((p) => {
             const name = p.name || p.title || "Product";
             const selling = p.selling_price ?? p.price ?? 0;
@@ -115,25 +119,26 @@ export default function NewArrivals() {
                 href={buildProductHref({ id: p.product_id, name })}
                 className="block bg-white"
               >
-                <div className="new-arrival-image-frame relative w-full aspect-square md:aspect-[3/4] bg-black/5 overflow-hidden rounded-[5px]">
+                <div className="new-arrival-image-frame relative aspect-square w-full overflow-hidden rounded-[5px] bg-black/5 md:aspect-[3/4]">
                   <HoverImage
                     images={images}
                     alt={name}
-                    className="w-full h-full"
+                    className="h-full w-full"
                   />
 
-                  <span className="absolute top-2 right-2 bg-black text-white text-[10px] px-2 py-1 rounded-[3px]">
+                  <span className="absolute right-2 top-2 rounded-[3px] bg-black px-2 py-1 text-[10px] text-white">
                     New
                   </span>
                 </div>
 
                 <div className="p-3">
-                  <div className="text-sm font-semibold line-clamp-2">
+                  <div className="line-clamp-2 text-sm font-semibold">
                     {name}
                   </div>
 
-                  <div className="flex items-center gap-2 text-sm mt-1">
+                  <div className="mt-1 flex items-center gap-2 text-sm">
                     <span className="font-semibold">₹{selling || "-"}</span>
+
                     {mrp ? (
                       <span className="text-xs text-[#999] line-through">
                         ₹{mrp}
@@ -149,128 +154,77 @@ export default function NewArrivals() {
 
       <Link
         href="/collections/new-arrival"
-        className="view-all-soft-cta group relative mx-auto mt-4 flex max-w-sm items-center justify-center gap-2 overflow-hidden rounded-[6px] border border-black/60 px-4 py-2.5 text-black transition-all duration-300 hover:-translate-y-0.5 hover:border-black hover:text-white hover:shadow-[0_10px_24px_rgba(0,0,0,0.12)] active:scale-[0.98]"
+        className="view-all-soft-cta group relative mx-auto mt-4 flex max-w-sm items-center justify-center gap-2 overflow-hidden rounded-[6px] border border-black/60 bg-white px-4 py-2.5 text-black transition-all duration-300 hover:-translate-y-0.5 hover:border-black hover:text-white hover:shadow-[0_10px_24px_rgba(0,0,0,0.12)] active:scale-[0.98]"
       >
-        <span className="relative z-10 text-sm font-semibold transition-colors duration-300 group-hover:text-white">
+        <span className="relative z-10 text-sm font-semibold transition-colors duration-300 group-hover:!text-white">
           View All
         </span>
 
-        <BiRightArrowAlt className="relative z-10 text-xl transition-transform duration-300 group-hover:translate-x-1 group-hover:text-white" />
+        <BiRightArrowAlt className="relative z-10 text-xl transition-transform duration-300 group-hover:translate-x-1 group-hover:!text-white" />
       </Link>
 
-      <style jsx>{`
-        @keyframes viewAllShine {
-          0% {
-            transform: translateX(-140%) rotate(18deg);
-            opacity: 0;
-          }
-
-          20% {
-            opacity: 0.75;
-          }
-
-          80% {
-            opacity: 0.75;
-          }
-
-          100% {
-            transform: translateX(170%) rotate(18deg);
-            opacity: 0;
-          }
-        }
-
-        .view-all-cta {
+      <style jsx global>{`
+        .new-arrivals-section .view-all-soft-cta {
           isolation: isolate;
+          background: #ffffff !important;
+          background-color: #ffffff !important;
+          color: #000000;
+          transform: translateZ(0);
         }
 
-        .view-all-cta::before {
+        .new-arrivals-section .view-all-soft-cta::before {
           content: "";
           position: absolute;
-          inset: 0;
+          left: -18px;
+          bottom: -18px;
           z-index: 0;
-          background: #000;
-          transform: scaleX(0);
-          transform-origin: left;
-          transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
-        }
-
-        .view-all-cta::after {
-          content: "";
-          position: absolute;
-          top: -45%;
-          left: -65%;
-          z-index: 1;
-          height: 190%;
-          width: 42%;
-          background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255, 255, 255, 0.55),
-            transparent
-          );
-          opacity: 0;
-          transform: rotate(18deg);
+          width: 38px;
+          height: 38px;
+          border-radius: 999px;
+          background: #000000 !important;
+          background-color: #000000 !important;
+          opacity: 1 !important;
           pointer-events: none;
+          transform: scale(0);
+          transform-origin: bottom left;
+          transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+          will-change: transform;
         }
 
-        .view-all-cta:hover::before {
-          transform: scaleX(1);
+        .new-arrivals-section .view-all-soft-cta:hover::before {
+          transform: scale(12);
+          background: #000000 !important;
+          background-color: #000000 !important;
         }
 
-        .view-all-cta:hover::after {
-          animation: viewAllShine 900ms ease-in-out forwards;
+        .new-arrivals-section .view-all-soft-cta:hover {
+          color: #ffffff !important;
+        }
+
+        .new-arrivals-section .view-all-soft-cta span,
+        .new-arrivals-section .view-all-soft-cta svg {
+          position: relative;
+          z-index: 10;
+        }
+
+        .new-arrivals-section .view-all-soft-cta:hover span,
+        .new-arrivals-section .view-all-soft-cta:hover svg {
+          color: #ffffff !important;
         }
 
         @media (max-width: 767px) {
-          .new-arrival-image-frame :global(img) {
+          .new-arrivals-section .new-arrival-image-frame img {
             object-position: top center !important;
           }
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .view-all-cta::after {
-            animation: none !important;
-          }
-
-          .view-all-cta::before {
+          .new-arrivals-section .view-all-soft-cta,
+          .new-arrivals-section .view-all-soft-cta::before,
+          .new-arrivals-section .view-all-soft-cta svg {
             transition: none !important;
           }
         }
-          .view-all-soft-cta {
-  isolation: isolate;
-}
-
-.view-all-soft-cta::before {
-  content: "";
-  position: absolute;
-  left: -18px;
-  bottom: -18px;
-  z-index: 0;
-  width: 38px;
-  height: 38px;
-  border-radius: 999px;
-  background: #000;
-  transform: scale(0);
-  transform-origin: bottom left;
-  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.view-all-soft-cta:hover::before {
-  transform: scale(12);
-}
-
-.view-all-soft-cta span,
-.view-all-soft-cta :global(svg) {
-  position: relative;
-  z-index: 10;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .view-all-soft-cta::before,
-  .view-all-soft-cta :global(svg) {
-    transition: none !important;
-  }
-}
       `}</style>
     </section>
   );
