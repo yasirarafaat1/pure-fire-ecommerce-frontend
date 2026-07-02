@@ -238,7 +238,7 @@ export default function SearchModal({
           <SearchBar value={query} onChange={setQuery} onSubmit={runSearch} onBack={onClose} autoFocus />
         </header>
 
-        <main className="min-h-0 flex-1 overflow-y-auto px-4 py-5">
+        <main className="search-modal-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5">
           {hasSearched ? (
             <>
               {relatedKeywords.length > 0 ? (
@@ -262,7 +262,7 @@ export default function SearchModal({
           ) : (
             <div className="grid gap-5">
               <section className="search-fade">
-                <h2 className="mb-3 text-lg font-semibold">Suggested keywords</h2>
+                <h2 className="mb-3 text-lg font-semibold">Popular Keywords</h2>
                 {suggestLoading ? (
                   <SuggestionsLoader />
                 ) : (
@@ -284,6 +284,19 @@ export default function SearchModal({
           {message ? <p className="mt-4 text-sm text-red-600">{message}</p> : null}
         </main>
       </section>
+      <style jsx>{`
+        .search-modal-scroll {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        .search-modal-scroll::-webkit-scrollbar {
+          display: none;
+          width: 0;
+          height: 0;
+        }
+      `}</style>
     </div>
   );
 }
