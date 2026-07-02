@@ -702,6 +702,58 @@ export default function HomeNavbar({ onOpenCart }: Props) {
           transform: translateX(3px);
         }
 
+        @media (hover: none), (pointer: coarse) {
+  .drawer-row:hover,
+  .drawer-child-row:hover,
+  .drawer-customer-row:hover {
+    background: #ffffff !important;
+  }
+
+  .drawer-row:hover .drawer-row-title,
+  .drawer-customer-row:hover .drawer-row-title {
+    color: #020617 !important;
+  }
+
+  .drawer-row:hover .drawer-row-subtitle,
+  .drawer-customer-row:hover .drawer-row-subtitle {
+    color: #64748b !important;
+  }
+
+  .drawer-row:hover .drawer-row-arrow,
+  .drawer-customer-row:hover .drawer-row-arrow {
+    color: #334155 !important;
+    background: #f1f5f9 !important;
+  }
+
+  .drawer-row:hover .drawer-row-index,
+  .drawer-customer-row:hover .drawer-row-index {
+    border-color: rgba(15, 23, 42, 0.08) !important;
+    background: #f1f5f9 !important;
+    color: #64748b !important;
+  }
+
+  .drawer-child-row:hover {
+    transform: none !important;
+    background: #ffffff !important;
+    color: #1e293b !important;
+  }
+
+  .drawer-child-row:hover span {
+    color: #1e293b !important;
+  }
+
+  .drawer-child-row:hover span:last-child {
+    background: #f1f5f9 !important;
+    color: #64748b !important;
+  }
+
+  .drawer-child-leaf:hover {
+    background: #ffffff !important;
+    color: #475569 !important;
+    box-shadow: none !important;
+  }
+}
+
         @media (max-width: 430px) {
           .nav-brand-name {
             max-width: 128px;
@@ -1067,7 +1119,7 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                                       <button
                                         key={child._id}
                                         type="button"
-                                        className="cursor-pointer rounded-sm px-3 py-2 text-left text-sm font-bold text-slate-600 transition hover:!bg-slate-950 hover:!text-white hover:shadow-sm"
+                                       className="drawer-child-leaf cursor-pointer rounded-sm px-3 py-2 text-left text-sm font-bold text-slate-600 transition hover:!bg-slate-950 hover:!text-white hover:shadow-sm"
                                         onClick={() =>
                                           goToCategory({
                                             root: root.name,
