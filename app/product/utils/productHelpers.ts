@@ -1,8 +1,44 @@
 import namer from "color-namer";
 
-export const normalizeProduct = (raw: any) => {
+type RawSize = string | { label?: string; size?: string; stock?: number | string };
+type RawVariant = {
+  color?: string;
+  images?: string | string[];
+  video?: string;
+  price?: number;
+  discountedPrice?: number;
+  sizes?: RawSize[] | string;
+};
+type RawProduct = {
+  _id?: string | number;
+  product_id?: string | number;
+  name?: string;
+  title?: string;
+  images?: string[];
+  product_image?: string[];
+  colorVariants?: RawVariant[];
+  video?: string;
+  video_url?: string;
+  mrp?: number;
+  price?: number;
+  selling_price?: number;
+  discountedPrice?: number;
+  category?: string;
+  category_name?: string;
+  Catagory?: { name?: string; title?: string };
+  colors?: string[];
+  sizes?: RawSize[] | string;
+  [key: string]: unknown;
+};
+
+const parseVariantImages = (images?: string | string[]) => {
+  if (typeof images === "string") return images.split(" ").filter(Boolean);
+  return Array.isArray(images) ? images.filter(Boolean) : [];
+};
+
+export const normalizeProduct = (raw: RawProduct | null | undefined) => {
   if (!raw) return null;
-  const parseList = (val: any) => {
+  const parseList = (val: RawSize[] | string | undefined) => {
     if (Array.isArray(val)) return val.filter(Boolean);
     if (typeof val === "string") {
       return val
@@ -12,13 +48,8 @@ export const normalizeProduct = (raw: any) => {
     }
     return [];
   };
-  const variantImages =
-    typeof raw?.colorVariants?.[0]?.images === "string"
-      ? raw.colorVariants[0].images.split(" ").filter(Boolean)
-      : Array.isArray(raw?.colorVariants?.[0]?.images)
-        ? raw.colorVariants[0].images
-        : [];
-  const variants = (raw.colorVariants || []).map((v: any) => {
+  const variantImages = parseVariantImages(raw?.colorVariants?.[0]?.images);
+  const variants = (raw.colorVariants || []).map((v) => {
     const vMrpRaw = v.price ?? raw.mrp ?? raw.price ?? 0;
     const vDiscountRaw =
       v.discountedPrice ?? raw.selling_price ?? raw.discountedPrice ?? v.price ?? raw.price ?? 0;
@@ -26,7 +57,7 @@ export const normalizeProduct = (raw: any) => {
     const vSafeDiscount = Math.min(vMrpRaw, vDiscountRaw);
     return {
       color: v.color,
-      images: typeof v.images === "string" ? v.images.split(" ").filter(Boolean) : v.images || [],
+      images: parseVariantImages(v.images),
       video: v.video,
       mrp: vSafeMrp,
       discountedPrice: vSafeDiscount,
@@ -40,8 +71,8 @@ export const normalizeProduct = (raw: any) => {
   const safeDiscount = Math.min(mrpRaw, discountRaw);
   return {
     ...raw,
-    images: raw.images || raw.product_image || variantImages || [],
-    video: raw.video || raw.video_url || raw?.colorVariants?.[0]?.video || "",
+    images: variantImages.length ? variantImages : raw.images || raw.product_image || [],
+    video: raw?.colorVariants?.[0]?.video || raw.video || raw.video_url || "",
     variants,
     category: raw.category || raw.category_name || raw?.Catagory?.name || raw?.Catagory?.title || "",
     price: safeMrp,

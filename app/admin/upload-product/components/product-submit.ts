@@ -59,6 +59,9 @@ export async function submitProduct({
       imageCount: omitNewFiles ? 0 : variant.imagesFiles.length,
       hasVideo: Boolean((omitNewFiles ? null : variant.videoFile) || existingVideo),
       images: existingImages,
+      mediaOrder: imagePreviews.map((url) =>
+        isPersistedMediaUrl(url) ? { type: "existing", url } : { type: "upload" }
+      ),
       video: existingVideo,
       sizes: toSizePayload(variant.sizes),
       primary: Boolean(variant.primary),

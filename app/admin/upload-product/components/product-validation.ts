@@ -47,9 +47,6 @@ export const validateProductVariants = (variants: VariantForm[]) => {
     if (imageCount > 10) {
       return `Color ${variant.color || "color"}: maximum 10 images allowed.`;
     }
-    if (!variant.videoFile && !variant.videoPreview) {
-      return `Color ${variant.color || "color"}: video required.`;
-    }
     const sizes = toSizePayload(variant.sizes);
     if (!sizes.length) return `Color ${variant.color || "color"}: add sizes with stock.`;
     if (sizes.some((size) => !/^[A-Z]+$/.test(size.label))) {

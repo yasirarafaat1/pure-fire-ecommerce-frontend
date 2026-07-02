@@ -19,6 +19,7 @@ import {
   validateProductUploadSize,
   validateProductVariants,
 } from "./product-validation";
+import { X } from "lucide-react";
 
 type Props = { product?: EditProduct | null; onSaved?: () => void; onClose?: () => void };
 const steps = [{ id: 1, label: "Category" }, { id: 2, label: "Details" }, { id: 3, label: "Variants" }];
@@ -355,7 +356,10 @@ export default function ProductWizard({ product, onSaved, onClose }: Props) {
           <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Multi-step flow</p>
           <h2 className="text-xl font-semibold">Upload product</h2>
         </div>
-        <button className="btn btn-ghost" onClick={() => onClose?.()}>Close</button>
+        <button className="btn btn-ghost" onClick={() => onClose?.()}>
+          <X size={20} />
+          Close
+        </button>
       </header>
       <div className="flex flex-wrap gap-2 mb-6">
         {steps.map((s) => (
