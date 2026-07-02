@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { cachedFetch, getCachedJson } from "../../utils/cachedFetch";
 import HoverImage from "../../components/HoverImage";
 import { BiRightArrowAlt } from "react-icons/bi";
@@ -16,7 +17,7 @@ type Product = {
   orderedQty?: number;
 };
 
-const placeholders: Product[] = Array.from({ length: 4 }, (_, i) => ({
+const placeholders: Product[] = Array.from({ length: 8 }, (_, i) => ({
   product_id: i,
   name: "Loading...",
   product_image: [""],
@@ -37,8 +38,8 @@ export default function BestSellers() {
           ? cached?.data?.products
           : [];
 
-        const cachedSorted = [...cachedList].sort(
-          (a: any, b: any) => (b.orderedQty || 0) - (a.orderedQty || 0),
+        const cachedSorted = [...(cachedList as Product[])].sort(
+          (a, b) => (b.orderedQty || 0) - (a.orderedQty || 0),
         );
 
         if (cachedSorted.length) {
@@ -57,8 +58,8 @@ export default function BestSellers() {
         const data = await res.json();
         const list = Array.isArray(data?.products) ? data.products : [];
 
-        const sorted = [...list].sort(
-          (a: any, b: any) => (b.orderedQty || 0) - (a.orderedQty || 0),
+        const sorted = [...(list as Product[])].sort(
+          (a, b) => (b.orderedQty || 0) - (a.orderedQty || 0),
         );
 
         setItems(sorted.slice(0, 8));
@@ -83,12 +84,13 @@ export default function BestSellers() {
       </div>
 
       {loading && !hasReal ? (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border border-black/10 rounded-[5px] p-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 rounded-[5px]">
           {placeholders.map((p) => (
-            <div key={p.product_id} className="bg-white rounded-[5px]">
-              <div className="w-full aspect-square md:aspect-[3/4] bg-black/5 rounded-t-[5px] animate-pulse" />
-              <div className="p-3">
-                <div className="h-3 w-24 bg-black/5 rounded-[3px] animate-pulse" />
+            <div key={p.product_id} className="bg-white rounded-[5px] overflow-hidden">
+              <div className="w-full aspect-square md:aspect-[3/4] bg-black/5 rounded-[5px] animate-pulse" />
+              <div className="p-3 grid gap-2">
+                <div className="h-3 w-4/5 bg-black/5 rounded-[3px] animate-pulse" />
+                <div className="h-3 w-1/2 bg-black/5 rounded-[3px] animate-pulse" />
               </div>
             </div>
           ))}
@@ -145,7 +147,7 @@ export default function BestSellers() {
         </div>
       )}
 
-      <a
+      <Link
         href="/collections/best-seller"
         className="view-all-soft-cta group relative mx-auto mt-4 flex w-full max-w-md items-center justify-center gap-2 overflow-hidden rounded-[6px] border border-black/60 px-4 py-2.5 text-black transition-all duration-300 hover:-translate-y-0.5 hover:border-black hover:text-white hover:shadow-[0_10px_24px_rgba(0,0,0,0.12)] active:scale-[0.98]"
       >
@@ -154,7 +156,7 @@ export default function BestSellers() {
         </span>
 
         <BiRightArrowAlt className="relative z-10 text-xl transition-transform duration-300 group-hover:translate-x-1 group-hover:!text-white" />
-      </a>
+      </Link>
 
       <style jsx>{`
         .view-all-soft-cta {

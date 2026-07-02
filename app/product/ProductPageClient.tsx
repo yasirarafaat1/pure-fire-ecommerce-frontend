@@ -376,6 +376,8 @@ export default function ProductPageClient() {
                   description={product.description || ""}
                   onAddToCart={addToCart}
                   addedToCart={addedToCart}
+                  wishlisted={wishlistIds.has(String(product.product_id))}
+                  onToggleWishlist={toggleWishlist}
                   onGoToCart={() => {
                     showActionToast("Opening cart.", "info");
                     openCartModal();

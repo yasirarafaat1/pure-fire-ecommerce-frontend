@@ -170,6 +170,38 @@ export const useProductPageData = ({
     }).catch(() => {});
   }, [product?.product_id]);
 
+  useEffect(() => {
+    const loadCart = async () => {
+      const cartId = localStorage.getItem("cart_id") || "";
+
+      if (!cartId) {
+        setCartItems([]);
+        return;
+      }
+
+      try {
+        const cartRes = await fetch(`${API_BASE}/get-user-cart`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-user-token": getToken() },
+          body: JSON.stringify({ cart_id: cartId }),
+        });
+        const cartData = await cartRes.json();
+        setCartItems(cartData?.items || []);
+      } catch {
+        setCartItems([]);
+      }
+    };
+
+    loadCart();
+    window.addEventListener("cart:updated", loadCart as EventListener);
+    window.addEventListener("storage", loadCart as EventListener);
+
+    return () => {
+      window.removeEventListener("cart:updated", loadCart as EventListener);
+      window.removeEventListener("storage", loadCart as EventListener);
+    };
+  }, [product?.product_id]);
+
   return {
     product,
     similarProducts,

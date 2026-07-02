@@ -5,6 +5,7 @@ import { FaShoppingCart } from "react-icons/fa";
 import { FaStar, FaRegStar } from "react-icons/fa6";
 import { FaTruckFast } from "react-icons/fa6";
 import { MdOutlinePayments } from "react-icons/md";
+import { PiHeartFill, PiHeartLight } from "react-icons/pi";
 import { returnPolicyText } from "../data/returnPolicy";
 
 type Crumb = { label: string; href?: string };
@@ -36,6 +37,8 @@ type Props = {
   description: string;
   onAddToCart?: (payload: { color: string; size: string }) => void;
   onBuyNow?: (payload: { color: string; size: string }) => void;
+  onToggleWishlist?: () => void;
+  wishlisted?: boolean;
   addedToCart?: boolean;
   onGoToCart?: () => void;
 };
@@ -75,6 +78,8 @@ export default function InfoPanel({
   description,
   onAddToCart,
   onBuyNow,
+  onToggleWishlist,
+  wishlisted,
   addedToCart,
   onGoToCart,
 }: Props) {
@@ -245,6 +250,18 @@ export default function InfoPanel({
           Buy Now
         </button>
       </div>
+      <button
+        type="button"
+        onClick={onToggleWishlist}
+        className={`hidden w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] border px-4 py-3 text-sm font-extrabold uppercase tracking-wide transition-all duration-200 active:scale-[0.98] md:flex ${
+          wishlisted
+            ? "border-red-500 bg-red-50 text-red-600 hover:bg-red-100"
+            : "border-red-200 bg-white text-black hover:border-red-500 hover:bg-red-50 hover:text-red-600"
+        }`}
+      >
+        {wishlisted ? <PiHeartFill size={18} /> : <PiHeartLight size={18} />}
+        {wishlisted ? "Added to Wishlist" : "Add to Wishlist"}
+      </button>
       {selectionError && <p className="text-sm text-red-600">{selectionError}</p>}
 
       {/* Mobile sticky CTA */}

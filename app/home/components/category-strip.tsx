@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 const items = [
@@ -90,6 +90,7 @@ const activeLoop = Array.from({ length: activeRepeatCount }).flatMap(
 export default function CategoryStrip() {
   const router = useRouter();
   const pathname = usePathname() || "";
+  const [imagesReady, setImagesReady] = useState(false);
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
@@ -106,7 +107,33 @@ export default function CategoryStrip() {
   const renderItems = hasActive ? activeLoop : marqueeLoop;
 
   useEffect(() => {
-    if (!hasActive) return;
+    let cancelled = false;
+    const timeout = window.setTimeout(() => {
+      if (!cancelled) setImagesReady(true);
+    }, 900);
+
+    Promise.allSettled(
+      items.slice(0, 8).map(
+        (item) =>
+          new Promise<void>((resolve) => {
+            const image = new Image();
+            image.onload = () => resolve();
+            image.onerror = () => resolve();
+            image.src = item.image;
+          }),
+      ),
+    ).then(() => {
+      if (!cancelled) setImagesReady(true);
+    });
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hasActive || !imagesReady) return;
 
     const centerActive = () => {
       const viewport = viewportRef.current;
@@ -135,7 +162,7 @@ export default function CategoryStrip() {
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", centerActive);
     };
-  }, [activeSlug, hasActive]);
+  }, [activeSlug, hasActive, imagesReady]);
 
   useEffect(() => {
     return () => {
@@ -291,9 +318,45 @@ export default function CategoryStrip() {
           transform: scale(1.12);
         }
 
+        .category-skeleton-card {
+          min-width: 82px;
+        }
+
+        .category-skeleton-image,
+        .category-skeleton-label {
+          position: relative;
+          overflow: hidden;
+          background: rgba(15, 23, 42, 0.06);
+        }
+
+        .category-skeleton-image::after,
+        .category-skeleton-label::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          transform: translateX(-100%);
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.8),
+            transparent
+          );
+          animation: categorySkeletonShimmer 1.15s ease-in-out infinite;
+        }
+
+        @keyframes categorySkeletonShimmer {
+          100% {
+            transform: translateX(100%);
+          }
+        }
+
         @media (max-width: 767px) {
           .category-marquee-track {
             gap: 10px;
+          }
+
+          .category-skeleton-card {
+            min-width: 82px;
           }
 
           .category-marquee-track.is-moving {
@@ -307,6 +370,11 @@ export default function CategoryStrip() {
           }
 
           .category-breath {
+            animation: none;
+          }
+
+          .category-skeleton-image::after,
+          .category-skeleton-label::after {
             animation: none;
           }
         }
@@ -329,16 +397,29 @@ export default function CategoryStrip() {
           ref={viewportRef}
           onScroll={handleActiveScroll}
           className={`category-marquee-viewport relative z-20 pt-4 pb-4 ${
-            hasActive ? "is-stopped" : "is-moving"
+            hasActive || !imagesReady ? "is-stopped" : "is-moving"
           }`}
         >
-          <div
-            ref={trackRef}
-            className={`category-marquee-track ${
-              hasActive ? "is-stopped" : "is-moving"
-            }`}
-          >
-            {renderItems.map((item, index) => {
+          {!imagesReady ? (
+            <div className="category-marquee-track is-stopped">
+              {Array.from({ length: 10 }, (_, index) => (
+                <div
+                  key={index}
+                  className="category-skeleton-card flex flex-col items-center gap-2 rounded-3xl sm:min-w-[96px]"
+                >
+                  <span className="category-skeleton-image h-[72px] w-[72px] rounded-[1.6rem] sm:h-20 sm:w-20" />
+                  <span className="category-skeleton-label h-6 w-20 rounded-full" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div
+              ref={trackRef}
+              className={`category-marquee-track ${
+                hasActive ? "is-stopped" : "is-moving"
+              }`}
+            >
+              {renderItems.map((item, index) => {
               const active = item.slug === activeSlug;
               const copyIndex = Math.floor(index / items.length);
               const isMiddleActive =
@@ -406,8 +487,9 @@ export default function CategoryStrip() {
                   </div>
                 </button>
               );
-            })}
-          </div>
+              })}
+            </div>
+          )}
         </div>
       </div>
     </section>
