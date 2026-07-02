@@ -31,10 +31,10 @@ export default function ProductRail({ title, items }: Props) {
               name: item.title,
               color: item.color,
             })}
-            className="group flex-shrink-0 cursor-pointer w-[calc((100vw-48px)/3)]"
+            className="group flex-shrink-0 cursor-pointer w-[calc((100vw-48px)/3)] transition-transform duration-200 hover:-translate-y-1 active:scale-[0.98]"
             style={{ width: "calc((100vw - 48px)/3.2)", maxWidth: "200px" }}
           >
-            <div className="aspect-[3/4] overflow-hidden relative">
+            <div className="aspect-[3/4] overflow-hidden relative rounded-[3px] bg-black/5 transition-shadow duration-200 group-hover:shadow-[0_14px_32px_rgba(15,23,42,0.12)]">
               <img
                 src={item.image}
                 alt={item.title}

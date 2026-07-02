@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { FaShoppingCart } from "react-icons/fa";
 import { FaStar, FaRegStar } from "react-icons/fa6";
 import { FaTruckFast } from "react-icons/fa6";
@@ -10,13 +10,12 @@ import { returnPolicyText } from "../data/returnPolicy";
 type Crumb = { label: string; href?: string };
 type Highlight = { key: string; value: string };
 type Color = { name: string; swatch: string };
+type SizeInput = string | { label?: string; size?: string };
 
-const formatEta = (date: Date) => {
-  const dd = date.getDate();
-  const mm = date.getMonth() + 1;
-  const yyyy = date.getFullYear();
-  return `${dd}-${mm}-${yyyy}`;
-};
+function normalizeSize(value: SizeInput) {
+  if (typeof value === "string") return value;
+  return value.label || value.size || "";
+}
 
 type Props = {
   breadcrumbs: Crumb[];
@@ -89,23 +88,14 @@ export default function InfoPanel({
   const safeSizes = useMemo(
     () =>
       sizes
-        .map((s: any) => (typeof s === "string" ? s : s?.label || s?.size || String(s)))
+        .map((s) => normalizeSize(s as SizeInput))
         .filter((s) => s && s !== "[object Object]"),
     [sizes],
   );
-  const [localSize, setLocalSize] = useState<string | null>(safeSizes[0] || null);
-  const selectedSize = selectedSizeProp ?? localSize;
-  useEffect(() => {
-    const next = safeSizes[0] || null;
-    if (!next) return;
-    if (selectedSize && safeSizes.includes(selectedSize)) return;
-    if (selectedSize === next) return;
-    if (selectedSizeProp !== undefined) onSelectSize?.(next);
-    else setLocalSize(next);
-  }, [safeSizes, selectedSize, selectedSizeProp, onSelectSize]);
-  useEffect(() => {
-    setSelectionError(null);
-  }, [selectedColor, selectedSize]);
+  const [localSize, setLocalSize] = useState<string | null>(null);
+  const normalizedPropSize =
+    selectedSizeProp && safeSizes.includes(selectedSizeProp) ? selectedSizeProp : null;
+  const selectedSize = normalizedPropSize ?? localSize ?? safeSizes[0] ?? null;
   const policyLines = returnPolicyText.split("\n").map((l) => l.trim()).filter(Boolean);
   const policyHeading = policyLines.shift() || "Returns, Exchange & Refund Policy";
   const handleCheckDelivery = () => {
@@ -185,10 +175,13 @@ export default function InfoPanel({
               <button
                 key={c.name}
                 type="button"
-                onClick={() => onSelectColor?.(c.swatch)}
+                onClick={() => {
+                  setSelectionError(null);
+                  onSelectColor?.(c.swatch);
+                }}
                 className={`w-9 h-9 p-4 bg-white cursor-pointer rounded-full border ${
                   active ? "border-1 border-black shadow-[0_0_0_2px_#fff]" : "border-black/30"
-                } transition-transform`}
+                } transition-transform duration-200 hover:scale-105 active:scale-95`}
                 style={{ background: c.swatch }}
                 title={c.name}
               />
@@ -207,12 +200,13 @@ export default function InfoPanel({
                 key={`${s}-${i}`}
                 type="button"
                 onClick={() => {
+                  setSelectionError(null);
                   if (selectedSizeProp !== undefined) onSelectSize?.(s);
                   else setLocalSize(s);
                 }}
-                className={`relative cursor-pointer px-4 py-3 mb-4 border rounded-[8px] text-sm transition-colors ${
+                className={`relative cursor-pointer px-4 py-3 mb-4 border rounded-[8px] text-sm transition-all ${
                   active ? "bg-black text-white border-black" : "border-gray-400 hover:bg-black hover:text-white"
-                }`}
+                } transition-transform duration-200 hover:-translate-y-[1px] active:scale-95`}
               >
                 {s}
               </button>
@@ -223,7 +217,7 @@ export default function InfoPanel({
 
       <div className="hidden md:flex flex-wrap gap-4">
         <button
-          className="flex-1 min-w-[200px] cursor-pointer bg-[#222] text-white font-extrabold uppercase tracking-wide py-3 rounded-[10px] border border-[#222] flex items-center justify-center gap-2 text-sm transition-all duration-200 hover:bg-black hover:border-black hover:-translate-y-[1px] hover:shadow-[0_10px_24px_rgba(0,0,0,0.18)]"
+          className="flex-1 min-w-[200px] cursor-pointer bg-[#222] text-white font-extrabold uppercase tracking-wide py-3 rounded-[10px] border border-[#222] flex items-center justify-center gap-2 text-sm transition-all duration-200 hover:bg-black hover:border-black hover:-translate-y-[1px] hover:shadow-[0_10px_24px_rgba(0,0,0,0.18)] active:scale-[0.98]"
           onClick={() => {
             if (addedToCart) {
               onGoToCart?.();
@@ -239,7 +233,7 @@ export default function InfoPanel({
           <FaShoppingCart /> {addedToCart ? "Go to Cart" : "Add to Cart"}
         </button>
         <button
-          className="flex-1 min-w-[200px] cursor-pointer text-black font-extrabold uppercase tracking-wide py-3 rounded-[10px] border border-gray-600 flex items-center justify-center text-sm transition-all duration-200 hover:bg-black hover:text-white hover:border-black hover:-translate-y-[1px] hover:shadow-[0_10px_24px_rgba(0,0,0,0.18)]"
+          className="flex-1 min-w-[200px] cursor-pointer text-black font-extrabold uppercase tracking-wide py-3 rounded-[10px] border border-gray-600 flex items-center justify-center text-sm transition-all duration-200 hover:bg-black hover:text-white hover:border-black hover:-translate-y-[1px] hover:shadow-[0_10px_24px_rgba(0,0,0,0.18)] active:scale-[0.98]"
           onClick={() => {
             if (!selectedColor || !selectedSize) {
               setSelectionError("Please select color and size.");
@@ -257,7 +251,7 @@ export default function InfoPanel({
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 border-t border-black/10 px-4 py-3 shadow-md">
         <div className="flex gap-3">
           <button
-            className="flex-1 min-w-[150px] cursor-pointer bg-[#222] text-white font-extrabold uppercase tracking-wide py-3 rounded-[10px] border border-[#222] flex items-center justify-center gap-2 text-sm transition-all duration-200 hover:bg-black hover:border-black hover:-translate-y-[1px] hover:shadow-[0_10px_24px_rgba(0,0,0,0.18)]"
+            className="flex-1 min-w-[150px] cursor-pointer bg-[#222] text-white font-extrabold uppercase tracking-wide py-3 rounded-[10px] border border-[#222] flex items-center justify-center gap-2 text-sm transition-all duration-200 hover:bg-black hover:border-black hover:-translate-y-[1px] hover:shadow-[0_10px_24px_rgba(0,0,0,0.18)] active:scale-[0.98]"
             onClick={() => {
               if (addedToCart) {
                 onGoToCart?.();
@@ -273,7 +267,7 @@ export default function InfoPanel({
             <FaShoppingCart /> {addedToCart ? "Go to Cart" : "Add to Cart"}
           </button>
           <button
-            className="flex-1 min-w-[150px] cursor-pointer text-black font-extrabold uppercase tracking-wide py-3 rounded-[10px] border border-gray-600 flex items-center justify-center text-sm transition-all duration-200 hover:bg-black hover:text-white hover:border-black hover:-translate-y-[1px] hover:shadow-[0_10px_24px_rgba(0,0,0,0.18)]"
+            className="flex-1 min-w-[150px] cursor-pointer text-black font-extrabold uppercase tracking-wide py-3 rounded-[10px] border border-gray-600 flex items-center justify-center text-sm transition-all duration-200 hover:bg-black hover:text-white hover:border-black hover:-translate-y-[1px] hover:shadow-[0_10px_24px_rgba(0,0,0,0.18)] active:scale-[0.98]"
             onClick={() => {
               if (!selectedColor || !selectedSize) {
                 setSelectionError("Please select color and size.");

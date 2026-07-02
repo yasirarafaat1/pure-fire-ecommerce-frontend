@@ -201,9 +201,9 @@ export default function SuggestedProducts({ items }: { items?: Product[] }) {
                   id: p.product_id,
                   name: productName,
                 })}
-                className="block bg-white"
+                className="group block bg-white transition-transform duration-200 hover:-translate-y-1 active:scale-[0.98]"
               >
-                <div className="suggested-product-image-frame relative w-full aspect-square md:aspect-[3/4] bg-black/5 overflow-hidden rounded-[5px]">
+                <div className="suggested-product-image-frame relative w-full aspect-square md:aspect-[3/4] bg-black/5 overflow-hidden rounded-[5px] transition-shadow duration-200 group-hover:shadow-[0_14px_32px_rgba(15,23,42,0.12)]">
                   <HoverImage
                     images={images}
                     alt={productName}

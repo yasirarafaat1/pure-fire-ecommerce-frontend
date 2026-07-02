@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Gallery from "./components/Gallery";
 import InfoPanel from "./components/InfoPanel";
@@ -52,12 +52,20 @@ type ReviewApi = {
   images?: string[];
 };
 
+type ActionToast = {
+  id: number;
+  message: string;
+  tone: "success" | "info" | "error";
+};
+
 export default function ProductPageClient() {
   const router = useRouter();
   const { productId, colorParam, sizeParam, nextUrl } = useProductQuery();
   const { leftRef, rightRef, stick } = useStickyColumns();
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [actionToast, setActionToast] = useState<ActionToast | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
 
   const {
     product,
@@ -137,6 +145,27 @@ export default function ProductPageClient() {
     return Array.from(unique.values()).slice(0, 8);
   }, [similarProducts, recentlyViewed, product?.product_id, productId]);
 
+  const showActionToast = useCallback(
+    (message: string, tone: ActionToast["tone"] = "success") => {
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+
+      setActionToast({ id: Date.now(), message, tone });
+      toastTimerRef.current = window.setTimeout(() => {
+        setActionToast(null);
+        toastTimerRef.current = null;
+      }, 2400);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    };
+  }, []);
+
   const requireAuth = () => {
     const token = getToken();
 
@@ -165,18 +194,28 @@ export default function ProductPageClient() {
       image: displayImages?.[0] || "",
     };
 
-    const res = await fetch(`${API_BASE}/add-to-cart`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    try {
+      const res = await fetch(`${API_BASE}/add-to-cart`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (data?.cart_id) localStorage.setItem("cart_id", data.cart_id);
-    if (data?.items) setCartItems(data.items);
+      if (!res.ok || data?.status === false) {
+        showActionToast(data?.message || "Could not add to cart.", "error");
+        return;
+      }
 
-    window.dispatchEvent(new Event("cart:updated"));
+      if (data?.cart_id) localStorage.setItem("cart_id", data.cart_id);
+      if (data?.items) setCartItems(data.items);
+
+      window.dispatchEvent(new Event("cart:updated"));
+      showActionToast(`${product.name} added to cart.`, "success");
+    } catch {
+      showActionToast("Could not add to cart.", "error");
+    }
   };
 
   const saveBuyNowItem = (color: string, size: string) => {
@@ -229,13 +268,29 @@ export default function ProductPageClient() {
 
       setWishlistIds(ids);
       window.dispatchEvent(new Event("wishlist:updated"));
+      showActionToast(
+        isWishlisted ? "Removed from wishlist." : "Added to wishlist.",
+        isWishlisted ? "info" : "success",
+      );
     } catch {
-      // ignore
+      showActionToast("Wishlist update failed.", "error");
     }
   };
 
   return (
     <main className="max-w-6xl mx-auto md:p-2 grid gap-2 md:pb-0 relative">
+      {actionToast ? (
+        <div
+          key={actionToast.id}
+          className={`product-action-toast product-action-toast-${actionToast.tone}`}
+          role="status"
+          aria-live="polite"
+        >
+          <span className="product-action-toast-dot" />
+          <span className="min-w-0 truncate">{actionToast.message}</span>
+        </div>
+      ) : null}
+
       {loading ? (
         <ProductPageLoader />
       ) : (
@@ -321,9 +376,13 @@ export default function ProductPageClient() {
                   description={product.description || ""}
                   onAddToCart={addToCart}
                   addedToCart={addedToCart}
-                  onGoToCart={openCartModal}
+                  onGoToCart={() => {
+                    showActionToast("Opening cart.", "info");
+                    openCartModal();
+                  }}
                   onBuyNow={async (payload) => {
                     saveBuyNowItem(payload.color, payload.size);
+                    showActionToast("Opening secure checkout.", "info");
                     window.location.href = "/checkout";
                   }}
                 />
@@ -406,6 +465,74 @@ export default function ProductPageClient() {
           <SuggestedProducts items={suggestedItems} />
         </>
       )}
+
+      <style jsx>{`
+        .product-action-toast {
+          position: fixed;
+          left: 50%;
+          top: max(18px, env(safe-area-inset-top));
+          z-index: 95;
+          display: inline-flex;
+          max-width: min(92vw, 420px);
+          transform: translateX(-50%);
+          align-items: center;
+          gap: 10px;
+          border-radius: 999px;
+          border: 1px solid rgba(15, 23, 42, 0.1);
+          background: rgba(255, 255, 255, 0.96);
+          padding: 10px 14px;
+          font-size: 13px;
+          font-weight: 800;
+          color: #0f172a;
+          box-shadow: 0 18px 48px rgba(15, 23, 42, 0.18);
+          backdrop-filter: blur(10px);
+          animation: productToastIn 240ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .product-action-toast-dot {
+          width: 9px;
+          height: 9px;
+          flex: 0 0 auto;
+          border-radius: 999px;
+          background: #16a34a;
+          box-shadow: 0 0 0 5px rgba(22, 163, 74, 0.12);
+        }
+
+        .product-action-toast-info .product-action-toast-dot {
+          background: #020617;
+          box-shadow: 0 0 0 5px rgba(2, 6, 23, 0.1);
+        }
+
+        .product-action-toast-error .product-action-toast-dot {
+          background: #dc2626;
+          box-shadow: 0 0 0 5px rgba(220, 38, 38, 0.12);
+        }
+
+        @keyframes productToastIn {
+          from {
+            transform: translateX(-50%) translateY(-10px) scale(0.96);
+            opacity: 0;
+          }
+
+          to {
+            transform: translateX(-50%) translateY(0) scale(1);
+            opacity: 1;
+          }
+        }
+
+        @media (max-width: 767px) {
+          .product-action-toast {
+            top: max(12px, env(safe-area-inset-top));
+            max-width: calc(100vw - 28px);
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .product-action-toast {
+            animation: none;
+          }
+        }
+      `}</style>
     </main>
   );
 }

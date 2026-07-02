@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FaStar } from "react-icons/fa";
 import { IoIosClose } from "react-icons/io";
-import { IoChevronBack, IoChevronForward } from "react-icons/io5";
+import { IoChevronBack, IoChevronForward, IoPause, IoPlay, IoVolumeHigh, IoVolumeMute } from "react-icons/io5";
 import { PiShareNetworkThin, PiArrowsOutLight, PiHeartLight, PiHeartFill } from "react-icons/pi";
 
 type SimilarItem = { title: string; price: string; image: string; badge?: string };
@@ -50,9 +50,20 @@ export default function Gallery({
   const mobileScrollRef = useRef<HTMLDivElement | null>(null);
   const [scrollPct, setScrollPct] = useState(0);
   const [showSimilar, setShowSimilar] = useState(false);
+  const [videoPlaying, setVideoPlaying] = useState(true);
+  const [videoMuted, setVideoMuted] = useState(true);
+  const fullVideoRef = useRef<HTMLVideoElement | null>(null);
 
-  useEffect(() => setOpenIndex(null), [title]);
-  useEffect(() => setZoom(false), [openIndex]);
+  useEffect(() => {
+    queueMicrotask(() => setOpenIndex(null));
+  }, [title]);
+  useEffect(() => {
+    queueMicrotask(() => {
+      setZoom(false);
+      setVideoPlaying(true);
+      setVideoMuted(true);
+    });
+  }, [openIndex]);
 
   const go = (dir: 1 | -1) => {
     if (openIndex === null) return;
@@ -77,6 +88,26 @@ export default function Gallery({
     if (!el) return;
     const pct = el.scrollWidth > el.clientWidth ? el.scrollLeft / (el.scrollWidth - el.clientWidth) : 0;
     setScrollPct(pct);
+  };
+
+  const toggleFullVideoPlayback = () => {
+    const videoEl = fullVideoRef.current;
+    if (!videoEl) return;
+
+    if (videoEl.paused) {
+      videoEl.play().then(() => setVideoPlaying(true)).catch(() => setVideoPlaying(false));
+      return;
+    }
+
+    videoEl.pause();
+    setVideoPlaying(false);
+  };
+
+  const toggleFullVideoMute = () => {
+    const videoEl = fullVideoRef.current;
+    const nextMuted = !videoMuted;
+    setVideoMuted(nextMuted);
+    if (videoEl) videoEl.muted = nextMuted;
   };
 
   return (
@@ -145,12 +176,16 @@ export default function Gallery({
                   ))}
                 </div>
               )}
-              <div className="absolute right-3 bottom-3 flex items-center gap-2 bg-white rounded-full px-3 py-1 shadow">
-                <span className="flex items-center gap-1 text-sm font-semibold"><FaStar/>{rating.toFixed(1)}</span>
-                <span className="text-xs text-[var(--muted)]">{reviews}</span>
+              <div className="absolute right-3 bottom-3 flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-amber-800 shadow">
+                <span className="flex items-center gap-1 text-sm font-black"><FaStar className="text-amber-500" />{rating.toFixed(1)}</span>
+                <span className="text-xs font-bold text-amber-700/75">{reviews}</span>
               </div>
               <button
-                className="absolute left-3 bottom-3 z-10 bg-white text-black w-10 h-10 rounded-full border shadow flex items-center justify-center"
+                className={`absolute left-3 bottom-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border shadow transition ${
+                  wishlisted
+                    ? "border-red-500 bg-red-500 text-white"
+                    : "border-black/15 bg-white text-black hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                }`}
                 onClick={(e) => {
                   e.stopPropagation();
                   onToggleWishlist?.();
@@ -202,7 +237,7 @@ export default function Gallery({
           onClick={requestClose}
         >
           <button
-            className="absolute cursor-pointer top-6 right-6 w-11 h-11 rounded-full bg-white shadow border flex items-center justify-center"
+            className="absolute cursor-pointer top-6 right-6 z-30 w-11 h-11 rounded-full bg-white shadow border flex items-center justify-center"
             onClick={(e) => {
               e.stopPropagation();
               requestClose();
@@ -212,7 +247,7 @@ export default function Gallery({
           </button>
 
           <button
-            className="absolute cursor-pointer left-6 w-11 h-11 rounded-full bg-white/90 shadow border flex items-center justify-center"
+            className="absolute cursor-pointer left-3 md:left-6 z-30 w-11 h-11 rounded-full bg-white/95 shadow border flex items-center justify-center"
             onClick={(e) => {
               e.stopPropagation();
               go(-1);
@@ -221,7 +256,7 @@ export default function Gallery({
             <IoChevronBack size={22} />
           </button>
           <button
-            className="absolute cursor-pointer right-6 w-11 h-11 rounded-full bg-white/90 shadow border flex items-center justify-center"
+            className="absolute cursor-pointer right-3 md:right-6 z-30 w-11 h-11 rounded-full bg-white/95 shadow border flex items-center justify-center"
             onClick={(e) => {
               e.stopPropagation();
               go(1);
@@ -230,7 +265,7 @@ export default function Gallery({
             <IoChevronForward size={22} />
           </button>
 
-          <div className={`max-w-4xl w-full flex items-center justify-center ${panelClass}`} onClick={(e) => e.stopPropagation()}>
+          <div className={`relative z-10 max-w-4xl w-full flex items-center justify-center ${panelClass}`} onClick={(e) => e.stopPropagation()}>
             <div key={openIndex} className="w-full animate-pop">
               {media[openIndex].type === "image" ? (
                 <div className="overflow-hidden bg-white max-h-[90vh]">
@@ -252,15 +287,47 @@ export default function Gallery({
                   />
                 </div>
               ) : (
-                <video
-                  src={media[openIndex].src}
-                  className="w-full h-full max-h-[90vh]"
-                  onClick={(e) => e.stopPropagation()}
-                  muted
-                  autoPlay
-                  loop
-                  // controls
-                />
+                <div className="relative overflow-hidden bg-black">
+                  <video
+                    ref={fullVideoRef}
+                    src={media[openIndex].src}
+                    className="w-full h-full max-h-[90vh]"
+                    onClick={(e) => e.stopPropagation()}
+                    muted={videoMuted}
+                    autoPlay
+                    loop
+                    playsInline
+                    onPlay={() => setVideoPlaying(true)}
+                    onPause={() => setVideoPlaying(false)}
+                    onVolumeChange={(event) => setVideoMuted(event.currentTarget.muted)}
+                  />
+
+                  <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-3 rounded-full border border-white/20 bg-black/55 px-3 py-2 text-white shadow-[0_14px_36px_rgba(0,0,0,0.28)] backdrop-blur">
+                    <button
+                      type="button"
+                      aria-label={videoPlaying ? "Pause video" : "Play video"}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        toggleFullVideoPlayback();
+                      }}
+                      className="grid h-10 w-10 place-items-center rounded-full bg-white text-black transition hover:scale-105 active:scale-95"
+                    >
+                      {videoPlaying ? <IoPause size={20} /> : <IoPlay size={20} />}
+                    </button>
+
+                    <button
+                      type="button"
+                      aria-label={videoMuted ? "Unmute video" : "Mute video"}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        toggleFullVideoMute();
+                      }}
+                      className="grid h-10 w-10 place-items-center rounded-full bg-white text-black transition hover:scale-105 active:scale-95"
+                    >
+                      {videoMuted ? <IoVolumeMute size={20} /> : <IoVolumeHigh size={20} />}
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           </div>
