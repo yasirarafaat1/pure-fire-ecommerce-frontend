@@ -278,7 +278,7 @@ export default function ProductPageClient() {
   };
 
   return (
-    <main className="max-w-6xl mx-auto md:p-2 grid gap-2 md:pb-0 relative">
+    <main className="product-page-root max-w-6xl mx-auto -mt-3 grid gap-2 md:mt-0 md:p-2 relative">
       {actionToast ? (
         <div
           key={actionToast.id}
@@ -472,7 +472,7 @@ export default function ProductPageClient() {
         .product-action-toast {
           position: fixed;
           left: 50%;
-          top: max(18px, env(safe-area-inset-top));
+          top: max(92px, calc(env(safe-area-inset-top) + 76px));
           z-index: 95;
           display: inline-flex;
           max-width: min(92vw, 420px);
@@ -523,9 +523,19 @@ export default function ProductPageClient() {
         }
 
         @media (max-width: 767px) {
+          .product-page-root {
+            padding-bottom: 96px;
+          }
+
           .product-action-toast {
-            top: max(12px, env(safe-area-inset-top));
+            top: max(76px, calc(env(safe-area-inset-top) + 64px));
             max-width: calc(100vw - 28px);
+          }
+        }
+
+        @media (min-width: 768px) {
+          .product-page-root {
+            padding-bottom: 0 !important;
           }
         }
 

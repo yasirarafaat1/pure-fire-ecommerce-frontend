@@ -22,7 +22,7 @@ type Props = {
   items: CartItem[];
   selectedAddress: string | number | null;
   onSuccess: (orderId: string | number) => void;
-  onError: (message: string) => void;
+  onError: (message: string, meta?: { failedPage?: boolean; orderId?: string | number }) => void;
   mode?: "cart" | "buy_now";
 };
 
@@ -66,6 +66,11 @@ const loadRazorpay = () =>
 export default function CheckoutPayment({ items, selectedAddress, onSuccess, onError, mode = "cart" }: Props) {
   const [paying, setPaying] = useState(false);
 
+  const failToPage = (message: string, orderId?: string | number) => {
+    onError(message, { failedPage: true, orderId });
+    setPaying(false);
+  };
+
   const handlePay = async () => {
     if (!selectedAddress) {
       onError("Please select an address.");
@@ -98,11 +103,15 @@ export default function CheckoutPayment({ items, selectedAddress, onSuccess, onE
       });
       const orderJson = await orderRes.json();
       if (!orderRes.ok || !orderJson.status) {
-        throw new Error(orderJson.message || "Failed to create order");
+        failToPage(orderJson.message || "Failed to create order", orderJson.local_order_id);
+        return;
       }
 
       const ready = await loadRazorpay();
-      if (!ready) throw new Error("Razorpay SDK failed to load");
+      if (!ready) {
+        failToPage("Razorpay SDK failed to load", orderJson.local_order_id);
+        return;
+      }
 
       const options = {
         key: orderJson.key,
@@ -140,8 +149,10 @@ export default function CheckoutPayment({ items, selectedAddress, onSuccess, onE
             localStorage.removeItem("checkout_started_from_assistant");
             onSuccess(verifyJson.order_id || orderJson.local_order_id);
           } else {
-            onError("Payment failed: verification was not confirmed.");
-            setPaying(false);
+            failToPage(
+              verifyJson?.message || "Payment failed: verification was not confirmed.",
+              verifyJson?.order_id || orderJson.local_order_id,
+            );
           }
         },
         modal: {
@@ -151,16 +162,20 @@ export default function CheckoutPayment({ items, selectedAddress, onSuccess, onE
       };
 
       const Razorpay = getRazorpay();
-      if (!Razorpay) throw new Error("Razorpay checkout unavailable");
+      if (!Razorpay) {
+        failToPage("Razorpay checkout unavailable", orderJson.local_order_id);
+        return;
+      }
       const rzp = new Razorpay(options);
       rzp.on?.("payment.failed", (response) => {
-        onError(response.error?.description || response.error?.reason || "Payment failed. Please try again.");
-        setPaying(false);
+        failToPage(
+          response.error?.description || response.error?.reason || "Payment failed. Please try again.",
+          orderJson.local_order_id || response.error?.metadata?.order_id,
+        );
       });
       rzp.open();
     } catch (err: unknown) {
-      onError(err instanceof Error ? err.message : "Payment failed");
-      setPaying(false);
+      failToPage(err instanceof Error ? err.message : "Payment failed");
     }
   };
 

@@ -640,8 +640,15 @@ export default function HomeNavbar({ onOpenCart }: Props) {
         }
 
         .nav-cart-button:hover .nav-cart-lottie {
-          filter: invert(1);
           transform: scale(1.25);
+        }
+
+        :global(.nav-cart-button:hover .nav-cart-lottie svg path),
+        :global(.nav-cart-button:hover .nav-cart-lottie svg line),
+        :global(.nav-cart-button:hover .nav-cart-lottie svg polyline),
+        :global(.nav-cart-button:hover .nav-cart-lottie svg circle) {
+          stroke: #ffffff !important;
+          fill: none !important;
         }
 
         .drawer-panel {

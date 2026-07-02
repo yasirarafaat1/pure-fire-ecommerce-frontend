@@ -49,6 +49,34 @@ type Reel = {
 };
 
 const REELS_ENDPOINT = "/api/user/instagram/reels?limit=20";
+const MOCK_REELS: Reel[] = Array.from({ length: 10 }, (_, index) => {
+  const titles = [
+    "New Drop Preview",
+    "Street Style Fit",
+    "Weekend Outfit",
+    "Cotton Edit",
+    "Minimal Layers",
+    "Everyday Look",
+    "Try-on Moment",
+    "Color Story",
+    "Product Detail",
+    "Pure Fire Pick",
+  ];
+
+  return {
+    id: `mock-reel-${index + 1}`,
+    title: titles[index] || `Pure Fire Reel ${index + 1}`,
+    description: "Mock reel preview for storefront testing.",
+    videoUrl:
+      index % 2 === 0
+        ? "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+        : "https://media.w3.org/2010/05/sintel/trailer.mp4",
+    thumbnailUrl: "",
+    permalink: "",
+    date: "",
+    username: "purefire",
+  };
+});
 
 function getString(value: unknown, fallback = "") {
   return typeof value === "string" ? value.trim() : fallback;
@@ -186,7 +214,12 @@ export default function InstagramReelsMarquee() {
 
         if (!res.ok) {
           console.error("Instagram reels API failed:", res.status, REELS_ENDPOINT);
-          if (!seededRef.current) setReels([]);
+          if (!seededRef.current) {
+            setEnabled(true);
+            setHandle(settingsHandle);
+            setReels(MOCK_REELS);
+            seededRef.current = true;
+          }
           return;
         }
 
@@ -196,8 +229,9 @@ export default function InstagramReelsMarquee() {
         setHandle(extractHandle(data) || settingsHandle);
 
         if (!responseEnabled) {
-          setReels([]);
-          seededRef.current = false;
+          setEnabled(true);
+          setReels(MOCK_REELS);
+          seededRef.current = true;
           return;
         }
 
@@ -205,11 +239,20 @@ export default function InstagramReelsMarquee() {
           .map(normalizeReel)
           .filter((reel): reel is Reel => Boolean(reel));
 
-        setReels(freshReels);
-        seededRef.current = freshReels.length > 0;
+        setReels(freshReels.length ? freshReels : MOCK_REELS);
+        seededRef.current = true;
       } catch (error) {
         console.error("Instagram reels load error:", error);
-        if (!seededRef.current) setReels([]);
+        if (!seededRef.current) {
+          setEnabled(true);
+          setHandle(
+            defaultPublicSettings.instagramReels?.handle ||
+              defaultPublicSettings.storeName ||
+              "purefire",
+          );
+          setReels(MOCK_REELS);
+          seededRef.current = true;
+        }
       } finally {
         setLoading(false);
       }
@@ -241,7 +284,7 @@ export default function InstagramReelsMarquee() {
   const marqueeItems = useMemo(() => {
     if (!reels.length) return [];
 
-    const repeatedHalf = Array.from({ length: 4 }).flatMap(() => reels);
+    const repeatedHalf = Array.from({ length: 2 }).flatMap(() => reels);
     return [...repeatedHalf, ...repeatedHalf];
   }, [reels]);
 
@@ -332,16 +375,19 @@ export default function InstagramReelsMarquee() {
                   onClick={() => setOpenIdx(originalIndex >= 0 ? originalIndex : 0)}
                   aria-label={`Open ${reel.title}`}
                 >
-                  <video
-                    src={reel.videoUrl}
-                    poster={reel.thumbnailUrl}
-                    muted
-                    loop
-                    autoPlay
-                    playsInline
-                    preload="metadata"
-                    className="w-full h-full object-cover"
-                  />
+                  {reel.thumbnailUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={reel.thumbnailUrl}
+                      alt={reel.title}
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="reel-card-preview grid h-full w-full place-items-center bg-[linear-gradient(145deg,#111827,#020617)] text-white">
+                      <FaPlay className="text-2xl opacity-90" />
+                    </div>
+                  )}
 
                   <div className="reel-card-gradient" />
 
@@ -489,7 +535,7 @@ export default function InstagramReelsMarquee() {
           display: flex;
           width: max-content;
           gap: 14px;
-          animation: reels-marquee-left 58s linear infinite;
+          animation: reels-marquee-left 72s linear infinite;
           will-change: transform;
         }
 

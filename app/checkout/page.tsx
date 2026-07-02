@@ -168,6 +168,22 @@ export default function CheckoutPage() {
     setPanelOpen(true);
   };
 
+  const handlePaymentError = (
+    message: string,
+    meta?: { failedPage?: boolean; orderId?: string | number },
+  ) => {
+    if (!meta?.failedPage) {
+      setError(message);
+      return;
+    }
+
+    const params = new URLSearchParams();
+    if (meta.orderId) params.set("order_id", String(meta.orderId));
+    if (message) params.set("reason", message);
+
+    router.replace(`/order-failed${params.toString() ? `?${params.toString()}` : ""}`);
+  };
+
   if (!authReady || loading) {
     return (
       <main className="max-w-6xl mx-auto p-4 md:p-6">
@@ -218,7 +234,7 @@ export default function CheckoutPage() {
           <CheckoutPayment
             items={cartItems}
             selectedAddress={selectedAddress}
-            onError={setError}
+            onError={handlePaymentError}
             onSuccess={(orderId) => router.replace(`/order-success?order_id=${orderId}`)}
             mode={isBuyNow ? "buy_now" : "cart"}
           />
