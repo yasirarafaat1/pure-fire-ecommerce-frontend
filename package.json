@@ -10,7 +10,9 @@
   },
   "dependencies": {
     "color-namer": "^1.4.0",
+    "lenis": "^1.3.25",
     "libphonenumber-js": "^1.12.40",
+    "lottie-react": "^2.4.1",
     "lucide-react": "^1.3.0",
     "next": "16.1.6",
     "react": "19.2.3",

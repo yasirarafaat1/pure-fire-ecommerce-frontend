@@ -15,7 +15,9 @@ export default function PublicFrame({ children }: { children: React.ReactNode })
     pathname.startsWith("/api") ||
     pathname.startsWith("/auth") ||
     pathname.startsWith("/login") ||
-    pathname.startsWith("/search");
+    pathname.startsWith("/search") ||
+    pathname.startsWith("/order-success") ||
+    pathname.startsWith("/order-failed");
 
   const showFooter =
     pathname === "/" ||

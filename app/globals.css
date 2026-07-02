@@ -28,6 +28,7 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 88px;
 }
 
 body {
@@ -41,6 +42,27 @@ body {
     "liga" 1,
     "calt" 1;
   text-rendering: geometricPrecision;
+  overscroll-behavior-y: contain;
+  -webkit-font-smoothing: antialiased;
+}
+
+@supports (-webkit-overflow-scrolling: touch) {
+  body,
+  .drawer-scroll,
+  .search-modal-scroll,
+  .assistant-chat-scroll,
+  [class*="overflow-y-auto"],
+  [class*="overflow-auto"] {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+[role="dialog"],
+[data-smooth-scroll-ignore="true"],
+.assistant-panel,
+.search-modal-scroll,
+.drawer-scroll {
+  overscroll-behavior: contain;
 }
 
 /* Premium display font */

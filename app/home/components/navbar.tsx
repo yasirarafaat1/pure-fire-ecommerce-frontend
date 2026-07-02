@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { cachedFetch } from "../../utils/cachedFetch";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -11,7 +11,6 @@ import {
 } from "../../utils/public-settings";
 import {
   IconArrowLeft,
-  IconCart,
   IconChevron,
   IconClose,
   IconSearch,
@@ -20,6 +19,7 @@ import {
   RatingStars,
 } from "./navbar-icons";
 import SearchModal from "../../search/components/SearchModal";
+import NavbarCartLottie from "./NavbarCartLottie";
 
 type CategoryNode = {
   _id: string;
@@ -74,6 +74,8 @@ const CUSTOMER_LINKS = [
 export default function HomeNavbar({ onOpenCart }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
+  const [cartAnimationTick, setCartAnimationTick] = useState(0);
+  const previousCartCountRef = useRef<number | null>(null);
   const [categoryTree, setCategoryTree] = useState<CategoryNode[]>([]);
   const [siteName, setSiteName] = useState(defaultPublicSettings.storeName);
   const [logoSrc, setLogoSrc] = useState(
@@ -145,8 +147,18 @@ export default function HomeNavbar({ onOpenCart }: Props) {
         );
 
         setCartCount(count);
+
+        if (
+          previousCartCountRef.current !== null &&
+          count > previousCartCountRef.current
+        ) {
+          setCartAnimationTick((tick) => tick + 1);
+        }
+
+        previousCartCountRef.current = count;
       } catch {
         setCartCount(0);
+        previousCartCountRef.current = 0;
       }
     };
 
@@ -619,6 +631,19 @@ export default function HomeNavbar({ onOpenCart }: Props) {
           border-color: #ffffff;
         }
 
+        .nav-cart-lottie {
+          color: currentColor;
+          transform: scale(1.18);
+          transition:
+            filter 180ms ease,
+            transform 180ms ease;
+        }
+
+        .nav-cart-button:hover .nav-cart-lottie {
+          filter: invert(1);
+          transform: scale(1.25);
+        }
+
         .drawer-panel {
           box-shadow:
             30px 0 90px rgba(15, 23, 42, 0.24),
@@ -802,7 +827,7 @@ export default function HomeNavbar({ onOpenCart }: Props) {
                 className="nav-action nav-cart-button relative inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-sm border border-slate-900/10 bg-white text-slate-950 shadow-[0_8px_24px_rgba(15,23,42,0.07)] transition hover:bg-slate-950 hover:text-white active:scale-[0.96]"
               >
                 <span className="nav-icon-glyph">
-                  <IconCart />
+                  <NavbarCartLottie playSignal={cartAnimationTick} />
                 </span>
 
                 {cartCount > 0 && (

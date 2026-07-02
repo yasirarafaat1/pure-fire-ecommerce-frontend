@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Bodoni_Moda, Geist_Mono, Manrope } from "next/font/google";
 import "./globals.css";
+import "lenis/dist/lenis.css";
 import CloseCursorOverlay from "./components/CloseCursorOverlay";
 import PublicFrame from "./components/PublicFrame";
+import SmoothScrollProvider from "./components/SmoothScrollProvider";
 import { defaultMetadata, siteConfig } from "./config/metadata";
 
 const manrope = Manrope({
@@ -121,6 +123,7 @@ export default function RootLayout({
         suppressHydrationWarning
         className={`${manrope.variable} ${geistMono.variable} ${bodoniModa.variable} antialiased`}
       >
+        <SmoothScrollProvider />
         <PublicFrame>{children}</PublicFrame>
         <CloseCursorOverlay />
       </body>
