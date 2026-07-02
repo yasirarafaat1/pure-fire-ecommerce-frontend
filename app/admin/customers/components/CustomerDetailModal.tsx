@@ -161,7 +161,6 @@ function ProductStrip({ products }: { products: ProductPreview[] }) {
               {formatInr(Number(product.price || 0))}
             </p>
           </div>
-          <AdminStatusBadge status={product.status || "UNKNOWN"} />
         </div>
       ))}
     </div>
