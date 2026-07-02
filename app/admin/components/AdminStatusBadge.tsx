@@ -6,7 +6,7 @@ const tone = (status: string) => {
   if (/PENDING|PACKED|SHIPPED|DRAFT|WARNING/.test(value)) {
     return "bg-amber-50 text-amber-700 ring-amber-600/20";
   }
-  if (/DISABLED|REJECTED|CANCELLED|FAILED|OUT/.test(value)) {
+  if (/BLOCKED|DISABLED|REJECTED|CANCELLED|FAILED|OUT/.test(value)) {
     return "bg-red-50 text-red-700 ring-red-600/20";
   }
   return "bg-slate-100 text-slate-700 ring-slate-500/20";
