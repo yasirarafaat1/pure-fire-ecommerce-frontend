@@ -59,6 +59,7 @@ export default function AssistantPanel({
 }) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [mobileViewportHeight, setMobileViewportHeight] = useState(0);
+  const [mobileKeyboardBottom, setMobileKeyboardBottom] = useState(0);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -84,8 +85,12 @@ export default function AssistantPanel({
     if (typeof window === "undefined") return;
 
     const updateViewportHeight = () => {
-      const viewportHeight = window.visualViewport?.height || window.innerHeight;
+      const visualViewport = window.visualViewport;
+      const viewportHeight = visualViewport?.height || window.innerHeight;
+      const viewportOffsetTop = visualViewport?.offsetTop || 0;
+      const keyboardBottom = Math.max(0, Math.floor(window.innerHeight - viewportHeight - viewportOffsetTop));
       setMobileViewportHeight(Math.max(360, Math.floor(viewportHeight - 8)));
+      setMobileKeyboardBottom(keyboardBottom);
     };
 
     updateViewportHeight();
@@ -102,6 +107,7 @@ export default function AssistantPanel({
 
   const panelStyle = {
     "--assistant-panel-mobile-height": `${mobileViewportHeight || 680}px`,
+    "--assistant-keyboard-bottom": `${mobileKeyboardBottom}px`,
   } as CSSProperties;
 
   const toggleHistory = () => {
@@ -143,7 +149,7 @@ export default function AssistantPanel({
         aria-modal="true"
         aria-label="Shopping Assistant"
         style={panelStyle}
-        className={`assistant-panel fixed inset-x-0 bottom-0 z-[44] mx-auto flex h-[min(88dvh,var(--assistant-panel-mobile-height))] max-h-[var(--assistant-panel-mobile-height)] w-full flex-col overflow-hidden rounded-t-[22px] border border-black/10 bg-white shadow-[0_-22px_70px_rgba(0,0,0,0.22)] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] md:inset-auto md:bottom-8 md:right-4 md:mx-0 md:h-[min(680px,calc(100dvh-50px))] md:max-h-[780px] md:w-[410px] md:rounded-[4px] md:shadow-[0_28px_90px_rgba(0,0,0,0.24)] ${
+        className={`assistant-panel fixed inset-x-0 bottom-[var(--assistant-keyboard-bottom)] z-[44] mx-auto flex h-[min(88dvh,var(--assistant-panel-mobile-height))] max-h-[var(--assistant-panel-mobile-height)] w-full flex-col overflow-hidden rounded-t-[22px] border border-black/10 bg-white shadow-[0_-22px_70px_rgba(0,0,0,0.22)] transition-[transform,opacity,filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] md:inset-auto md:bottom-8 md:right-4 md:mx-0 md:h-[min(680px,calc(100dvh-50px))] md:max-h-[780px] md:w-[410px] md:rounded-[4px] md:shadow-[0_28px_90px_rgba(0,0,0,0.24)] ${
           open
             ? "pointer-events-auto translate-y-0 scale-100 opacity-100 blur-0"
             : "pointer-events-none translate-y-[105%] scale-[0.98] opacity-0 blur-[1px] md:translate-y-8 md:scale-[0.94]"

@@ -5,6 +5,7 @@ type Props = {
   onChange: (v: string) => void;
   onSubmit: () => void;
   onBack?: () => void;
+  autoFocus?: boolean;
 };
 
 const IconSearch = () => (
@@ -14,7 +15,7 @@ const IconSearch = () => (
   </svg>
 );
 
-export default function SearchBar({ value, onChange, onSubmit, onBack }: Props) {
+export default function SearchBar({ value, onChange, onSubmit, onBack, autoFocus = false }: Props) {
   return (
     <div className="flex items-center gap-2 border border-black/15 rounded-[5px] px-3 py-2 bg-white">
       {onBack && (
@@ -25,7 +26,7 @@ export default function SearchBar({ value, onChange, onSubmit, onBack }: Props) 
         </button>
       )}
       <input
-        autoFocus
+        autoFocus={autoFocus}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => {

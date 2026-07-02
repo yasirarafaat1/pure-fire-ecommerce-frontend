@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { cachedFetch } from "../../utils/cachedFetch";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -19,6 +19,7 @@ import {
   IconUser,
   RatingStars,
 } from "./navbar-icons";
+import SearchModal from "../../search/components/SearchModal";
 
 type CategoryNode = {
   _id: string;
@@ -81,9 +82,9 @@ export default function HomeNavbar({ onOpenCart }: Props) {
   const [expandedRoot, setExpandedRoot] = useState<string | null>(null);
   const [expandedSub, setExpandedSub] = useState<string | null>(null);
   const [drawerSearch, setDrawerSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchInitialQuery, setSearchInitialQuery] = useState("");
   const [scrolled, setScrolled] = useState(false);
-
-  const drawerSearchRef = useRef<HTMLInputElement | null>(null);
 
   const router = useRouter();
   const pathname = usePathname();
@@ -114,13 +115,8 @@ export default function HomeNavbar({ onOpenCart }: Props) {
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
-    const timer = window.setTimeout(() => {
-      drawerSearchRef.current?.focus();
-    }, 280);
-
     return () => {
       document.body.style.overflow = originalOverflow;
-      window.clearTimeout(timer);
     };
   }, [menuOpen]);
 
@@ -232,7 +228,8 @@ export default function HomeNavbar({ onOpenCart }: Props) {
 
   const startSearch = () => {
     closeMenu();
-    router.push("/search");
+    setSearchInitialQuery("");
+    setSearchOpen(true);
   };
 
   const submitDrawerSearch = (event: FormEvent<HTMLFormElement>) => {
@@ -241,13 +238,8 @@ export default function HomeNavbar({ onOpenCart }: Props) {
     const query = drawerSearch.trim();
 
     closeMenu();
-
-    if (query) {
-      router.push(`/search?q=${encodeURIComponent(query)}`);
-      return;
-    }
-
-    router.push("/search");
+    setSearchInitialQuery(query);
+    setSearchOpen(true);
   };
 
   const backFromSearch = () => {
@@ -918,7 +910,6 @@ export default function HomeNavbar({ onOpenCart }: Props) {
             >
               <label className="group flex w-full cursor-text items-center gap-3 rounded-sm border border-slate-900/10 bg-slate-50 px-3 py-2.5 transition focus-within:border-amber-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-amber-300/20">
                 <input
-                  ref={drawerSearchRef}
                   value={drawerSearch}
                   onChange={(event) => setDrawerSearch(event.target.value)}
                   type="search"
@@ -1126,6 +1117,12 @@ export default function HomeNavbar({ onOpenCart }: Props) {
           </div>
         </aside>
       </div>
+
+      <SearchModal
+        open={searchOpen}
+        initialQuery={searchInitialQuery}
+        onClose={() => setSearchOpen(false)}
+      />
     </>
   );
 }

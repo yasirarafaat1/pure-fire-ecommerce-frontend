@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  BotMessageSquare,
   Boxes,
   CircleDollarSign,
+  MessageSquareText,
   PackageCheck,
   RefreshCw,
   RotateCcw,
@@ -62,6 +64,18 @@ type AnalyticsData = {
     productViews: { available: boolean; count: number };
     addToCart: { available: boolean; count: number };
     wishlist: { available: boolean; count: number };
+  };
+  assistant?: {
+    kpis: {
+      sessions: number;
+      messages: number;
+      userSessions: number;
+      guestSessions: number;
+      averageMessagesPerSession: number;
+    };
+    intentBreakdown: Array<{ intent: string; count: number }>;
+    dailyMessages: Array<{ date: string; messages: number }>;
+    feedbackBreakdown: Array<{ rating: string; count: number }>;
   };
 };
 
@@ -138,6 +152,8 @@ export default function AnalyticsPage() {
     { label: "New Customers", value: formatCount(data.kpis.newCustomers), icon: <Users size={18} /> },
     { label: "Returning Customers", value: formatCount(data.kpis.returningCustomers), icon: <Users size={18} />, hint: `${formatPercent(data.kpis.repeatPurchaseRate)} repeat rate` },
     { label: "Average Order Value", value: formatInr(data.kpis.averageOrderValue), icon: <CircleDollarSign size={18} /> },
+    { label: "Assistant Sessions", value: formatCount(data.assistant?.kpis.sessions), icon: <BotMessageSquare size={18} />, hint: `${formatCount(data.assistant?.kpis.userSessions)} user / ${formatCount(data.assistant?.kpis.guestSessions)} guest` },
+    { label: "Assistant Messages", value: formatCount(data.assistant?.kpis.messages), icon: <MessageSquareText size={18} />, hint: `${formatCount(data.assistant?.kpis.averageMessagesPerSession)} avg per chat` },
   ];
 
   return (
@@ -219,6 +235,20 @@ export default function AnalyticsPage() {
             <TrackingRow label="Wishlist records" value={data.trackingAvailability.wishlist.count} />
           </div>
         </div>
+      </section>
+
+      <section className="grid min-w-0 gap-6 xl:grid-cols-2">
+        <AnalyticsBarChart
+          title="Assistant Top Intents"
+          data={data.assistant?.intentBreakdown || []}
+          xKey="intent"
+          bars={[{ key: "count", label: "Chats", color: "#020617" }]}
+        />
+        <AnalyticsLineChart
+          title="Assistant Messages Over Time"
+          data={data.assistant?.dailyMessages || []}
+          lines={[{ key: "messages", label: "Messages", color: "#16a34a" }]}
+        />
       </section>
 
       <section className="grid min-w-0 gap-6 xl:grid-cols-2">
