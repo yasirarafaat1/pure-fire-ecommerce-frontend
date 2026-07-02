@@ -133,7 +133,6 @@ export default function CustomersPage() {
                   <th className="px-4 py-3">Total spent</th>
                   <th className="px-4 py-3">Last login</th>
                   <th className="px-4 py-3">Last order</th>
-                  <th className="px-4 py-3 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
@@ -155,19 +154,6 @@ export default function CustomersPage() {
                     <td className="px-4 py-3">{formatInrFromPaise(customer.totalSpent)}</td>
                     <td className="px-4 py-3 text-slate-600">{formatDate(customer.lastLoginAt)}</td>
                     <td className="px-4 py-3 text-slate-600">{formatDate(customer.lastOrderAt)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void openCustomer(customer.email);
-                        }}
-                        className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-900 hover:text-slate-950"
-                      >
-                        <Eye size={14} />
-                        View
-                      </button>
-                    </td>
                   </tr>
                 ))}
               </tbody>
