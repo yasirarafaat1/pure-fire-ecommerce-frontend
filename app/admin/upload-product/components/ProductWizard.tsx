@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import FooterControls from "./FooterControls";
 import StepCategory from "./StepCategory";
 import StepDetails from "./StepDetails";
@@ -23,6 +23,7 @@ type Props = { product?: EditProduct | null; onSaved?: () => void; onClose?: () 
 const steps = [{ id: 1, label: "Category" }, { id: 2, label: "Details" }, { id: 3, label: "Variants" }];
 const minHighlights = 6, maxHighlights = 10;
 export default function ProductWizard({ product, onSaved, onClose }: Props) {
+  const initializedProductKeyRef = useRef<string>("");
   const [active, setActive] = useState(1);
   const [tree, setTree] = useState<CategoryNode[]>([]);
   const [level1, setLevel1] = useState("");
@@ -52,10 +53,12 @@ export default function ProductWizard({ product, onSaved, onClose }: Props) {
 
   useEffect(() => {
     if (!product) return;
+    const productKey = product.product_id ? `product-${product.product_id}` : product.draft_id ? `draft-${product.draft_id}` : "edit";
+    if (initializedProductKeyRef.current === productKey) return;
     const targetIdRaw = typeof product.catagory_id === "object" ? product.catagory_id?._id : product.catagory_id;
     const targetId = targetIdRaw ? String(targetIdRaw) : "";
-    if (targetId && !categoryId) setCategoryId(targetId);
     if (!targetId || tree.length === 0) return;
+    initializedProductKeyRef.current = productKey;
     const path: string[] = [];
     const dfs = (nodes: CategoryNode[], target: string, trail: string[]): boolean => {
       for (const n of nodes) {
@@ -122,7 +125,7 @@ export default function ProductWizard({ product, onSaved, onClose }: Props) {
     const stage = (product.draft_stage || "").toLowerCase();
     if (stage === "details") setActive(2);
     else if (stage === "media" || stage === "variants" || stage === "pricing" || stage === "complete") setActive(3);
-  }, [categoryId, product, tree]);
+  }, [product, tree]);
 
   const level1Options = tree;
   const level2Options = useMemo(() => (level1 ? findNode(tree, level1)?.children || [] : []), [tree, level1]);

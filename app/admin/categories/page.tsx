@@ -6,7 +6,6 @@ import AdminConfirmDialog from "../components/AdminConfirmDialog";
 import AdminPageHeader from "../components/AdminPageHeader";
 import AdminPagination from "../components/AdminPagination";
 import { AdminEmptyState, AdminErrorState, AdminLoadingState } from "../components/AdminStates";
-import AdminStatusBadge from "../components/AdminStatusBadge";
 import { useAdminList } from "../hooks/useAdminList";
 import { AdminApiError, adminApi } from "../lib/adminApi";
 
@@ -44,6 +43,13 @@ const categoryLevel = (category: Category) => category.ancestors?.length || 0;
 const categoryPath = (category: Category) => {
   const ancestors = category.ancestors?.map((item) => item.name).filter(Boolean) || [];
   return [...ancestors, category.name].join(" / ");
+};
+
+const categoryParentLabel = (category: Category) => {
+  const path = categoryPath(category);
+  const level = categoryLevel(category);
+  const levelLabel = level === 0 ? "Root" : `Level ${level + 1}`;
+  return `${path || category.name} (${levelLabel})`;
 };
 
 const canUseAsParent = (category: Category, editing: Category | null) => {
@@ -352,6 +358,8 @@ function CategoryModal({
 }) {
   if (!open) return null;
 
+  const selectedParent = parentOptions.find((category) => category._id === form.parentId) || null;
+
   return (
     <div className="fixed inset-0 z-[80] grid place-items-center bg-slate-950/50 p-4">
       <button
@@ -427,10 +435,18 @@ function CategoryModal({
               {parentOptions.map((category) => (
                 <option value={category._id} key={category._id}>
                   {"— ".repeat(categoryLevel(category))}
-                  {category.name}
+                  {categoryParentLabel(category)}
                 </option>
               ))}
             </select>
+            {selectedParent ? (
+              <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-normal leading-5 text-slate-600">
+                Selected parent:{" "}
+                <span className="font-semibold text-slate-900">
+                  {categoryParentLabel(selectedParent)}
+                </span>
+              </span>
+            ) : null}
             <span className="text-xs font-normal text-slate-500">
               Root category means this category will not have a parent. Maximum three levels are supported.
             </span>

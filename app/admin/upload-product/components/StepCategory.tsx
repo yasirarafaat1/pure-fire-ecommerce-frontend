@@ -26,23 +26,27 @@ export default function StepCategory({
   level2Options,
   level3Options,
 }: Props) {
-  const [expandedRoot, setExpandedRoot] = useState<string | null>(null);
-  const [expandedSub, setExpandedSub] = useState<string | null>(null);
+  const [expandedRoot, setExpandedRoot] = useState<string | null | undefined>(undefined);
+  const [expandedSub, setExpandedSub] = useState<string | null | undefined>(undefined);
+  const visibleRoot = expandedRoot === undefined ? level1 : expandedRoot;
+  const visibleSub = expandedSub === undefined ? level2 : expandedSub;
+
   const nameById = (id: string) => {
     const stack = [...level1Options];
     while (stack.length) {
-      const n = stack.pop()!;
-      if (n._id === id) return n.name;
-      if (n.children) stack.push(...n.children);
+      const node = stack.pop()!;
+      if (node._id === id) return node.name;
+      if (node.children) stack.push(...node.children);
     }
     return "";
   };
+
   const pathLabel = [level1, level2, level3].map(nameById).filter(Boolean).join(" / ");
 
   return (
     <section className="grid gap-4">
       <div className="text-sm text-[var(--muted)]">
-        Pick category → sub category → sub child. Selected:{" "}
+        Pick category - sub category - sub child. Selected:{" "}
         <span className="text-black font-semibold">{pathLabel || "none"}</span>
       </div>
 
@@ -50,9 +54,9 @@ export default function StepCategory({
         {level1Options.map((root) => (
           <div key={root._id} className="border border-black/5 rounded-lg">
             <button
-              className={`w-full text-left px-4 py-3 flex justify-between items-center ${expandedRoot === root._id ? "bg-black/5" : ""}`}
+              className={`w-full text-left px-4 py-3 flex justify-between items-center ${visibleRoot === root._id ? "bg-black/5" : ""}`}
               onClick={() => {
-                const next = expandedRoot === root._id ? null : root._id;
+                const next = visibleRoot === root._id ? null : root._id;
                 setExpandedRoot(next);
                 setExpandedSub(null);
                 setLevel1(root._id);
@@ -61,29 +65,29 @@ export default function StepCategory({
               }}
             >
               <span>{root.name}</span>
-              <span className="text-xs text-[var(--muted)]">{expandedRoot === root._id ? "▲" : "▼"}</span>
+              <span className="text-xs text-[var(--muted)]">{visibleRoot === root._id ? "^" : "v"}</span>
             </button>
 
-            {expandedRoot === root._id && (
+            {visibleRoot === root._id && (
               <div className="px-4 pb-3">
-                {(expandedRoot === level1 ? level2Options : root.children || []).map((sub) => (
+                {(visibleRoot === level1 ? level2Options : root.children || []).map((sub) => (
                   <div key={sub._id} className="mt-2 border border-black/5 rounded">
                     <button
-                      className={`w-full text-left px-3 py-2 flex justify-between items-center ${expandedSub === sub._id ? "bg-black/5" : ""}`}
+                      className={`w-full text-left px-3 py-2 flex justify-between items-center ${visibleSub === sub._id ? "bg-black/5" : ""}`}
                       onClick={() => {
-                        const next = expandedSub === sub._id ? null : sub._id;
+                        const next = visibleSub === sub._id ? null : sub._id;
                         setExpandedSub(next);
                         setLevel2(sub._id);
                         setLevel3("");
                       }}
                     >
                       <span>{sub.name}</span>
-                      <span className="text-xs text-[var(--muted)]">{expandedSub === sub._id ? "▲" : "▼"}</span>
+                      <span className="text-xs text-[var(--muted)]">{visibleSub === sub._id ? "^" : "v"}</span>
                     </button>
 
-                    {expandedSub === sub._id && (
+                    {visibleSub === sub._id && (
                       <div className="px-3 pb-2">
-                        {(expandedSub === level2 ? level3Options : sub.children || []).map((child) => (
+                        {(visibleSub === level2 ? level3Options : sub.children || []).map((child) => (
                           <button
                             key={child._id}
                             className={`w-full text-left px-3 py-2 rounded mb-1 ${level3 === child._id ? "bg-black text-white" : "bg-black/5"}`}
