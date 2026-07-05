@@ -16,6 +16,7 @@ type Product = {
   price?: number;
   avgRating?: number;
   reviewCount?: number;
+  orderedQty?: number;
   category?: string;
   category_name?: string;
   catagory_id?: { name?: string };
@@ -26,7 +27,7 @@ const API_BASE = "/api/user";
 const SUGGESTED_ENDPOINT = `${API_BASE}/suggested-products`;
 const PUBLIC_FALLBACK_ENDPOINT = `${API_BASE}/show-product?limit=12`;
 const SUGGESTED_CACHE_TTL = 600000;
-const placeholders = Array.from({ length: 4 }, (_, idx) => idx);
+const placeholders = Array.from({ length: 8 }, (_, idx) => idx);
 
 function tokenCacheKey(token: string) {
   let hash = 0;
@@ -99,6 +100,30 @@ async function fetchPublicFallbackProducts() {
     .slice(0, 8);
 }
 
+async function fetchTopFallbackProducts() {
+  const endpoint = `${API_BASE}/top-products`;
+  const cached = getCachedJson(endpoint);
+  const cachedProducts = getProductList(cached?.data);
+
+  if (cachedProducts.length) {
+    return [...cachedProducts]
+      .sort((a, b) => Number(b.orderedQty || 0) - Number(a.orderedQty || 0))
+      .slice(0, 8);
+  }
+
+  const response = await cachedFetch(endpoint, undefined, 600000, true);
+  const data = await response.json();
+  return getProductList(data)
+    .sort((a, b) => Number(b.orderedQty || 0) - Number(a.orderedQty || 0))
+    .slice(0, 8);
+}
+
+async function fetchHomepageSuggestions() {
+  const publicProducts = await fetchPublicFallbackProducts();
+  if (publicProducts.length) return publicProducts;
+  return fetchTopFallbackProducts();
+}
+
 export default function SuggestedProducts({ items }: { items?: Product[] }) {
   const [suggested, setSuggested] = useState<Product[]>(items || []);
   const [loading, setLoading] = useState(false);
@@ -119,7 +144,7 @@ export default function SuggestedProducts({ items }: { items?: Product[] }) {
         const token = getUserToken();
 
         if (!token) {
-          const fallbackProducts = await fetchPublicFallbackProducts();
+          const fallbackProducts = await fetchHomepageSuggestions();
           setSuggested(fallbackProducts);
           seededRef.current = fallbackProducts.length > 0;
           return;
@@ -138,7 +163,7 @@ export default function SuggestedProducts({ items }: { items?: Product[] }) {
         let products = getProductList(data);
 
         if (!res.ok || !products.length) {
-          products = await fetchPublicFallbackProducts();
+          products = await fetchHomepageSuggestions();
         }
 
         setSuggested(products);
@@ -149,7 +174,13 @@ export default function SuggestedProducts({ items }: { items?: Product[] }) {
           seededRef.current = false;
         }
       } catch {
-        if (!seededRef.current) setSuggested([]);
+        try {
+          const fallbackProducts = await fetchHomepageSuggestions();
+          setSuggested(fallbackProducts);
+          seededRef.current = fallbackProducts.length > 0;
+        } catch {
+          if (!seededRef.current) setSuggested([]);
+        }
       } finally {
         setLoading(false);
       }
@@ -159,30 +190,34 @@ export default function SuggestedProducts({ items }: { items?: Product[] }) {
   }, [items]);
 
   const display = useMemo(() => suggested.slice(0, 8), [suggested]);
-
-  if (!loading && !display.length) return null;
+  const hasReal = display.length > 0;
 
   return (
-    <section className="mt-6 min-h-[330px] p-4 md:min-h-[500px] md:p-5">
+    <section className="suggested-products-section mx-auto mt-6 min-h-[350px] max-w-6xl p-4 py-3 md:min-h-[520px] md:p-2 md:py-5">
       <div className="flex items-center justify-between mb-3">
         <h2 className="font-semibold text-lg border-b border-gray-600">
           Suggested for you
         </h2>
       </div>
 
-      {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border border-black/10 rounded-[5px] p-3">
+      {loading && !hasReal ? (
+        <div className="grid grid-cols-2 gap-3 rounded-[5px] sm:grid-cols-4">
           {placeholders.map((idx) => (
-            <div key={idx} className="bg-white rounded-[5px]">
-              <div className="w-full aspect-square md:aspect-[3/4] bg-black/5 animate-pulse rounded-t-[5px]" />
-              <div className="p-3">
-                <div className="h-3 w-24 bg-black/5 rounded-[3px] animate-pulse" />
+            <div key={idx} className="overflow-hidden rounded-[5px] bg-white">
+              <div className="aspect-square w-full animate-pulse rounded-[5px] bg-black/5 md:aspect-[3/4]" />
+              <div className="grid gap-2 p-3">
+                <div className="h-3 w-4/5 animate-pulse rounded-[3px] bg-black/5" />
+                <div className="h-3 w-1/2 animate-pulse rounded-[3px] bg-black/5" />
               </div>
             </div>
           ))}
         </div>
+      ) : !hasReal ? (
+        <div className="w-full rounded-[5px] border border-black/10 p-10 text-center text-sm text-[var(--muted)]">
+          No suggested products yet.
+        </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {display.map((p) => {
             const productName = p.name || p.title || "Product";
             const showRating =
