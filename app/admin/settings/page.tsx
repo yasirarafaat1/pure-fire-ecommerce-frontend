@@ -43,6 +43,22 @@ type Settings = {
     lastSyncStatus?: string;
     lastSyncError?: string;
   };
+  googleSheets?: {
+    enabled?: boolean;
+    appScriptUrl?: string;
+    secret?: string;
+    spreadsheetId?: string;
+    productsTabName?: string;
+    ordersTabName?: string;
+    lastSyncedAt?: string | null;
+    lastSyncStatus?: string;
+    lastSyncError?: string;
+    lastSyncStats?: {
+      products?: number;
+      orders?: number;
+    };
+    lastConnectedAt?: string | null;
+  };
 };
 
 const empty: Settings = {
@@ -57,6 +73,7 @@ const empty: Settings = {
   seo: {},
   shipping: {},
   instagramReels: {},
+  googleSheets: {},
 };
 
 function normalizeSettings(settings?: Partial<Settings> | null): Settings {
@@ -74,6 +91,9 @@ function normalizeSettings(settings?: Partial<Settings> | null): Settings {
     },
     instagramReels: {
       ...(settings?.instagramReels || {}),
+    },
+    googleSheets: {
+      ...(settings?.googleSheets || {}),
     },
   };
 }
@@ -464,6 +484,136 @@ export default function SettingsPage() {
           {form.instagramReels?.lastSyncError && (
             <p className="md:col-span-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
               {form.instagramReels.lastSyncError}
+            </p>
+          )}
+        </SettingsCard>
+
+        <SettingsCard
+          title="Google Sheets sync"
+          description="Outbound-only sync from dashboard to Google Sheets. Products and orders are upserted by stable IDs."
+        >
+          <label className="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-800">
+            <input
+              type="checkbox"
+              checked={Boolean(form.googleSheets?.enabled)}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  googleSheets: { ...form.googleSheets, enabled: event.target.checked },
+                })
+              }
+            />
+            Enable Google Sheets sync
+          </label>
+
+          <Field
+            label="Apps Script Web App URL"
+            value={form.googleSheets?.appScriptUrl || ""}
+            placeholder="https://script.google.com/macros/s/.../exec"
+            onChange={(value) =>
+              setForm({ ...form, googleSheets: { ...form.googleSheets, appScriptUrl: value } })
+            }
+          />
+
+          <Field
+            label="Sync secret"
+            value={form.googleSheets?.secret || ""}
+            placeholder="Use the same secret in Apps Script"
+            onChange={(value) =>
+              setForm({ ...form, googleSheets: { ...form.googleSheets, secret: value } })
+            }
+          />
+
+          <Field
+            label="Spreadsheet ID (optional)"
+            value={form.googleSheets?.spreadsheetId || ""}
+            placeholder="Leave blank if script is bound to the sheet"
+            onChange={(value) =>
+              setForm({ ...form, googleSheets: { ...form.googleSheets, spreadsheetId: value } })
+            }
+          />
+
+          <Field
+            label="Products tab name"
+            value={form.googleSheets?.productsTabName || "Products"}
+            placeholder="Products"
+            onChange={(value) =>
+              setForm({ ...form, googleSheets: { ...form.googleSheets, productsTabName: value } })
+            }
+          />
+
+          <Field
+            label="Orders tab name"
+            value={form.googleSheets?.ordersTabName || "Orders"}
+            placeholder="Orders"
+            onChange={(value) =>
+              setForm({ ...form, googleSheets: { ...form.googleSheets, ordersTabName: value } })
+            }
+          />
+
+          <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+            <p className="font-semibold text-slate-900">Apps Script contract</p>
+            <p className="mt-1">
+              Deploy a Google Apps Script web app that accepts POST JSON with
+              <span className="font-mono"> secret</span>,
+              <span className="font-mono"> tabs</span>,
+              <span className="font-mono"> headers</span>,
+              <span className="font-mono"> keyColumn</span>, and
+              <span className="font-mono"> rows</span>. The script should create missing
+              tabs/headers and upsert rows by Product ID and Order ID.
+            </p>
+          </div>
+
+          <div className="md:col-span-2 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium"
+              onClick={() =>
+                adminApi
+                  .post<{ message?: string }>("/settings/google-sheets/test")
+                  .then((response) => {
+                    setMessage(response.message || "Google Sheets connection successful.");
+                    load();
+                  })
+                  .catch((requestError) =>
+                    setMessage(requestError instanceof AdminApiError ? requestError.message : "Google Sheets test failed"),
+                  )
+              }
+            >
+              Test connection
+            </button>
+            <button
+              type="button"
+              className="rounded-lg bg-slate-950 px-3 py-2 text-sm font-medium text-white transition hover:bg-black"
+              onClick={() =>
+                adminApi
+                  .post<{ message?: string }>("/settings/google-sheets/sync")
+                  .then((response) => {
+                    setMessage(response.message || "Google Sheets synced.");
+                    load();
+                  })
+                  .catch((requestError) =>
+                    setMessage(requestError instanceof AdminApiError ? requestError.message : "Google Sheets sync failed"),
+                  )
+              }
+            >
+              Manual sync now
+            </button>
+            <span className="text-xs text-slate-500">
+              Last sync: {form.googleSheets?.lastSyncedAt ? new Date(form.googleSheets.lastSyncedAt).toLocaleString() : "-"}
+              {form.googleSheets?.lastSyncStatus ? ` (${form.googleSheets.lastSyncStatus})` : ""}
+            </span>
+          </div>
+
+          <p className="md:col-span-2 text-xs text-slate-500">
+            Last synced rows: {form.googleSheets?.lastSyncStats?.products || 0} products,
+            {" "}
+            {form.googleSheets?.lastSyncStats?.orders || 0} orders.
+          </p>
+
+          {form.googleSheets?.lastSyncError && (
+            <p className="md:col-span-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              {form.googleSheets.lastSyncError}
             </p>
           )}
         </SettingsCard>
