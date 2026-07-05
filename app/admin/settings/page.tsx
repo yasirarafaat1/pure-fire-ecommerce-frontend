@@ -551,19 +551,6 @@ export default function SettingsPage() {
             }
           />
 
-          <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-            <p className="font-semibold text-slate-900">Apps Script contract</p>
-            <p className="mt-1">
-              Deploy a Google Apps Script web app that accepts POST JSON with
-              <span className="font-mono"> secret</span>,
-              <span className="font-mono"> tabs</span>,
-              <span className="font-mono"> headers</span>,
-              <span className="font-mono"> keyColumn</span>, and
-              <span className="font-mono"> rows</span>. The script should create missing
-              tabs/headers and upsert rows by Product ID and Order ID.
-            </p>
-          </div>
-
           <div className="md:col-span-2 flex flex-wrap items-center gap-3">
             <button
               type="button"
