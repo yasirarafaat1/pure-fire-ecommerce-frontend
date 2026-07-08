@@ -21,6 +21,10 @@ type RawReview = {
   review_text?: string;
   review?: string;
   message?: string;
+  date?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  review_date?: string;
   images?: string[];
   image?: string;
   review_image?: string;
@@ -33,6 +37,7 @@ type Review = {
   user: string;
   rating: number;
   text: string;
+  date: string;
   images: string[];
 };
 
@@ -85,6 +90,11 @@ function normalizeReview(raw: RawReview, index: number): Review | null {
     user,
     rating,
     text,
+    date:
+      getString(raw.review_date) ||
+      getString(raw.date) ||
+      getString(raw.createdAt) ||
+      getString(raw.updatedAt),
     images: getImages(raw),
   };
 }
@@ -103,10 +113,31 @@ function trimText(text: string, max = 120) {
   return text.length > max ? `${text.slice(0, max).trim()}...` : text;
 }
 
+function formatReviewDateTime(value: string) {
+  const date = value ? new Date(value) : new Date();
+
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getRatingTone(rating: number) {
+  if (rating <= 1.5) return "review-rating-red";
+  if (rating < 4) return "review-rating-yellow";
+  return "review-rating-green";
+}
+
 export default function CustomerReviewsMarquee() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [openIdx, setOpenIdx] = useState<number | null>(null);
+  const [modalMotionKey, setModalMotionKey] = useState(0);
   const seededRef = useRef(false);
 
   useEffect(() => {
@@ -171,11 +202,15 @@ export default function CustomerReviewsMarquee() {
   const go = (dir: 1 | -1) => {
     if (openIdx === null || !mediaReviews.length) return;
     setOpenIdx((openIdx + dir + mediaReviews.length) % mediaReviews.length);
+    setModalMotionKey((key) => key + 1);
   };
 
   const openImageReview = (review: Review) => {
     const idx = mediaReviews.findIndex((item) => item.review.id === review.id);
-    if (idx >= 0) setOpenIdx(idx);
+    if (idx >= 0) {
+      setOpenIdx(idx);
+      setModalMotionKey((key) => key + 1);
+    }
   };
 
   const hasReal = reviews.length > 0;
@@ -314,6 +349,7 @@ export default function CustomerReviewsMarquee() {
           ) : null}
 
           <div
+            key={modalMotionKey}
             className="max-w-5xl w-full grid md:grid-cols-[1.1fr_0.9fr] gap-6 items-center animate-pop"
             onClick={(e) => e.stopPropagation()}
           >
@@ -326,12 +362,21 @@ export default function CustomerReviewsMarquee() {
             </div>
 
             <div className="grid gap-3">
-              <p className="text-lg font-semibold">
-                {mediaReviews[openIdx].review.user}
-              </p>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-lg font-semibold">
+                    {mediaReviews[openIdx].review.user}
+                  </p>
+                </div>
+              </div>
               <p className="text-sm leading-6 text-[var(--ink)]">
                 {mediaReviews[openIdx].review.text}
               </p>
+                {mediaReviews[openIdx].review.date ? (
+                  <p className="mt-1 text-xs font-semibold text-slate-500">
+                    {formatReviewDateTime(mediaReviews[openIdx].review.date)}
+                  </p>
+                ) : null}
             </div>
           </div>
         </div>
@@ -380,6 +425,35 @@ export default function CustomerReviewsMarquee() {
         .review-image-button {
           width: 88px;
           height: 88px;
+        }
+
+        .review-rating-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 999px;
+          padding: 4px 9px;
+          font-size: 11px;
+          font-weight: 800;
+          line-height: 1;
+        }
+
+        .review-rating-red {
+          background: #fee2e2;
+          color: #991b1b;
+          border: 1px solid #fecaca;
+        }
+
+        .review-rating-yellow {
+          background: #fef3c7;
+          color: #92400e;
+          border: 1px solid #fde68a;
+        }
+
+        .review-rating-green {
+          background: #dcfce7;
+          color: #166534;
+          border: 1px solid #bbf7d0;
         }
 
         @keyframes reviews-marquee-left {

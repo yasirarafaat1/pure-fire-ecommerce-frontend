@@ -351,7 +351,7 @@ export default function HomeNavbar({ onOpenCart }: Props) {
 
         .nav-shell {
           position: sticky;
-          top: 0;
+          top: var(--nav-shell-top, 0px);
           z-index: 40;
           border-bottom: 1px solid rgba(15, 23, 42, 0.06);
           background:

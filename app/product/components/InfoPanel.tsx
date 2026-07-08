@@ -196,7 +196,17 @@ export default function InfoPanel({
       </div>
 
       <div className="grid gap-2">
-        <p className="text-sm font-medium">Size:</p>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-medium">Size:</p>
+          <a
+            href="/size-guide"
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs font-bold text-slate-700 underline underline-offset-4 transition hover:text-black"
+          >
+            Size guide
+          </a>
+        </div>
         <div className="flex flex-wrap gap-2">
           {safeSizes.map((s, i) => {
             const active = selectedSize === s;

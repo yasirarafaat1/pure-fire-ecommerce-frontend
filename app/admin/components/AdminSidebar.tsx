@@ -18,7 +18,9 @@ import {
   Gauge,
   ImageIcon,
   PackageCheck,
+  PanelTop,
   RotateCcw,
+  Ruler,
   Settings,
   ShieldCheck,
   ShoppingBag,
@@ -50,6 +52,8 @@ const sections: { label: string; items: Item[] }[] = [
       { label: "Categories", href: "/admin/categories", icon: FolderTree },
       { label: "Inventory", href: "/admin/inventory", icon: Boxes },
       { label: "Banners", href: "/admin/banners", icon: ImageIcon },
+      { label: "Nav Strip", href: "/admin/nav-strip", icon: PanelTop, roles: ["SUPER_ADMIN"] },
+      { label: "Size Guide", href: "/admin/size-guide", icon: Ruler, roles: ["SUPER_ADMIN"] },
     ],
   },
   {
