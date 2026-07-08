@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { cachedFetch, getCachedJson } from "../../utils/cachedFetch";
+import { getCachedJson } from "../../utils/cachedFetch";
 import { defaultPublicSettings, fetchPublicSettings } from "../../utils/public-settings";
 import { IoIosClose } from "react-icons/io";
 import { IoChevronBack, IoChevronForward } from "react-icons/io5";
@@ -126,6 +126,10 @@ function normalizeReel(raw: RawReel, index: number): Reel | null {
 function extractReels(payload: unknown): RawReel[] {
   if (Array.isArray(payload)) return payload as RawReel[];
   if (!payload || typeof payload !== "object") return [];
+  const cacheEntry = payload as { data?: unknown; status?: number };
+  if (cacheEntry.status !== undefined && cacheEntry.data) {
+    return extractReels(cacheEntry.data);
+  }
   const data = payload as { reels?: RawReel[]; data?: RawReel[] | { reels?: RawReel[] } };
   if (Array.isArray(data.reels)) return data.reels;
   if (data.data && !Array.isArray(data.data) && Array.isArray(data.data.reels)) return data.data.reels;
@@ -135,12 +139,20 @@ function extractReels(payload: unknown): RawReel[] {
 
 function extractHandle(payload: unknown) {
   if (!payload || typeof payload !== "object") return "";
+  const cacheEntry = payload as { data?: unknown; status?: number };
+  if (cacheEntry.status !== undefined && cacheEntry.data) {
+    return extractHandle(cacheEntry.data);
+  }
   const data = payload as { handle?: string; data?: { handle?: string } };
   return getString(data.handle) || getString(data.data?.handle);
 }
 
 function extractEnabled(payload: unknown) {
   if (!payload || typeof payload !== "object") return true;
+  const cacheEntry = payload as { data?: unknown; status?: number };
+  if (cacheEntry.status !== undefined && cacheEntry.data) {
+    return extractEnabled(cacheEntry.data);
+  }
   const data = payload as { enabled?: boolean; data?: { enabled?: boolean } };
   if (typeof data.enabled === "boolean") return data.enabled;
   if (typeof data.data?.enabled === "boolean") return data.data.enabled;
@@ -162,6 +174,20 @@ function formatDate(value?: string) {
 
 function trimText(text: string, max = 92) {
   return text.length > max ? `${text.slice(0, max).trim()}...` : text;
+}
+
+async function fetchFreshReels() {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 10000);
+
+  try {
+    return await fetch(REELS_ENDPOINT, {
+      cache: "no-store",
+      signal: controller.signal,
+    });
+  } finally {
+    window.clearTimeout(timeout);
+  }
 }
 
 export default function InstagramReelsMarquee() {
@@ -204,7 +230,7 @@ export default function InstagramReelsMarquee() {
 
         const [publicSettings, res] = await Promise.all([
           fetchPublicSettings().catch(() => defaultPublicSettings),
-          cachedFetch(REELS_ENDPOINT, undefined, 600000, true),
+          fetchFreshReels(),
         ]);
         const settingsHandle =
           publicSettings.instagramReels?.handle ||
@@ -229,9 +255,8 @@ export default function InstagramReelsMarquee() {
         setHandle(extractHandle(data) || settingsHandle);
 
         if (!responseEnabled) {
-          setEnabled(true);
-          setReels(MOCK_REELS);
-          seededRef.current = true;
+          setEnabled(false);
+          if (!seededRef.current) setReels([]);
           return;
         }
 
@@ -239,8 +264,8 @@ export default function InstagramReelsMarquee() {
           .map(normalizeReel)
           .filter((reel): reel is Reel => Boolean(reel));
 
-        setReels(freshReels.length ? freshReels : MOCK_REELS);
-        seededRef.current = true;
+        setReels(freshReels);
+        seededRef.current = freshReels.length > 0;
       } catch (error) {
         console.error("Instagram reels load error:", error);
         if (!seededRef.current) {
