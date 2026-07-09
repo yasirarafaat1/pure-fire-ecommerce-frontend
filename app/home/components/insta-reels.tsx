@@ -357,7 +357,7 @@ export default function InstagramReelsMarquee() {
   if (!loading && (!enabled || !hasReal)) return null;
 
   return (
-    <section className="min-h-[440px] py-5 overflow-hidden md:min-h-[470px]">
+    <section className="min-h-[440px] md:py-5 overflow-hidden md:min-h-[470px]">
       <div className="max-w-6xl mx-auto px-4 md:px-2 mb-4">
         <div className="flex items-center justify-between gap-3">
           <div>

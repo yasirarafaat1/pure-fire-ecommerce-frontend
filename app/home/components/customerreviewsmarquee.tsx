@@ -468,50 +468,50 @@ export default function CustomerReviewsMarquee() {
 
         @media (max-width: 767px) {
           .reviews-marquee-track {
-            gap: 10px;
-            animation-duration: 34s;
+            gap: 12px;
+            animation-duration: 46s;
           }
 
           .reviews-marquee-card {
-            width: 218px;
-            min-height: 96px;
-            padding: 10px;
+            width: 260px;
+            min-height: 128px;
+            padding: 13px;
           }
 
           .reviews-marquee-card-image {
-            min-height: 112px;
+            min-height: 136px;
           }
 
           .review-user {
-            font-size: 12px;
-            line-height: 16px;
-          }
-
-          .review-text {
-            font-size: 12px;
+            font-size: 13px;
             line-height: 18px;
           }
 
+          .review-text {
+            font-size: 13px;
+            line-height: 20px;
+          }
+
           .review-image-row {
-            gap: 9px;
-            margin-top: 7px;
+            gap: 11px;
+            margin-top: 9px;
           }
 
           .review-image-button {
-            width: 58px;
-            height: 58px;
+            width: 76px;
+            height: 76px;
             border-radius: 5px;
           }
         }
 
         @media (max-width: 380px) {
           .reviews-marquee-card {
-            width: 202px;
+            width: 238px;
           }
 
           .review-image-button {
-            width: 54px;
-            height: 54px;
+            width: 68px;
+            height: 68px;
           }
         }
 

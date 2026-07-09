@@ -43,7 +43,7 @@ const loop = [...marqueeHalf, ...marqueeHalf];
 export default function QualityMarquee() {
   return (
     <section>
-      <div className="min-h-[200px] max-w-6xl mx-auto px-4 py-12">
+      <div className="min-h-[200px] max-w-6xl mx-auto px-4 md:py-4">
         <div className="flex flex-col items-center text-center gap-3 py-5">
           <div className="flex items-center gap-1 text-black">
             <RatingStars />
