@@ -195,14 +195,11 @@ export default function InfoPanel({
               return (
                 <article
                   key={offer.code}
-                  className="min-w-full snap-start rounded-[8px] border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-amber-50 p-3 shadow-[0_8px_22px_rgba(15,23,42,0.06)]"
+                  className="min-w-full snap-start rounded-[8px] border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-amber-50 p-3"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">
-                        Product offer
-                      </p>
-                      <h3 className="mt-1 text-sm font-black text-black">{discountLabel}</h3>
+                      <h3 className="text-sm font-black text-black">{discountLabel}</h3>
                     </div>
                     <button
                       type="button"
@@ -222,8 +219,7 @@ export default function InfoPanel({
 
                   {offer.minimumOrderAmount || offer.maxDiscountAmount ? (
                     <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-bold text-slate-500">
-                      {offer.minimumOrderAmount ? <span>Min Rs {offer.minimumOrderAmount}</span> : null}
-                      {offer.maxDiscountAmount ? <span>Max Rs {offer.maxDiscountAmount}</span> : null}
+                      {offer.minimumOrderAmount ? <span>Min Order {offer.minimumOrderAmount}</span> : null}
                     </div>
                   ) : null}
                 </article>
