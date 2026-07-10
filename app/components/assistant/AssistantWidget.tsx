@@ -9,10 +9,81 @@ import { useAssistantSession } from "./hooks/useAssistantSession";
 import { getAssistantPageContext } from "./pageContext";
 import type { AssistantCard, ProductAssistantCard } from "./types";
 
+const getLauncherQuestions = (pageContext: ReturnType<typeof getAssistantPageContext>) => {
+  const productTitle = pageContext.productTitle || pageContext.title || "this product";
+
+  if (pageContext.pageType === "product") {
+    return [
+      `Did you like ${productTitle}?`,
+      `Ye product cart mein add kar du?`,
+      "Iska size aur stock check karna hai?",
+      "Similar products dikhau?",
+      "Buy now karna hai?",
+      "Is product ki quality kaisi hai?",
+    ];
+  }
+
+  if (pageContext.pageType === "collection") {
+    return [
+      "Is collection se best pick chahiye?",
+      "Budget ke hisaab se products dikhau?",
+      "Best sellers dekhna hai?",
+      "Under 1000 options chahiye?",
+      "New arrivals explore karoge?",
+    ];
+  }
+
+  if (pageContext.pageType === "wishlist") {
+    return [
+      "Wishlist se best item choose karu?",
+      "Saved products ka count chahiye?",
+      "Similar products dikhau?",
+      "Wishlist mein kya buy karna hai?",
+    ];
+  }
+
+  if (pageContext.pageType === "orders" || pageContext.pageType === "order_detail") {
+    return [
+      "Order status check karna hai?",
+      "Delivery update chahiye?",
+      "Latest order dikhau?",
+      "Return ya support help chahiye?",
+    ];
+  }
+
+  if (pageContext.pageType === "profile") {
+    return [
+      "Profile summary dikhau?",
+      "Orders count chahiye?",
+      "Cart aur wishlist count bataun?",
+      "Saved addresses dekhna hai?",
+    ];
+  }
+
+  if (pageContext.pageType === "policy") {
+    return [
+      "Is policy ko short mein samjhau?",
+      "Return aur refund details chahiye?",
+      "Shipping time check karna hai?",
+      "Payment help chahiye?",
+    ];
+  }
+
+  return [
+    "Best sellers dekhna hai?",
+    "Kis type ka product chahiye?",
+    "New arrivals explore karoge?",
+    "Order track karna hai?",
+    "Budget ke hisaab se suggest karu?",
+  ];
+};
+
 export default function AssistantWidget() {
   const pathname = usePathname() || "/";
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [allowAutoOpen, setAllowAutoOpen] = useState(false);
   const pageContext = useMemo(() => getAssistantPageContext(pathname), [pathname]);
+  const launcherQuestions = useMemo(() => getLauncherQuestions(pageContext), [pageContext]);
   const session = useAssistantSession(open);
   const chat = useAssistantChat({
     sessionId: session.sessionId,
@@ -23,6 +94,26 @@ export default function AssistantWidget() {
     pageContext,
   });
   const { addAssistantNotice } = chat;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const mq = window.matchMedia("(min-width: 768px)");
+    const apply = () => {
+      setAllowAutoOpen(mq.matches);
+      if (mq.matches) setOpen(true);
+    };
+
+    apply();
+
+    if (mq.addEventListener) mq.addEventListener("change", apply);
+    else mq.addListener(apply);
+
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener("change", apply);
+      else mq.removeListener(apply);
+    };
+  }, []);
 
   useEffect(() => {
     const addNotice = (event: Event) => {
@@ -121,6 +212,8 @@ export default function AssistantWidget() {
         open={open}
         onClick={() => setOpen((value) => !value)}
         productPage={isProductPage}
+        allowAutoOpen={allowAutoOpen}
+        questions={launcherQuestions}
       />
     </>
   );

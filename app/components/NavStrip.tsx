@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Clock3 } from "lucide-react";
 
 type NavStripItem = {
   _id?: string;
@@ -8,6 +9,14 @@ type NavStripItem = {
   textHtml?: string;
   hoverText?: string;
   href?: string;
+  createdAt?: string;
+  timer?: {
+    enabled?: boolean;
+    position?: "start" | "end";
+    mode?: "loop" | "one_time";
+    durationMinutes?: number;
+    startAt?: string | null;
+  };
 };
 
 type NavStripResponse = {
@@ -23,12 +32,56 @@ function normalizeDuration(value?: number) {
   return Math.min(10, Math.max(1, Math.round(Number(value)))) * 1000;
 }
 
+function formatRemaining(ms: number) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (days > 0) {
+    return `${days}d ${String(hours).padStart(2, "0")}h ${String(minutes).padStart(2, "0")}m`;
+  }
+
+  if (hours > 0) {
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function getTimerRemaining(item: NavStripItem | null, now: number) {
+  const timer = item?.timer;
+  if (!timer?.enabled) return "";
+
+  const durationMs = Math.max(1, Number(timer.durationMinutes || 60)) * 60 * 1000;
+  const startMs = timer.startAt
+    ? new Date(timer.startAt).getTime()
+    : item?.createdAt
+      ? new Date(item.createdAt).getTime()
+      : now;
+
+  if (!Number.isFinite(startMs)) return "";
+
+  if (timer.mode === "one_time") {
+    if (now < startMs) return formatRemaining(startMs - now);
+    const endMs = startMs + durationMs;
+    return formatRemaining(Math.max(0, endMs - now));
+  }
+
+  if (now < startMs) return formatRemaining(startMs - now);
+
+  const elapsed = (now - startMs) % durationMs;
+  return formatRemaining(durationMs - elapsed);
+}
+
 export default function NavStrip() {
   const [items, setItems] = useState<NavStripItem[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [visible, setVisible] = useState(true);
   const [durationSeconds, setDurationSeconds] = useState(4);
   const [loading, setLoading] = useState(true);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     let mounted = true;
@@ -56,6 +109,12 @@ export default function NavStrip() {
 
   const activeItem = items[activeIndex] || null;
   const duration = useMemo(() => normalizeDuration(durationSeconds), [durationSeconds]);
+  const timerText = useMemo(() => getTimerRemaining(activeItem, now), [activeItem, now]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     window.dispatchEvent(
@@ -93,6 +152,12 @@ export default function NavStrip() {
   if (!activeItem) return null;
 
   const richContent = activeItem.textHtml?.trim();
+  const timerBadge = timerText ? (
+    <span className="nav-strip-timer">
+      <Clock3 size={13} strokeWidth={2.5} />
+      <span>{timerText}</span>
+    </span>
+  ) : null;
   const content = richContent ? (
     <span
       className="nav-strip-rich"
@@ -115,24 +180,28 @@ export default function NavStrip() {
         {activeItem.href && !richContent ? (
           <a
             href={activeItem.href}
-            className={`max-w-full transition-all duration-300 hover:text-amber-200 ${
+            className={`inline-flex max-w-full items-center gap-2 underline decoration-white/70 decoration-2 underline-offset-4 transition-all duration-300 hover:text-amber-200 hover:decoration-amber-200 ${
               visible ? "translate-y-0 opacity-100" : "translate-y-1 opacity-0"
             }`}
           >
+            {activeItem.timer?.position !== "end" ? timerBadge : null}
             {content}
+            {activeItem.timer?.position === "end" ? timerBadge : null}
           </a>
         ) : (
           <span
-            className={`max-w-full transition-all duration-300 ${
+            className={`inline-flex max-w-full items-center gap-2 transition-all duration-300 ${
               visible ? "translate-y-0 opacity-100" : "translate-y-1 opacity-0"
             }`}
           >
+            {activeItem.timer?.position !== "end" ? timerBadge : null}
             {content}
+            {activeItem.timer?.position === "end" ? timerBadge : null}
           </span>
         )}
       </div>
 
-      <style jsx>{`
+      <style jsx global>{`
         .nav-strip-rich {
           display: inline-flex;
           max-width: 100%;
@@ -144,27 +213,48 @@ export default function NavStrip() {
           white-space: nowrap;
         }
 
-        .nav-strip-rich :global(a) {
-          color: inherit;
-          text-decoration: underline;
-          text-underline-offset: 3px;
+        .nav-strip-rich a,
+        .nav-strip-rich a:visited {
+          color: inherit !important;
+          border-bottom: 2px solid rgba(255, 255, 255, 0.78) !important;
+          padding-bottom: 1px !important;
+          text-decoration: none !important;
+          transition:
+            border-color 180ms ease,
+            color 180ms ease !important;
+        }
+
+        .nav-strip-rich a:hover {
+          border-color: #fde68a !important;
+          color: #fde68a !important;
+        }
+
+        .nav-strip-rich [data-hover-color="true"] {
           transition: color 180ms ease;
         }
 
-        .nav-strip-rich :global(a:hover) {
-          color: #fde68a;
-        }
-
-        .nav-strip-rich :global([data-hover-color="true"]) {
-          transition: color 180ms ease;
-        }
-
-        .nav-strip-rich :global([data-hover-color="true"]:hover) {
+        .nav-strip-rich [data-hover-color="true"]:hover {
           color: var(--hover-color) !important;
         }
 
-        .nav-strip-rich :global(a[data-hover-color="true"]:hover) {
+        .nav-strip-rich a[data-hover-color="true"]:hover,
+        .nav-strip-rich a[style*="--hover-color"]:hover {
+          border-color: var(--hover-color) !important;
           color: var(--hover-color) !important;
+        }
+
+        .nav-strip-timer {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          flex: 0 0 auto;
+          border-radius: 999px;
+          border: 1px solid rgba(255, 255, 255, 0.28);
+          background: rgba(255, 255, 255, 0.1);
+          padding: 2px 7px;
+          color: #ffffff;
+          font-variant-numeric: tabular-nums;
+          letter-spacing: 0.04em;
         }
       `}</style>
     </div>

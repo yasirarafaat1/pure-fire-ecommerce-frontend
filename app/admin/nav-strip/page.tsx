@@ -7,7 +7,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
-import { Edit3, Link2, Plus, Save, Trash2, X } from "lucide-react";
+import { Clock3, Edit3, Link2, Plus, Save, Trash2, X } from "lucide-react";
 import AdminPageHeader from "../components/AdminPageHeader";
 import { AdminErrorState, AdminLoadingState } from "../components/AdminStates";
 import { AdminApiError, adminApi } from "../lib/adminApi";
@@ -18,6 +18,16 @@ type NavStripItem = {
   textHtml?: string;
   isActive: boolean;
   order: number;
+  timer?: NavStripTimer;
+};
+
+type NavStripTimer = {
+  enabled: boolean;
+  position: "start" | "end";
+  mode: "loop" | "one_time";
+  durationMinutes: number;
+  startAt?: string | null;
+  icon?: "clock";
 };
 
 type NavStripForm = {
@@ -25,10 +35,16 @@ type NavStripForm = {
   textHtml: string;
   isActive: boolean;
   order: number;
+  timer: NavStripTimer;
 };
 
 type NavStripSettings = {
   durationSeconds: number;
+};
+
+type LinkEditState = {
+  anchor: HTMLAnchorElement | null;
+  selectedText: string;
 };
 
 const emptyForm: NavStripForm = {
@@ -36,9 +52,31 @@ const emptyForm: NavStripForm = {
   textHtml: "",
   isActive: true,
   order: 0,
+  timer: {
+    enabled: false,
+    position: "start",
+    mode: "loop",
+    durationMinutes: 60,
+    startAt: "",
+    icon: "clock",
+  },
 };
 
 const TEXT_LIMIT = 120;
+
+const toDatetimeLocal = (value?: string | null) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const offsetMs = date.getTimezoneOffset() * 60 * 1000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+};
+
+const fromDatetimeLocal = (value: string) => {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString();
+};
 
 export default function AdminNavStripPage() {
   const [items, setItems] = useState<NavStripItem[]>([]);
@@ -102,6 +140,14 @@ export default function AdminNavStripPage() {
       textHtml: item.textHtml || item.text || "",
       isActive: Boolean(item.isActive),
       order: Number(item.order || 0),
+      timer: {
+        enabled: Boolean(item.timer?.enabled),
+        position: item.timer?.position === "end" ? "end" : "start",
+        mode: item.timer?.mode === "one_time" ? "one_time" : "loop",
+        durationMinutes: Math.min(43200, Math.max(1, Number(item.timer?.durationMinutes || 60))),
+        startAt: toDatetimeLocal(item.timer?.startAt || ""),
+        icon: "clock",
+      },
     });
     setEditorOpen(true);
     setMessage("");
@@ -142,6 +188,14 @@ export default function AdminNavStripPage() {
       const payload = {
         ...form,
         text: nextText.slice(0, TEXT_LIMIT),
+        timer: {
+          ...form.timer,
+          durationMinutes: Math.min(43200, Math.max(1, Number(form.timer.durationMinutes || 60))),
+          startAt:
+            form.timer.mode === "one_time"
+              ? fromDatetimeLocal(String(form.timer.startAt || ""))
+              : "",
+        },
       };
 
       if (editingId) {
@@ -266,6 +320,14 @@ export default function AdminNavStripPage() {
                     Rich text enabled
                   </p>
                 ) : null}
+                {item.timer?.enabled ? (
+                  <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-slate-500">
+                    <Clock3 size={13} />
+                    {item.timer.mode === "one_time" ? "One-time" : "Loop"} timer,
+                    {" "}
+                    {item.timer.position === "start" ? "before text" : "after text"}
+                  </p>
+                ) : null}
               </div>
               <p className="self-center text-sm font-semibold text-slate-600">
                 Order {item.order}
@@ -379,6 +441,118 @@ function NavStripEditorModal({
               Display
             </label>
           </div>
+
+          <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="grid h-9 w-9 place-items-center rounded-lg bg-white text-slate-950 shadow-sm">
+                  <Clock3 size={17} />
+                </span>
+                <div>
+                  <h4 className="text-sm font-black text-slate-950">Countdown timer</h4>
+                  <p className="text-xs font-medium text-slate-500">
+                    Clock icon is shown by default when timer is enabled.
+                  </p>
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                <input
+                  type="checkbox"
+                  checked={form.timer.enabled}
+                  onChange={(event) =>
+                    onChange({
+                      ...form,
+                      timer: { ...form.timer, enabled: event.target.checked },
+                    })
+                  }
+                />
+                Enable timer
+              </label>
+            </div>
+
+            {form.timer.enabled ? (
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <label className="grid gap-1.5 text-sm font-medium text-slate-800">
+                  Clock position
+                  <select
+                    value={form.timer.position}
+                    onChange={(event) =>
+                      onChange({
+                        ...form,
+                        timer: {
+                          ...form.timer,
+                          position: event.target.value as "start" | "end",
+                        },
+                      })
+                    }
+                    className="rounded-lg border border-slate-300 px-3 py-2.5 text-slate-950 outline-none focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10"
+                  >
+                    <option value="start">Start of text</option>
+                    <option value="end">End of text</option>
+                  </select>
+                </label>
+
+                <label className="grid gap-1.5 text-sm font-medium text-slate-800">
+                  Timer type
+                  <select
+                    value={form.timer.mode}
+                    onChange={(event) =>
+                      onChange({
+                        ...form,
+                        timer: {
+                          ...form.timer,
+                          mode: event.target.value as "loop" | "one_time",
+                        },
+                      })
+                    }
+                    className="rounded-lg border border-slate-300 px-3 py-2.5 text-slate-950 outline-none focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10"
+                  >
+                    <option value="loop">Loop</option>
+                    <option value="one_time">One time</option>
+                  </select>
+                </label>
+
+                <label className="grid gap-1.5 text-sm font-medium text-slate-800">
+                  Timer duration
+                  <input
+                    type="number"
+                    min={1}
+                    max={43200}
+                    value={form.timer.durationMinutes}
+                    onChange={(event) =>
+                      onChange({
+                        ...form,
+                        timer: {
+                          ...form.timer,
+                          durationMinutes: Math.min(43200, Math.max(1, Number(event.target.value || 60))),
+                        },
+                      })
+                    }
+                    className="rounded-lg border border-slate-300 px-3 py-2.5 text-slate-950 outline-none focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10"
+                  />
+                  <span className="text-xs text-slate-500">Duration is in minutes.</span>
+                </label>
+
+                {form.timer.mode === "one_time" ? (
+                  <label className="grid gap-1.5 text-sm font-medium text-slate-800">
+                    Start date and time
+                    <input
+                      type="datetime-local"
+                      value={String(form.timer.startAt || "")}
+                      onChange={(event) =>
+                        onChange({
+                          ...form,
+                          timer: { ...form.timer, startAt: event.target.value },
+                        })
+                      }
+                      className="rounded-lg border border-slate-300 px-3 py-2.5 text-slate-950 outline-none focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10"
+                    />
+                  </label>
+                ) : null}
+              </div>
+            ) : null}
+          </section>
         </div>
 
         <div className="sticky bottom-0 flex flex-wrap items-center justify-end gap-3 border-t border-slate-100 bg-white px-5 py-4">
@@ -412,8 +586,10 @@ function RichNavStripEditor({
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const rangeRef = useRef<Range | null>(null);
+  const linkEditRef = useRef<LinkEditState>({ anchor: null, selectedText: "" });
   const [selectionMenu, setSelectionMenu] = useState<{ top: number; left: number } | null>(null);
   const [linkPanelOpen, setLinkPanelOpen] = useState(false);
+  const [linkMode, setLinkMode] = useState<"add" | "edit">("add");
   const [hoverColor, setHoverColor] = useState("#f59e0b");
   const [linkHref, setLinkHref] = useState("");
 
@@ -431,7 +607,7 @@ function RichNavStripEditor({
 
   const saveSelection = () => {
     const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0 || selection.toString().trim() === "") {
+    if (!selection || selection.rangeCount === 0) {
       setSelectionMenu(null);
       return;
     }
@@ -442,7 +618,22 @@ function RichNavStripEditor({
       return;
     }
 
+    const selectedText = selection.toString().trim();
+    const anchor = findClosestAnchor(
+      range.commonAncestorContainer,
+      ref.current,
+    );
+
+    if (!selectedText && !anchor) {
+      setSelectionMenu(null);
+      return;
+    }
+
     rangeRef.current = range.cloneRange();
+    linkEditRef.current = {
+      anchor,
+      selectedText: selectedText || anchor?.innerText.trim() || "",
+    };
     const rect = range.getBoundingClientRect();
     const rootRect = ref.current.getBoundingClientRect();
     setSelectionMenu({
@@ -468,20 +659,69 @@ function RichNavStripEditor({
     saveSelection();
   };
 
+  const openLinkPanel = () => {
+    const anchor = linkEditRef.current.anchor;
+    setLinkMode(anchor ? "edit" : "add");
+    setLinkHref(anchor?.getAttribute("href") || "");
+    setHoverColor(
+      anchor?.style.getPropertyValue("--hover-color") ||
+        anchor?.dataset.hoverColor ||
+        "#f59e0b",
+    );
+    setLinkPanelOpen(true);
+  };
+
   const applyLink = () => {
     const href = normalizeHref(linkHref);
     const color = normalizeHex(hoverColor);
-    if (!href || !color || !restoreSelection()) return;
+    if (!href || !color) return;
+
+    if (linkMode === "edit" && linkEditRef.current.anchor) {
+      const anchor = linkEditRef.current.anchor;
+      anchor.setAttribute("href", href);
+      anchor.setAttribute("data-hover-color", "true");
+      anchor.style.setProperty("--hover-color", color);
+      emitChange();
+      setLinkPanelOpen(false);
+      setSelectionMenu(null);
+      return;
+    }
+
+    if (!restoreSelection()) return;
+    const range = rangeRef.current;
+    if (!range || range.collapsed) return;
+
+    const fragment = range.extractContents();
+    const anchor = document.createElement("a");
+    anchor.setAttribute("href", href);
+    anchor.setAttribute("data-hover-color", "true");
+    anchor.style.setProperty("--hover-color", color);
+    anchor.appendChild(fragment);
+    range.insertNode(anchor);
 
     const selection = window.getSelection();
-    const selectedText = selection?.toString() || "";
-    if (!selectedText.trim()) return;
+    if (selection) {
+      selection.removeAllRanges();
+      const nextRange = document.createRange();
+      nextRange.selectNodeContents(anchor);
+      selection.addRange(nextRange);
+      rangeRef.current = nextRange.cloneRange();
+    }
 
-    document.execCommand(
-      "insertHTML",
-      false,
-      `<a href="${escapeAttribute(href)}" data-hover-color="true" style="--hover-color:${color}">${escapeHtml(selectedText)}</a>`,
-    );
+    emitChange();
+    setLinkPanelOpen(false);
+    setSelectionMenu(null);
+  };
+
+  const removeLink = () => {
+    const anchor = linkEditRef.current.anchor;
+    if (!anchor) return;
+    const parent = anchor.parentNode;
+    if (!parent) return;
+    while (anchor.firstChild) {
+      parent.insertBefore(anchor.firstChild, anchor);
+    }
+    parent.removeChild(anchor);
     emitChange();
     setLinkPanelOpen(false);
     setSelectionMenu(null);
@@ -497,22 +737,18 @@ function RichNavStripEditor({
       </div>
 
       <div className="relative">
-        {selectionMenu ? (
+        {selectionMenu && !linkPanelOpen ? (
           <div
-            className="absolute z-20 -translate-x-1/2 rounded-lg border border-slate-200 bg-white p-1 shadow-xl"
-            style={{
-              top: Math.max(8, selectionMenu.top),
-              left: selectionMenu.left,
-            }}
+            className="absolute right-3 top-3 z-20 rounded-lg border border-slate-200 bg-white p-1 shadow-xl"
           >
             <button
               type="button"
               onMouseDown={(event) => event.preventDefault()}
-              onClick={() => setLinkPanelOpen(true)}
+              onClick={openLinkPanel}
               className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-xs font-black text-slate-800 transition hover:bg-slate-100"
             >
               <Link2 size={14} />
-              Add hyperlink
+              {linkEditRef.current.anchor ? "Edit hyperlink" : "Add hyperlink"}
             </button>
           </div>
         ) : null}
@@ -521,9 +757,13 @@ function RichNavStripEditor({
           <div className="absolute right-3 top-3 z-30 w-[min(360px,calc(100%-24px))] rounded-xl border border-slate-200 bg-white p-3 shadow-2xl">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-black text-slate-950">Hyperlink</p>
+                <p className="text-sm font-black text-slate-950">
+                  {linkMode === "edit" ? "Edit hyperlink" : "Hyperlink"}
+                </p>
                 <p className="mt-1 text-xs font-medium text-slate-500">
-                  Add URL and hover color for selected text.
+                  {linkMode === "edit"
+                    ? "Update or remove hyperlink from selected text."
+                    : "Add URL and hover color for selected text."}
                 </p>
               </div>
               <button
@@ -559,9 +799,18 @@ function RichNavStripEditor({
                   onClick={applyLink}
                   className="ml-auto rounded-lg bg-slate-950 px-3 py-2 text-xs font-black text-white transition hover:bg-black"
                 >
-                  Apply link
+                  {linkMode === "edit" ? "Update link" : "Apply link"}
                 </button>
               </div>
+              {linkMode === "edit" ? (
+                <button
+                  type="button"
+                  onClick={removeLink}
+                  className="w-fit rounded-lg border border-red-200 px-3 py-2 text-xs font-black text-red-600 transition hover:bg-red-50"
+                >
+                  Remove hyperlink
+                </button>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -605,6 +854,20 @@ function ToolbarButton({ label, onClick }: { label: string; onClick: () => void 
       {label}
     </button>
   );
+}
+
+function findClosestAnchor(
+  node: Node,
+  root: HTMLElement | null,
+): HTMLAnchorElement | null {
+  let current: Node | null = node;
+
+  while (current && current !== root) {
+    if (current instanceof HTMLAnchorElement) return current;
+    current = current.parentNode;
+  }
+
+  return null;
 }
 
 function normalizeHex(value: string) {
