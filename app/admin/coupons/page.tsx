@@ -2,11 +2,15 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { Clock3, Plus, RefreshCw, Tags, X } from "lucide-react";
+import { Plus, RefreshCw, Tags, X } from "lucide-react";
 import AdminConfirmDialog from "../components/AdminConfirmDialog";
 import AdminPageHeader from "../components/AdminPageHeader";
 import AdminPagination from "../components/AdminPagination";
-import { AdminEmptyState, AdminErrorState, AdminLoadingState } from "../components/AdminStates";
+import {
+  AdminEmptyState,
+  AdminErrorState,
+  AdminLoadingState,
+} from "../components/AdminStates";
 import AdminStatusBadge from "../components/AdminStatusBadge";
 import { useAdminList } from "../hooks/useAdminList";
 import { AdminApiError, adminApi } from "../lib/adminApi";
@@ -35,6 +39,7 @@ type Coupon = {
   discountType: "PERCENTAGE" | "FIXED";
   discountValue: number;
   minimumOrderAmount: number;
+  minimumQuantity: number;
   maxDiscountAmount: number;
   usageLimit: number;
   perCustomerLimit: number;
@@ -67,6 +72,7 @@ type PromoForm = {
   discountType: "PERCENTAGE" | "FIXED";
   discountValue: string;
   minimumOrderAmount: string;
+  minimumQuantity: string;
   maxDiscountAmount: string;
   usageLimit: string;
   perCustomerLimit: string;
@@ -93,6 +99,7 @@ const blank: PromoForm = {
   discountType: "PERCENTAGE",
   discountValue: "",
   minimumOrderAmount: "0",
+  minimumQuantity: "1",
   maxDiscountAmount: "0",
   usageLimit: "0",
   perCustomerLimit: "0",
@@ -115,38 +122,76 @@ const blank: PromoForm = {
 
 const toDateInput = (value?: string | null) => {
   if (!value) return "";
+
   const date = new Date(value);
+
   if (Number.isNaN(date.getTime())) return "";
+
   return date.toISOString().slice(0, 10);
 };
 
 const toDateTimeInput = (value?: string | null) => {
   if (!value) return "";
+
   const date = new Date(value);
+
   if (Number.isNaN(date.getTime())) return "";
+
   const offset = date.getTimezoneOffset() * 60000;
+
   return new Date(date.getTime() - offset).toISOString().slice(0, 16);
 };
 
 const categoryLabel = (category: CategoryOption) => {
-  const parents = (category.ancestors || []).map((item) => item.name).filter(Boolean);
+  const parents = (category.ancestors || [])
+    .map((item) => item.name)
+    .filter(Boolean);
+
   return [...parents, category.name].join(" / ");
 };
 
 const targetLabel = (target?: PromoTarget) => {
   if (!target || target.scope === "ALL_PRODUCTS") return "All products";
-  if (target.scope === "SELECTED_PRODUCTS") return `${target.productIds?.length || 0} selected product(s)`;
-  return `${target.categoryIds?.length || 0} selected category(s)`;
+  if (target.scope === "SELECTED_PRODUCTS") {
+    return `${target.productIds?.length || 0} product(s)`;
+  }
+  return `${target.categoryIds?.length || 0} category(s)`;
+};
+
+const targetScopeLabel = (scope: TargetScope) => {
+  if (scope === "SELECTED_PRODUCTS") return "Selected products";
+  if (scope === "SELECTED_CATEGORIES") return "Selected categories";
+  return "All products";
 };
 
 const timerLabel = (timer?: PromoTimer) => {
-  if (!timer?.enabled) return "No timer";
-  if (timer.type === "FIXED_WINDOW") return "Fixed window";
-  if (timer.type === "ONE_TIME") return "One time";
-  return "Loop";
+  if (!timer?.enabled) return "Timer off";
+  if (timer.type === "FIXED_WINDOW") return "Fixed start and end";
+  if (timer.type === "ONE_TIME") return "One-time countdown";
+  return "Repeating countdown";
 };
 
-const descriptionWordCount = (value: string) => value.trim().split(/\s+/).filter(Boolean).length;
+const timerTypeLabel = (type: TimerType) => {
+  if (type === "FIXED_WINDOW") return "Fixed start and end";
+  if (type === "ONE_TIME") return "One-time countdown";
+  return "Repeating countdown";
+};
+
+const descriptionWordCount = (value: string) =>
+  value.trim().split(/\s+/).filter(Boolean).length;
+
+const money = (value: number | string) => `Rs ${Number(value || 0)}`;
+
+const discountText = (
+  discountType: "PERCENTAGE" | "FIXED",
+  discountValue: number | string,
+) => {
+  const value = Number(discountValue || 0);
+
+  if (!value) return "No discount value";
+
+  return discountType === "PERCENTAGE" ? `${value}% off` : `Rs ${value} off`;
+};
 
 export default function CouponsPage() {
   const list = useAdminList<Coupon>("/coupons");
@@ -162,6 +207,7 @@ export default function CouponsPage() {
 
   const loadOptions = useCallback(async () => {
     setOptionsLoading(true);
+
     try {
       const [productResponse, categoryResponse] = await Promise.all([
         adminApi.get<{ data: ProductOption[] }>("/products?limit=100"),
@@ -171,7 +217,9 @@ export default function CouponsPage() {
       setProducts(productResponse.data || []);
       setCategories(categoryResponse.data || []);
     } catch {
-      setMessage("Promo options could not be loaded. Product/category targeting may be unavailable.");
+      setMessage(
+        "Products and categories could not be loaded. Targeting options may be limited.",
+      );
     } finally {
       setOptionsLoading(false);
     }
@@ -182,12 +230,18 @@ export default function CouponsPage() {
   }, [loadOptions]);
 
   const selectedProducts = useMemo(
-    () => products.filter((product) => form.target.productIds.includes(product.product_id)),
+    () =>
+      products.filter((product) =>
+        form.target.productIds.includes(product.product_id),
+      ),
     [form.target.productIds, products],
   );
 
   const selectedCategories = useMemo(
-    () => categories.filter((category) => form.target.categoryIds.includes(category._id)),
+    () =>
+      categories.filter((category) =>
+        form.target.categoryIds.includes(category._id),
+      ),
     [categories, form.target.categoryIds],
   );
 
@@ -214,6 +268,7 @@ export default function CouponsPage() {
       discountType: coupon.discountType,
       discountValue: String(coupon.discountValue),
       minimumOrderAmount: String(coupon.minimumOrderAmount || 0),
+      minimumQuantity: String(coupon.minimumQuantity || 1),
       maxDiscountAmount: String(coupon.maxDiscountAmount || 0),
       usageLimit: String(coupon.usageLimit || 0),
       perCustomerLimit: String(coupon.perCustomerLimit || 0),
@@ -238,30 +293,55 @@ export default function CouponsPage() {
 
   const validateForm = () => {
     const words = descriptionWordCount(form.description);
-    if (!form.code.trim()) return "Promo code is required.";
+
+    if (!form.code.trim()) return "Enter a promo code.";
     if (!/^[A-Z0-9_-]{3,30}$/.test(form.code.trim())) {
-      return "Promo code must be 3-30 characters. Use letters, numbers, underscore or dash.";
+      return "Promo code must be 3-30 characters. Use A-Z, numbers, dash or underscore only.";
     }
-    if (words < 5 || words > 30) return "Description must be between 5 and 30 words.";
+
+    if (words < 5 || words > 30) {
+      return "Description must be 5-30 words.";
+    }
+
     if (!Number(form.discountValue) || Number(form.discountValue) <= 0) {
-      return "Discount value is required and must be greater than zero.";
+      return "Enter a discount value greater than zero.";
     }
+
     if (form.discountType === "PERCENTAGE" && Number(form.discountValue) > 100) {
-      return "Percentage discount cannot be above 100.";
+      return "Percentage discount cannot be more than 100.";
     }
-    if (form.target.scope === "SELECTED_PRODUCTS" && !form.target.productIds.length) {
-      return "Select at least one product.";
+
+    if (Number(form.minimumQuantity) < 1) {
+      return "Minimum item quantity must be at least 1.";
     }
-    if (form.target.scope === "SELECTED_CATEGORIES" && !form.target.categoryIds.length) {
-      return "Select at least one category.";
+
+    if (
+      form.target.scope === "SELECTED_PRODUCTS" &&
+      !form.target.productIds.length
+    ) {
+      return "Select at least one product for this promo.";
     }
+
+    if (
+      form.target.scope === "SELECTED_CATEGORIES" &&
+      !form.target.categoryIds.length
+    ) {
+      return "Select at least one category for this promo.";
+    }
+
     if (form.timer.enabled) {
-      if (!form.timer.startAt) return "Timer start date/time is required.";
-      if (form.timer.type === "FIXED_WINDOW" && !form.timer.endAt) return "Timer end date/time is required.";
-      if (form.timer.type !== "FIXED_WINDOW" && Number(form.timer.durationMinutes) <= 0) {
+      if (!form.timer.startAt) return "Select timer start date and time.";
+      if (form.timer.type === "FIXED_WINDOW" && !form.timer.endAt) {
+        return "Select timer end date and time.";
+      }
+      if (
+        form.timer.type !== "FIXED_WINDOW" &&
+        Number(form.timer.durationMinutes) <= 0
+      ) {
         return "Timer duration must be greater than zero.";
       }
     }
+
     return "";
   };
 
@@ -270,6 +350,7 @@ export default function CouponsPage() {
     setMessage("");
 
     const localError = validateForm();
+
     if (localError) {
       setMessage(localError);
       return;
@@ -279,6 +360,7 @@ export default function CouponsPage() {
       ...form,
       discountValue: Number(form.discountValue),
       minimumOrderAmount: Number(form.minimumOrderAmount),
+      minimumQuantity: Number(form.minimumQuantity),
       maxDiscountAmount: Number(form.maxDiscountAmount),
       usageLimit: Number(form.usageLimit),
       perCustomerLimit: Number(form.perCustomerLimit),
@@ -288,7 +370,10 @@ export default function CouponsPage() {
         enabled: form.timer.enabled,
         type: form.timer.type,
         startAt: form.timer.enabled ? form.timer.startAt || null : null,
-        endAt: form.timer.enabled && form.timer.type === "FIXED_WINDOW" ? form.timer.endAt || null : null,
+        endAt:
+          form.timer.enabled && form.timer.type === "FIXED_WINDOW"
+            ? form.timer.endAt || null
+            : null,
         durationMinutes:
           form.timer.enabled && form.timer.type !== "FIXED_WINDOW"
             ? Number(form.timer.durationMinutes)
@@ -299,29 +384,34 @@ export default function CouponsPage() {
     try {
       if (editing) await adminApi.patch(`/coupons/${editing._id}`, payload);
       else await adminApi.post("/coupons", payload);
-      setMessage("Promo code saved.");
+
+      setMessage("Promo code saved successfully.");
       resetEditor();
       await list.refresh();
     } catch (error) {
-      setMessage(error instanceof AdminApiError ? error.message : "Promo code save failed");
+      setMessage(
+        error instanceof AdminApiError ? error.message : "Promo code save failed.",
+      );
     }
   };
 
   const remove = async () => {
     if (!deleting) return;
+
     try {
       await adminApi.delete(`/coupons/${deleting._id}`);
       setDeleting(null);
       setMessage("Promo code deleted.");
       await list.refresh();
     } catch (error) {
-      setMessage(error instanceof AdminApiError ? error.message : "Delete failed");
+      setMessage(error instanceof AdminApiError ? error.message : "Delete failed.");
     }
   };
 
   const refreshAll = async () => {
     setRefreshing(true);
     setMessage("");
+
     try {
       await Promise.all([list.refresh(), loadOptions()]);
     } finally {
@@ -334,6 +424,7 @@ export default function CouponsPage() {
       const productIds = current.target.productIds.includes(productId)
         ? current.target.productIds.filter((id) => id !== productId)
         : [...current.target.productIds, productId];
+
       return { ...current, target: { ...current.target, productIds } };
     });
   };
@@ -343,6 +434,7 @@ export default function CouponsPage() {
       const categoryIds = current.target.categoryIds.includes(categoryId)
         ? current.target.categoryIds.filter((id) => id !== categoryId)
         : [...current.target.categoryIds, categoryId];
+
       return { ...current, target: { ...current.target, categoryIds } };
     });
   };
@@ -351,7 +443,7 @@ export default function CouponsPage() {
     <div className="grid gap-6">
       <AdminPageHeader
         title="Promo Codes"
-        description="Create discount codes with product/category targeting, purchase rules, usage limits and campaign timers."
+        description="Create and manage discount codes with targeting, usage limits and optional countdown timers."
         action={
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -363,6 +455,7 @@ export default function CouponsPage() {
               <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
               Refresh
             </button>
+
             <button
               type="button"
               className="inline-flex items-center gap-2 rounded-lg bg-slate-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-black"
@@ -387,33 +480,62 @@ export default function CouponsPage() {
         ) : list.error ? (
           <AdminErrorState message={list.error} retry={list.refresh} />
         ) : !list.items.length ? (
-          <AdminEmptyState title="No promo codes" description="Create the first promo code definition." />
+          <AdminEmptyState
+            title="No promo codes"
+            description="Create a promo code to offer discounts on selected products, categories or the full store."
+          />
         ) : (
           <div className="divide-y divide-slate-100">
             {list.items.map((coupon) => (
-              <div className="grid gap-3 p-4 lg:grid-cols-[1fr_190px_150px_auto]" key={coupon._id}>
+              <div
+                className="grid gap-3 p-4 lg:grid-cols-[1fr_190px_150px_auto]"
+                key={coupon._id}
+              >
                 <div className="min-w-0">
                   <p className="font-mono font-semibold">{coupon.code}</p>
+
                   <p className="mt-1 line-clamp-1 text-sm text-slate-500">
-                    {coupon.description || "No description"}
+                    {coupon.description || "No description added"}
                   </p>
+
                   <p className="mt-1 text-xs font-medium text-slate-500">
-                    {coupon.discountType === "PERCENTAGE" ? `${coupon.discountValue}%` : `Rs ${coupon.discountValue}`} off · used {coupon.usedCount}/{coupon.usageLimit || "∞"} · {targetLabel(coupon.target)}
+                    {discountText(coupon.discountType, coupon.discountValue)} ·
+                    Used {coupon.usedCount}/{coupon.usageLimit || "∞"} ·{" "}
+                    {targetLabel(coupon.target)}
                   </p>
                 </div>
+
                 <div className="text-sm text-slate-600">
-                  <p className="font-semibold text-slate-800">{timerLabel(coupon.timer)}</p>
-                  <p className="text-xs text-slate-500">Min purchase Rs {coupon.minimumOrderAmount || 0}</p>
-                  <p className="text-xs text-slate-500">Max discount Rs {coupon.maxDiscountAmount || 0}</p>
+                  <p className="font-semibold text-slate-800">
+                    {timerLabel(coupon.timer)}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Min amount {money(coupon.minimumOrderAmount || 0)}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Min quantity {coupon.minimumQuantity || 1}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Max discount {money(coupon.maxDiscountAmount || 0)}
+                  </p>
                 </div>
+
                 <div className="self-center">
                   <AdminStatusBadge status={coupon.status} />
                 </div>
+
                 <div className="flex items-center gap-2 self-center">
-                  <button className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm" onClick={() => edit(coupon)}>
+                  <button
+                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+                    onClick={() => edit(coupon)}
+                  >
                     Edit
                   </button>
-                  <button className="rounded-lg border border-red-200 px-3 py-1.5 text-sm text-red-700" onClick={() => setDeleting(coupon)}>
+
+                  <button
+                    className="rounded-lg border border-red-200 px-3 py-1.5 text-sm text-red-700"
+                    onClick={() => setDeleting(coupon)}
+                  >
                     Delete
                   </button>
                 </div>
@@ -421,7 +543,12 @@ export default function CouponsPage() {
             ))}
           </div>
         )}
-        <AdminPagination pagination={list.pagination} onPage={list.setPage} onLimit={list.setLimit} />
+
+        <AdminPagination
+          pagination={list.pagination}
+          onPage={list.setPage}
+          onLimit={list.setLimit}
+        />
       </section>
 
       {editorOpen ? (
@@ -433,13 +560,17 @@ export default function CouponsPage() {
                   <Tags size={14} />
                   Promo editor
                 </p>
+
                 <h3 className="mt-1 text-lg font-black text-slate-950">
                   {editing ? `Edit ${editing.code}` : "Create promo code"}
                 </h3>
+
                 <p className="mt-1 text-sm text-slate-500">
-                  Fill required fields first. Use zero for unlimited or no cap rules.
+                  Add discount details, choose where it applies and set limits if
+                  needed.
                 </p>
               </div>
+
               <button
                 type="button"
                 className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-slate-600 transition hover:bg-slate-950 hover:text-white"
@@ -453,15 +584,21 @@ export default function CouponsPage() {
             <form className="min-h-0 flex-1 overflow-y-auto" onSubmit={submit}>
               <div className="grid gap-5 p-5 lg:grid-cols-[1fr_300px]">
                 <div className="grid gap-4">
-                  <EditorSection title="Discount details" description="Customer-facing code and the value they receive.">
+                  <EditorSection
+                    title="Discount details"
+                    description="Set the promo code, discount value and customer-facing description."
+                  >
                     <div className="grid gap-3 md:grid-cols-2">
                       <Field
                         label="Promo code"
                         required
-                        helper="3-30 chars. Letters, numbers, dash or underscore."
+                        helper="Use 3-30 characters: A-Z, numbers, dash or underscore."
                         value={form.code}
-                        onChange={(value) => setForm({ ...form, code: value.toUpperCase() })}
+                        onChange={(value) =>
+                          setForm({ ...form, code: value.toUpperCase() })
+                        }
                       />
+
                       <label className="grid gap-1.5 text-sm font-medium">
                         Discount type <RequiredMark />
                         <select
@@ -469,73 +606,114 @@ export default function CouponsPage() {
                           className="rounded-lg border border-slate-300 px-3 py-2"
                           value={form.discountType}
                           onChange={(event) =>
-                            setForm({ ...form, discountType: event.target.value as PromoForm["discountType"] })
+                            setForm({
+                              ...form,
+                              discountType: event.target
+                                .value as PromoForm["discountType"],
+                            })
                           }
                         >
-                          <option value="PERCENTAGE">Percentage</option>
-                          <option value="FIXED">Fixed amount</option>
+                          <option value="PERCENTAGE">Percentage discount</option>
+                          <option value="FIXED">Fixed amount discount</option>
                         </select>
                         <span className="text-xs font-medium text-slate-500">
-                          Percentage is capped at 100 by backend validation.
+                          Use percentage for offers like 10% off. Use fixed for
+                          flat rupee discounts.
                         </span>
                       </label>
                     </div>
+
                     <label className="grid gap-1.5 text-sm font-medium">
                       Description <RequiredMark />
                       <textarea
                         required
                         className="min-h-24 rounded-lg border border-slate-300 px-3 py-2"
-                        placeholder="Example: Get extra savings on selected cotton products this week only"
+                        placeholder="Example: Get extra savings on selected products this week."
                         value={form.description}
-                        onChange={(event) => setForm({ ...form, description: event.target.value })}
+                        onChange={(event) =>
+                          setForm({ ...form, description: event.target.value })
+                        }
                       />
                       <span className="text-xs font-medium text-slate-500">
-                        5-30 words. Current: {descriptionWordCount(form.description)} words.
+                        Keep it clear in 5-30 words. Current:{" "}
+                        {descriptionWordCount(form.description)} words.
                       </span>
                     </label>
-                    <div className="grid gap-3 md:grid-cols-3">
+
+                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
                       <Field
                         label="Discount value"
                         required
                         type="number"
-                        helper={form.discountType === "PERCENTAGE" ? "Example: 10 means 10% off." : "Amount in rupees."}
+                        helper={
+                          form.discountType === "PERCENTAGE"
+                            ? "Example: 10 means 10% off."
+                            : "Enter flat discount amount in rupees."
+                        }
                         value={form.discountValue}
-                        onChange={(value) => setForm({ ...form, discountValue: value })}
+                        onChange={(value) =>
+                          setForm({ ...form, discountValue: value })
+                        }
                       />
+
                       <Field
-                        label="Minimum purchase amount"
+                        label="Minimum order amount"
                         type="number"
-                        helper="Cart/product subtotal must be at least this amount. Use 0 for no minimum."
+                        helper="Price/subtotal in rupees. Use 0 if there is no minimum amount."
                         value={form.minimumOrderAmount}
-                        onChange={(value) => setForm({ ...form, minimumOrderAmount: value })}
+                        onChange={(value) =>
+                          setForm({ ...form, minimumOrderAmount: value })
+                        }
                       />
+
                       <Field
-                        label="Maximum discount cap"
+                        label="Minimum item quantity"
                         type="number"
-                        helper="For percentage promos. Use 0 for no maximum cap."
+                        helper="Quantity count required in cart. Use 1 for no extra quantity rule."
+                        value={form.minimumQuantity}
+                        onChange={(value) =>
+                          setForm({ ...form, minimumQuantity: value })
+                        }
+                      />
+
+                      <Field
+                        label="Maximum discount"
+                        type="number"
+                        helper="Useful for percentage discounts. Use 0 for no cap."
                         value={form.maxDiscountAmount}
-                        onChange={(value) => setForm({ ...form, maxDiscountAmount: value })}
+                        onChange={(value) =>
+                          setForm({ ...form, maxDiscountAmount: value })
+                        }
                       />
                     </div>
+
                     <div className="grid gap-3 md:grid-cols-2">
                       <Field
                         label="Total usage limit"
                         type="number"
-                        helper="Maximum total redemptions. Use 0 for unlimited."
+                        helper="Use 0 for unlimited total usage."
                         value={form.usageLimit}
-                        onChange={(value) => setForm({ ...form, usageLimit: value })}
+                        onChange={(value) =>
+                          setForm({ ...form, usageLimit: value })
+                        }
                       />
+
                       <Field
                         label="Per customer limit"
                         type="number"
-                        helper="Reserved for customer-level usage rules. Use 0 for unlimited."
+                        helper="Use 0 for unlimited use per customer."
                         value={form.perCustomerLimit}
-                        onChange={(value) => setForm({ ...form, perCustomerLimit: value })}
+                        onChange={(value) =>
+                          setForm({ ...form, perCustomerLimit: value })
+                        }
                       />
                     </div>
                   </EditorSection>
 
-                  <EditorSection title="Targeting" description="Choose where this promo code can be applied.">
+                  <EditorSection
+                    title="Targeting"
+                    description="Choose whether this promo applies to the full store, selected products or selected categories."
+                  >
                     <label className="grid gap-1.5 text-sm font-medium">
                       Applies to <RequiredMark />
                       <select
@@ -554,11 +732,16 @@ export default function CouponsPage() {
                         }
                       >
                         <option value="ALL_PRODUCTS">All products</option>
-                        <option value="SELECTED_PRODUCTS">Selected products only</option>
-                        <option value="SELECTED_CATEGORIES">Selected categories only</option>
+                        <option value="SELECTED_PRODUCTS">
+                          Selected products
+                        </option>
+                        <option value="SELECTED_CATEGORIES">
+                          Selected categories
+                        </option>
                       </select>
                       <span className="text-xs font-medium text-slate-500">
-                        Product page offers show only product/category-targeted promos.
+                        Product/category targeting helps show relevant offers on
+                        matching product pages.
                       </span>
                     </label>
 
@@ -571,9 +754,17 @@ export default function CouponsPage() {
                         {products.map((product) => (
                           <CheckRow
                             key={product.product_id}
-                            checked={form.target.productIds.includes(product.product_id)}
-                            title={product.name || product.title || `Product #${product.product_id}`}
-                            meta={`#${product.product_id}${product.status ? ` · ${product.status}` : ""}`}
+                            checked={form.target.productIds.includes(
+                              product.product_id,
+                            )}
+                            title={
+                              product.name ||
+                              product.title ||
+                              `Product #${product.product_id}`
+                            }
+                            meta={`#${product.product_id}${
+                              product.status ? ` · ${product.status}` : ""
+                            }`}
                             onChange={() => toggleProduct(product.product_id)}
                           />
                         ))}
@@ -589,7 +780,9 @@ export default function CouponsPage() {
                         {categories.map((category) => (
                           <CheckRow
                             key={category._id}
-                            checked={form.target.categoryIds.includes(category._id)}
+                            checked={form.target.categoryIds.includes(
+                              category._id,
+                            )}
                             title={categoryLabel(category)}
                             meta={category.status || "ACTIVE"}
                             onChange={() => toggleCategory(category._id)}
@@ -599,34 +792,53 @@ export default function CouponsPage() {
                     ) : null}
                   </EditorSection>
 
-                  <EditorSection title="Timer and availability" description="Control campaign window and optional countdown display logic.">
+                  <EditorSection
+                    title="Availability and timer"
+                    description="Set promo availability and optional countdown display settings."
+                  >
                     <div className="grid gap-3 md:grid-cols-2">
                       <Field
                         label="Available from"
                         type="date"
-                        helper="Leave empty to make it available immediately."
+                        helper="Leave empty to allow immediate use."
                         value={form.startsAt}
-                        onChange={(value) => setForm({ ...form, startsAt: value })}
+                        onChange={(value) =>
+                          setForm({ ...form, startsAt: value })
+                        }
                       />
+
                       <Field
                         label="Available until"
                         type="date"
-                        helper="Leave empty for no expiry date."
+                        helper="Leave empty if the promo should not expire automatically."
                         value={form.endsAt}
-                        onChange={(value) => setForm({ ...form, endsAt: value })}
+                        onChange={(value) =>
+                          setForm({ ...form, endsAt: value })
+                        }
                       />
                     </div>
+
                     <div className="rounded-xl border border-slate-200 p-3">
                       <label className="inline-flex items-center gap-2 text-sm font-bold text-slate-700">
                         <input
                           type="checkbox"
                           checked={form.timer.enabled}
-                          onChange={(event) => setForm({ ...form, timer: { ...form.timer, enabled: event.target.checked } })}
+                          onChange={(event) =>
+                            setForm({
+                              ...form,
+                              timer: {
+                                ...form.timer,
+                                enabled: event.target.checked,
+                              },
+                            })
+                          }
                         />
-                        Enable campaign timer
+                        Enable countdown timer
                       </label>
+
                       <p className="mt-1 text-xs font-medium text-slate-500">
-                        Timer is optional. It can power countdown-style promo displays.
+                        Optional. Use it when the promo needs a countdown on the
+                        storefront.
                       </p>
 
                       {form.timer.enabled ? (
@@ -637,48 +849,91 @@ export default function CouponsPage() {
                               required
                               className="rounded-lg border border-slate-300 px-3 py-2"
                               value={form.timer.type}
-                              onChange={(event) => setForm({ ...form, timer: { ...form.timer, type: event.target.value as TimerType } })}
+                              onChange={(event) =>
+                                setForm({
+                                  ...form,
+                                  timer: {
+                                    ...form.timer,
+                                    type: event.target.value as TimerType,
+                                  },
+                                })
+                              }
                             >
-                              <option value="FIXED_WINDOW">Fixed start and end</option>
-                              <option value="ONE_TIME">One-time countdown</option>
-                              <option value="LOOP">Loop countdown</option>
+                              <option value="FIXED_WINDOW">
+                                Fixed start and end
+                              </option>
+                              <option value="ONE_TIME">
+                                One-time countdown
+                              </option>
+                              <option value="LOOP">
+                                Repeating countdown
+                              </option>
                             </select>
+                            <span className="text-xs font-medium text-slate-500">
+                              Repeating countdown keeps restarting until the promo availability expires.
+                            </span>
                           </label>
+
                           <Field
-                            label="Timer start date/time"
+                            label="Timer starts at"
                             required
                             type="datetime-local"
                             value={form.timer.startAt}
-                            onChange={(value) => setForm({ ...form, timer: { ...form.timer, startAt: value } })}
+                            onChange={(value) =>
+                              setForm({
+                                ...form,
+                                timer: { ...form.timer, startAt: value },
+                              })
+                            }
                           />
+
                           {form.timer.type === "FIXED_WINDOW" ? (
                             <Field
-                              label="Timer end date/time"
+                              label="Timer ends at"
                               required
                               type="datetime-local"
                               value={form.timer.endAt}
-                              onChange={(value) => setForm({ ...form, timer: { ...form.timer, endAt: value } })}
+                              onChange={(value) =>
+                                setForm({
+                                  ...form,
+                                  timer: { ...form.timer, endAt: value },
+                                })
+                              }
                             />
                           ) : (
                             <Field
-                              label="Timer duration in minutes"
+                              label="Duration in minutes"
                               required
                               type="number"
-                              helper="One-time uses this once. Loop repeats this duration."
+                              helper="One-time uses this once. Repeating timer loops by this duration until the coupon expires."
                               value={form.timer.durationMinutes}
-                              onChange={(value) => setForm({ ...form, timer: { ...form.timer, durationMinutes: value } })}
+                              onChange={(value) =>
+                                setForm({
+                                  ...form,
+                                  timer: {
+                                    ...form.timer,
+                                    durationMinutes: value,
+                                  },
+                                })
+                              }
                             />
                           )}
                         </div>
                       ) : null}
                     </div>
+
                     <label className="grid gap-1.5 text-sm font-medium">
                       Status <RequiredMark />
                       <select
                         required
                         className="rounded-lg border border-slate-300 px-3 py-2"
                         value={form.status}
-                        onChange={(event) => setForm({ ...form, status: event.target.value as PromoForm["status"] })}
+                        onChange={(event) =>
+                          setForm({
+                            ...form,
+                            status: event.target.value as PromoForm["status"],
+                          })
+                        }
                       >
                         <option value="ACTIVE">Active</option>
                         <option value="DISABLED">Disabled</option>
@@ -688,22 +943,68 @@ export default function CouponsPage() {
                 </div>
 
                 <aside className="h-fit rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-sm font-black text-slate-950">Field guide</p>
+                  <p className="text-sm font-black text-slate-950">
+                    Promo summary
+                  </p>
+
                   <div className="mt-3 grid gap-3 text-xs font-medium leading-5 text-slate-600">
-                    <GuideItem title="Minimum purchase" text="User must buy at least this subtotal before the promo applies." />
-                    <GuideItem title="Maximum discount" text="Caps the discount amount. Useful for percentage promos." />
-                    <GuideItem title="Usage limit" text="0 means unlimited. Otherwise promo stops after that many paid orders." />
-                    <GuideItem title="Selected products" text="Promo appears on those product pages and applies only when cart has them." />
-                    <GuideItem title="Selected categories" text="Promo applies to products inside selected categories." />
-                    <GuideItem title="Timer type" text="Fixed has start/end. One-time runs once. Loop repeats a duration." />
+                    <SummaryItem
+                      label="Code"
+                      value={form.code || "Not added"}
+                    />
+                    <SummaryItem
+                      label="Discount"
+                      value={discountText(form.discountType, form.discountValue)}
+                    />
+                    <SummaryItem
+                      label="Target"
+                      value={targetScopeLabel(form.target.scope)}
+                    />
+                    <SummaryItem
+                      label="Selected"
+                      value={
+                        form.target.scope === "SELECTED_PRODUCTS"
+                          ? `${form.target.productIds.length} product(s)`
+                          : form.target.scope === "SELECTED_CATEGORIES"
+                            ? `${form.target.categoryIds.length} category(s)`
+                            : "All products"
+                      }
+                    />
+                    <SummaryItem
+                      label="Min order amount"
+                      value={money(form.minimumOrderAmount)}
+                    />
+                    <SummaryItem
+                      label="Min item quantity"
+                      value={`${Number(form.minimumQuantity || 1)} item(s)`}
+                    />
+                    <SummaryItem
+                      label="Usage"
+                      value={
+                        Number(form.usageLimit || 0) > 0
+                          ? `${form.usageLimit} total use(s)`
+                          : "Unlimited"
+                      }
+                    />
+                    <SummaryItem
+                      label="Timer"
+                      value={
+                        form.timer.enabled
+                          ? timerTypeLabel(form.timer.type)
+                          : "Timer off"
+                      }
+                    />
+                    <SummaryItem label="Status" value={form.status} />
                   </div>
                 </aside>
               </div>
 
               <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white px-5 py-4">
                 <p className="text-xs font-semibold text-slate-500">
-                  Required fields are marked with <span className="text-red-500">*</span>
+                  Required fields are marked with{" "}
+                  <span className="text-red-500">*</span>
                 </p>
+
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -712,8 +1013,9 @@ export default function CouponsPage() {
                   >
                     Cancel
                   </button>
+
                   <button className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white">
-                    Save promo code
+                    Save promo
                   </button>
                 </div>
               </div>
@@ -725,8 +1027,8 @@ export default function CouponsPage() {
       <AdminConfirmDialog
         open={Boolean(deleting)}
         title="Delete promo code?"
-        description="This removes the promo code definition from admin storage."
-        confirmLabel="Delete promo code"
+        description="This promo code will be removed permanently. Existing orders will not be changed."
+        confirmLabel="Delete promo"
         onClose={() => setDeleting(null)}
         onConfirm={remove}
       />
@@ -754,11 +1056,11 @@ function EditorSection({
   );
 }
 
-function GuideItem({ title, text }: { title: string; text: string }) {
+function SummaryItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg bg-white p-3 ring-1 ring-slate-200">
-      <p className="font-black text-slate-800">{title}</p>
-      <p className="mt-1 text-slate-500">{text}</p>
+      <p className="font-black text-slate-800">{label}</p>
+      <p className="mt-1 text-slate-500">{value}</p>
     </div>
   );
 }
@@ -787,6 +1089,7 @@ function Field({
       <span>
         {label} {required ? <RequiredMark /> : null}
       </span>
+
       <input
         required={required}
         min={type === "number" ? "0" : undefined}
@@ -795,7 +1098,10 @@ function Field({
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />
-      {helper ? <span className="text-xs font-medium text-slate-500">{helper}</span> : null}
+
+      {helper ? (
+        <span className="text-xs font-medium text-slate-500">{helper}</span>
+      ) : null}
     </label>
   );
 }
@@ -811,16 +1117,28 @@ function SelectionBox({
   emptyText: string;
   children: ReactNode;
 }) {
-  const empty = !loading && (!children || (Array.isArray(children) && children.length === 0));
+  const empty =
+    !loading && (!children || (Array.isArray(children) && children.length === 0));
 
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200">
       <div className="border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600">
         {title}
       </div>
+
       <div className="max-h-72 overflow-y-auto p-2 scrollbar-hide">
-        {loading ? <p className="px-2 py-4 text-center text-xs font-semibold text-slate-500">Loading options...</p> : null}
-        {empty ? <p className="px-2 py-4 text-center text-xs font-semibold text-slate-500">{emptyText}</p> : null}
+        {loading ? (
+          <p className="px-2 py-4 text-center text-xs font-semibold text-slate-500">
+            Loading options...
+          </p>
+        ) : null}
+
+        {empty ? (
+          <p className="px-2 py-4 text-center text-xs font-semibold text-slate-500">
+            {emptyText}
+          </p>
+        ) : null}
+
         {!loading ? <div className="grid gap-1">{children}</div> : null}
       </div>
     </div>
@@ -840,10 +1158,20 @@ function CheckRow({
 }) {
   return (
     <label className="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2 text-sm transition hover:bg-slate-50">
-      <input className="mt-1" type="checkbox" checked={checked} onChange={onChange} />
+      <input
+        className="mt-1"
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+      />
+
       <span className="min-w-0">
-        <span className="block truncate font-semibold text-slate-800">{title}</span>
-        <span className="block truncate text-xs font-medium text-slate-500">{meta}</span>
+        <span className="block truncate font-semibold text-slate-800">
+          {title}
+        </span>
+        <span className="block truncate text-xs font-medium text-slate-500">
+          {meta}
+        </span>
       </span>
     </label>
   );

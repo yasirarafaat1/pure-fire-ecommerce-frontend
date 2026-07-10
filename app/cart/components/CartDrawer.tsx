@@ -19,6 +19,7 @@ type Props = {
     discountType?: "PERCENTAGE" | "FIXED";
     discountValue?: number;
     minimumOrderAmount?: number;
+    minimumQuantity?: number;
   }>;
   appliedPromo: { code: string; discountAmount: number; description?: string } | null;
   promoLoading: boolean;

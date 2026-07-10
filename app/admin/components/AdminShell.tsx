@@ -12,12 +12,31 @@ type MeResponse = {
   admin: AdminUser;
 };
 
+const sidebarCollapsedKey = "purefire_admin_sidebar_collapsed";
+
 export default function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   const [admin, setAdmin] = useState<AdminUser | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    try {
+      setSidebarCollapsed(localStorage.getItem(sidebarCollapsedKey) === "true");
+    } catch {
+      setSidebarCollapsed(false);
+    }
+  }, []);
+
+  const updateSidebarCollapsed = (collapsed: boolean) => {
+    setSidebarCollapsed(collapsed);
+    try {
+      localStorage.setItem(sidebarCollapsedKey, String(collapsed));
+    } catch {
+      // localStorage may be unavailable in private or restricted contexts.
+    }
+  };
 
   useEffect(() => {
     if (pathname === "/admin/login") return;
@@ -42,7 +61,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         onClose={() => setMenuOpen(false)}
         role={admin.role}
         collapsed={sidebarCollapsed}
-        onCollapsedChange={setSidebarCollapsed}
+        onCollapsedChange={updateSidebarCollapsed}
       />
 
       <div
@@ -53,7 +72,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         <AdminTopbar
           admin={admin}
           onMenu={() => {
-            setSidebarCollapsed(false);
+            updateSidebarCollapsed(false);
             setMenuOpen(true);
           }}
         />

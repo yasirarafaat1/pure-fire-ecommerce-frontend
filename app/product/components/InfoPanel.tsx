@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FaShoppingCart } from "react-icons/fa";
 import { FaStar, FaRegStar } from "react-icons/fa6";
 import { FaTruckFast } from "react-icons/fa6";
@@ -18,7 +18,17 @@ type ProductOffer = {
   discountType?: "PERCENTAGE" | "FIXED";
   discountValue?: number;
   minimumOrderAmount?: number;
+  minimumQuantity?: number;
   maxDiscountAmount?: number;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  timer?: {
+    enabled?: boolean;
+    type?: "FIXED_WINDOW" | "ONE_TIME" | "LOOP";
+    startAt?: string | null;
+    endAt?: string | null;
+    durationMinutes?: number;
+  } | null;
 };
 
 function normalizeSize(value: SizeInput) {
@@ -68,6 +78,56 @@ const Caret = ({ open }: { open: boolean }) => (
   </svg>
 );
 
+const formatCountdown = (ms: number) => {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+  return `${minutes}m ${seconds}s`;
+};
+
+const getOfferCountdown = (offer: ProductOffer | undefined, now: number) => {
+  if (!offer?.timer?.enabled) return null;
+
+  const start = offer.timer.startAt ? new Date(offer.timer.startAt).getTime() : 0;
+  const couponEnd = offer.endsAt ? new Date(offer.endsAt).getTime() : 0;
+  const timerEnd = offer.timer.endAt ? new Date(offer.timer.endAt).getTime() : 0;
+  const hardEnd = [couponEnd, timerEnd].filter(Boolean).sort((a, b) => a - b)[0] || 0;
+
+  if (start && now < start) {
+    return { title: "Offer starts in", value: formatCountdown(start - now) };
+  }
+
+  if (hardEnd && now >= hardEnd) return null;
+
+  if (offer.timer.type === "LOOP") {
+    const durationMs = Math.max(1, Number(offer.timer.durationMinutes || 0)) * 60 * 1000;
+    const elapsed = Math.max(0, now - (start || now));
+    const loopRemaining = durationMs - (elapsed % durationMs);
+    const remaining = hardEnd ? Math.min(loopRemaining, hardEnd - now) : loopRemaining;
+
+    return {
+      title: "Live offer resets in",
+      value: formatCountdown(remaining),
+    };
+  }
+
+  if (offer.timer.type === "ONE_TIME") {
+    const end = (start || now) + Math.max(1, Number(offer.timer.durationMinutes || 0)) * 60 * 1000;
+    const remainingEnd = hardEnd ? Math.min(end, hardEnd) : end;
+    if (now >= remainingEnd) return null;
+    return { title: "Offer ends in", value: formatCountdown(remainingEnd - now) };
+  }
+
+  if (hardEnd) return { title: "Offer ends in", value: formatCountdown(hardEnd - now) };
+
+  return null;
+};
+
 export default function InfoPanel({
   breadcrumbs,
   name,
@@ -100,6 +160,7 @@ export default function InfoPanel({
   const [showDescription, setShowDescription] = useState(false);
   const [showPolicy, setShowPolicy] = useState(false);
   const [selectionError, setSelectionError] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const safeSizes = useMemo(
     () =>
       sizes
@@ -113,6 +174,16 @@ export default function InfoPanel({
   const selectedSize = normalizedPropSize ?? localSize ?? safeSizes[0] ?? null;
   const policyLines = returnPolicyText.split("\n").map((l) => l.trim()).filter(Boolean);
   const policyHeading = policyLines.shift() || "Returns, Exchange & Refund Policy";
+  const liveOffer = useMemo(() => offers.find((offer) => offer.timer?.enabled), [offers]);
+  const liveCountdown = useMemo(() => getOfferCountdown(liveOffer, now), [liveOffer, now]);
+
+  useEffect(() => {
+    if (!liveOffer) return undefined;
+
+    const interval = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, [liveOffer]);
+
   const handleCheckDelivery = () => {
     if (!/^\d{6}$/.test(pin)) {
       setPinError("Enter a valid 6-digit pincode.");
@@ -176,6 +247,22 @@ export default function InfoPanel({
         <span className="text-base font-medium text-black">{rating.toFixed(1)} ( {reviews} )</span>
       </div>
 
+      {liveCountdown ? (
+        <div className="rounded-[8px] border border-black/10 bg-black px-3 py-2 text-white">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/60">
+                {liveCountdown.title}
+              </p>
+              <p className="mt-1 truncate text-sm font-black">{liveOffer?.code}</p>
+            </div>
+            <span className="shrink-0 rounded-[5px] bg-white px-3 py-1.5 text-sm font-black tabular-nums text-black">
+              {liveCountdown.value}
+            </span>
+          </div>
+        </div>
+      ) : null}
+
       {offers.length ? (
         <div className="grid gap-2">
           <div className="flex items-center justify-between gap-3">
@@ -217,9 +304,11 @@ export default function InfoPanel({
                       `Use code ${offer.code} on this product${offer.minimumOrderAmount ? ` above Rs ${offer.minimumOrderAmount}` : ""}.`}
                   </p>
 
-                  {offer.minimumOrderAmount || offer.maxDiscountAmount ? (
+                  {offer.minimumOrderAmount || offer.minimumQuantity || offer.maxDiscountAmount ? (
                     <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-bold text-slate-500">
-                      {offer.minimumOrderAmount ? <span>Min Order {offer.minimumOrderAmount}</span> : null}
+                      {offer.minimumOrderAmount ? <span>Min amount Rs {offer.minimumOrderAmount}</span> : null}
+                      {offer.minimumQuantity && offer.minimumQuantity > 1 ? <span>Min qty {offer.minimumQuantity}</span> : null}
+                      {offer.maxDiscountAmount ? <span>Max off Rs {offer.maxDiscountAmount}</span> : null}
                     </div>
                   ) : null}
                 </article>

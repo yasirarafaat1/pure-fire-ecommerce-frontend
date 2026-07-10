@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import type { ComponentType } from "react";
 import {
   Activity,
@@ -107,8 +108,10 @@ export default function AdminSidebar({
   onCollapsedChange,
 }: Props) {
   const pathname = usePathname();
+  const [hoverExpanded, setHoverExpanded] = useState(false);
 
-  const sidebarWidth = collapsed ? "lg:w-[76px]" : "lg:w-[260px]";
+  const visuallyExpanded = !collapsed || hoverExpanded;
+  const sidebarWidth = visuallyExpanded ? "lg:w-[260px]" : "lg:w-[76px]";
 
   return (
     <>
@@ -125,16 +128,20 @@ export default function AdminSidebar({
         className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r border-slate-800 bg-slate-950 text-slate-200 transition-all duration-300 ease-in-out lg:translate-x-0 ${sidebarWidth} ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
+        onMouseEnter={() => {
+          if (collapsed) setHoverExpanded(true);
+        }}
+        onMouseLeave={() => setHoverExpanded(false)}
       >
         <div
           className={`flex h-16 items-center border-b border-white/10 ${
-            collapsed ? "justify-center px-3" : "justify-between px-5"
+            visuallyExpanded ? "justify-between px-5" : "justify-center px-3"
           }`}
         >
           <Link
             href="/admin/dashboard"
             className={`flex min-w-0 items-center font-semibold tracking-tight text-white ${
-              collapsed ? "justify-center" : "gap-2"
+              visuallyExpanded ? "gap-2" : "justify-center"
             }`}
             onClick={onClose}
             title="PureFire Admin"
@@ -148,16 +155,16 @@ export default function AdminSidebar({
               priority
             />
 
-            {!collapsed && <span className="truncate">PureFire Admin</span>}
+            {visuallyExpanded && <span className="truncate">PureFire Admin</span>}
           </Link>
 
-          {!collapsed && (
+          {visuallyExpanded && (
             <button className="rounded-md p-2 hover:bg-white/10 lg:hidden" onClick={onClose}>
               <X size={18} />
             </button>
           )}
 
-          {!collapsed && (
+          {visuallyExpanded && (
             <button
               aria-label="Collapse admin sidebar"
               className="hidden rounded-md p-2 text-slate-300 hover:bg-white/10 hover:text-white lg:inline-flex"
@@ -169,7 +176,7 @@ export default function AdminSidebar({
           )}
         </div>
 
-        {collapsed && (
+        {collapsed && !hoverExpanded && (
           <div className="hidden border-b border-white/10 px-3 py-3 lg:block">
             <button
               aria-label="Expand admin sidebar"
@@ -182,15 +189,15 @@ export default function AdminSidebar({
           </div>
         )}
 
-        <nav className={`flex-1 overflow-y-auto overflow-x-hidden py-5 ${collapsed ? "px-2" : "px-3"}`}>
+        <nav className={`flex-1 overflow-y-auto overflow-x-hidden py-5 ${visuallyExpanded ? "px-3" : "px-2"}`}>
           {sections.map((section) => {
             const items = section.items.filter((item) => !item.roles || item.roles.includes(role));
 
             if (!items.length) return null;
 
             return (
-              <div className={collapsed ? "mb-4" : "mb-6"} key={section.label}>
-                {!collapsed ? (
+              <div className={visuallyExpanded ? "mb-6" : "mb-4"} key={section.label}>
+                {visuallyExpanded ? (
                   <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                     {section.label}
                   </p>
@@ -208,9 +215,9 @@ export default function AdminSidebar({
                         key={item.href}
                         href={item.href}
                         onClick={onClose}
-                        title={collapsed ? item.label : undefined}
+                        title={visuallyExpanded ? undefined : item.label}
                         className={`group flex items-center rounded-lg text-sm transition ${
-                          collapsed ? "h-11 justify-center px-0" : "gap-3 px-3 py-2.5"
+                          visuallyExpanded ? "gap-3 px-3 py-2.5" : "h-11 justify-center px-0"
                         } ${
                           active
                             ? "bg-white font-medium !text-slate-950"
@@ -218,13 +225,13 @@ export default function AdminSidebar({
                         }`}
                       >
                         <Icon
-                          size={collapsed ? 19 : 17}
+                          size={visuallyExpanded ? 17 : 19}
                           className={`shrink-0 ${
                             active ? "text-slate-950" : "text-slate-300 group-hover:text-white"
                           }`}
                         />
 
-                        {!collapsed && (
+                        {visuallyExpanded && (
                           <>
                             <span className={`min-w-0 flex-1 truncate ${active ? "text-slate-950" : ""}`}>
                               {item.label}

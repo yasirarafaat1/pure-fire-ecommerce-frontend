@@ -18,6 +18,7 @@ type PublicPromo = {
   discountType?: "PERCENTAGE" | "FIXED";
   discountValue?: number;
   minimumOrderAmount?: number;
+  minimumQuantity?: number;
   maxDiscountAmount?: number;
 };
 
