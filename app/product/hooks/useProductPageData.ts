@@ -5,6 +5,7 @@ import { getUserEmail, getUserToken } from "../../utils/auth";
 
 const API_BASE = "/api/user";
 const getToken = () => getUserToken();
+const productDetailUrl = (id: string | number) => `${API_BASE}/get-product-byid/${id}?include_promos=1`;
 
 type UseProductDataParams = {
   productId?: string;
@@ -27,6 +28,8 @@ export const useProductPageData = ({
   const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [wishlistIds, setWishlistIds] = useState<Set<string>>(new Set());
+  const [productPromos, setProductPromos] = useState<any[]>([]);
+  const [promosLoading, setPromosLoading] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,9 +42,10 @@ export const useProductPageData = ({
           : [];
       const cachedFirst = cachedListItems?.[0];
       const cachedId = productId || cachedFirst?._id || cachedFirst?.product_id;
-      const cachedDetail = cachedId ? getCachedJson(`${API_BASE}/get-product-byid/${cachedId}`) : null;
+      const cachedDetail = cachedId ? getCachedJson(productDetailUrl(cachedId)) : null;
       const cachedDetailRaw =
         cachedDetail?.data?.data?.[0] || cachedDetail?.data?.product || cachedDetail?.data?.data;
+      const cachedPromos = Array.isArray(cachedDetail?.data?.promos) ? cachedDetail.data.promos : [];
       const initialProduct = cachedDetailRaw
         ? normalizeProduct(cachedDetailRaw)
         : cachedFirst
@@ -52,6 +56,8 @@ export const useProductPageData = ({
       }
       if (initialProduct) {
         setProduct(initialProduct);
+        setProductPromos(cachedPromos);
+        setPromosLoading(!cachedPromos.length);
         setSelectedColor(colorParam || initialProduct?.variants?.[0]?.color || initialProduct?.colors?.[0] || null);
         if (sizeParam) setSelectedSize(sizeParam);
         setLoading(false);
@@ -78,6 +84,7 @@ export const useProductPageData = ({
       }
 
       if (!initialProduct) setLoading(true);
+      setPromosLoading(true);
       try {
         const listRes = await cachedFetch(`${API_BASE}/show-product`, undefined, 600000, true);
         const listData = await listRes.json();
@@ -86,11 +93,13 @@ export const useProductPageData = ({
         if (!first) return;
         const id = productId || first._id || first.product_id;
 
-        const detailRes = await cachedFetch(`${API_BASE}/get-product-byid/${id}`, undefined, 600000, true);
+        const detailRes = await cachedFetch(productDetailUrl(id), undefined, 600000, true);
         const detailData = await detailRes.json();
         const detail = detailData?.data?.[0] || detailData?.product || detailData?.data;
         const prod = normalizeProduct(detail || first);
         setProduct(prod);
+        setProductPromos(Array.isArray(detailData?.promos) ? detailData.promos : []);
+        setPromosLoading(false);
         setSelectedColor(colorParam || prod?.variants?.[0]?.color || prod?.colors?.[0] || null);
         if (sizeParam) setSelectedSize(sizeParam);
 
@@ -152,6 +161,7 @@ export const useProductPageData = ({
         }
       } catch (err) {
         console.error("product fetch error", err);
+        setPromosLoading(false);
       } finally {
         setLoading(false);
       }
@@ -211,6 +221,8 @@ export const useProductPageData = ({
     setCartItems,
     wishlistIds,
     setWishlistIds,
+    productPromos,
+    promosLoading,
     loading,
     setReviews,
   };

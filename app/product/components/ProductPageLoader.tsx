@@ -93,6 +93,34 @@ export default function ProductPageLoader() {
               <SkeletonBox className="h-5 w-20 rounded-full border border-black/10" />
             </div>
 
+            {/* Promo timer */}
+            <div className="rounded-[4px] border border-red-100 bg-red-50/60 px-3 py-3 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <SkeletonBox className="h-8 w-24 rounded-[4px] border border-red-100" />
+                  <SkeletonBox className="h-8 w-9 rounded-[4px] border border-red-100" />
+                </div>
+                <SkeletonBox className="h-9 w-28 shrink-0 rounded-[4px] border border-red-100" />
+              </div>
+            </div>
+
+            {/* Available offers */}
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between gap-3">
+                <SkeletonBox className="h-4 w-32 rounded-[5px] border border-black/10" />
+                <SkeletonBox className="h-3 w-12 rounded-[5px] border border-black/10" />
+              </div>
+
+              <div className="rounded-[8px] border border-emerald-100 bg-emerald-50/50 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <SkeletonBox className="h-4 w-24 rounded-[5px] border border-emerald-100" />
+                  <SkeletonBox className="h-7 w-20 rounded-[5px] border border-emerald-100" />
+                </div>
+                <SkeletonBox className="mt-3 h-3 w-3/4 rounded-[5px] border border-emerald-100" />
+                <SkeletonBox className="mt-2 h-3 w-24 rounded-[5px] border border-emerald-100" />
+              </div>
+            </div>
+
             {/* Color selector */}
             <div className="grid gap-2">
               <div className="flex items-center justify-between">

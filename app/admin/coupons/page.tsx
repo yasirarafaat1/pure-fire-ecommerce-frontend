@@ -88,7 +88,7 @@ type PromoForm = {
   };
   timer: {
     enabled: boolean;
-    type: TimerType;
+    type: TimerType | "";
     startAt: string;
     endAt: string;
     durationMinutes: string;
@@ -116,7 +116,7 @@ const blank: PromoForm = {
   },
   timer: {
     enabled: false,
-    type: "FIXED_WINDOW",
+    type: "",
     startAt: "",
     endAt: "",
     durationMinutes: "60",
@@ -132,16 +132,6 @@ const textareaClass =
 const selectClass =
   "h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-950 outline-none transition hover:border-slate-400 focus:border-slate-950 focus:ring-4 focus:ring-slate-950/5";
 
-const toDateInput = (value?: string | null) => {
-  if (!value) return "";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return "";
-
-  return date.toISOString().slice(0, 10);
-};
-
 const toDateTimeInput = (value?: string | null) => {
   if (!value) return "";
 
@@ -152,6 +142,12 @@ const toDateTimeInput = (value?: string | null) => {
   const offset = date.getTimezoneOffset() * 60000;
 
   return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+};
+
+const toApiDateTime = (value: string) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
 };
 
 const categoryLabel = (category: CategoryOption) => {
@@ -183,10 +179,16 @@ const timerLabel = (timer?: PromoTimer) => {
   return "Repeating countdown";
 };
 
-const timerTypeLabel = (type: TimerType) => {
+const timerTypeLabel = (type: TimerType | "") => {
   if (type === "FIXED_WINDOW") return "Fixed start and end";
   if (type === "ONE_TIME") return "One-time countdown";
-  return "Repeating countdown";
+  if (type === "LOOP") return "Repeating countdown";
+  return "Timer type not selected";
+};
+
+const normalizeTimerType = (type?: string | null): TimerType | "" => {
+  if (type === "FIXED_WINDOW" || type === "ONE_TIME" || type === "LOOP") return type;
+  return "";
 };
 
 const minimumRequirementFromCoupon = (coupon: Coupon): MinimumRequirementType => {
@@ -303,8 +305,8 @@ export default function CouponsPage() {
       maxDiscountAmount: String(coupon.maxDiscountAmount || 0),
       usageLimit: String(coupon.usageLimit || 0),
       perCustomerLimit: String(coupon.perCustomerLimit || 0),
-      startsAt: toDateInput(coupon.startsAt),
-      endsAt: toDateInput(coupon.endsAt),
+      startsAt: toDateTimeInput(coupon.startsAt),
+      endsAt: toDateTimeInput(coupon.endsAt),
       status: coupon.status,
       target: {
         scope: coupon.target?.scope || "ALL_PRODUCTS",
@@ -313,7 +315,7 @@ export default function CouponsPage() {
       },
       timer: {
         enabled: Boolean(coupon.timer?.enabled),
-        type: coupon.timer?.type || "FIXED_WINDOW",
+        type: normalizeTimerType(coupon.timer?.type),
         startAt: toDateTimeInput(coupon.timer?.startAt),
         endAt: toDateTimeInput(coupon.timer?.endAt),
         durationMinutes: String(coupon.timer?.durationMinutes || 60),
@@ -375,6 +377,7 @@ export default function CouponsPage() {
     }
 
     if (form.timer.enabled) {
+      if (!form.timer.type) return "Select timer type.";
       if (!form.timer.startAt) return "Select timer start date and time.";
       if (form.timer.type === "FIXED_WINDOW" && !form.timer.endAt) {
         return "Select timer end date and time.";
@@ -416,15 +419,15 @@ export default function CouponsPage() {
       maxDiscountAmount: Number(form.maxDiscountAmount),
       usageLimit: Number(form.usageLimit),
       perCustomerLimit: Number(form.perCustomerLimit),
-      startsAt: form.startsAt || null,
-      endsAt: form.endsAt || null,
+      startsAt: toApiDateTime(form.startsAt),
+      endsAt: toApiDateTime(form.endsAt),
       timer: {
         enabled: form.timer.enabled,
         type: form.timer.type,
-        startAt: form.timer.enabled ? form.timer.startAt || null : null,
+        startAt: form.timer.enabled ? toApiDateTime(form.timer.startAt) : null,
         endAt:
           form.timer.enabled && form.timer.type === "FIXED_WINDOW"
-            ? form.timer.endAt || null
+            ? toApiDateTime(form.timer.endAt)
             : null,
         durationMinutes:
           form.timer.enabled && form.timer.type !== "FIXED_WINDOW"
@@ -859,8 +862,8 @@ export default function CouponsPage() {
                     <div className="grid gap-3 md:grid-cols-2">
                       <Field
                         label="Available from"
-                        type="date"
-                        helper="Leave empty to allow immediate use."
+                        type="datetime-local"
+                        helper="Leave empty to allow immediate use. Date and time use your local timezone."
                         value={form.startsAt}
                         onChange={(value) =>
                           setForm({ ...form, startsAt: value })
@@ -869,8 +872,8 @@ export default function CouponsPage() {
 
                       <Field
                         label="Available until"
-                        type="date"
-                        helper="Leave empty if the promo should not expire automatically."
+                        type="datetime-local"
+                        helper="Leave empty if the promo should not expire automatically. Date and time use your local timezone."
                         value={form.endsAt}
                         onChange={(value) =>
                           setForm({ ...form, endsAt: value })
@@ -916,11 +919,12 @@ export default function CouponsPage() {
                                 ...form,
                                 timer: {
                                   ...form.timer,
-                                  type: value as TimerType,
+                                  type: value as TimerType | "",
                                 },
                               })
                             }
                           >
+                            <option value="">Select timer type</option>
                             <option value="FIXED_WINDOW">
                               Fixed start and end
                             </option>
@@ -954,7 +958,7 @@ export default function CouponsPage() {
                                 })
                               }
                             />
-                          ) : (
+                          ) : form.timer.type === "ONE_TIME" || form.timer.type === "LOOP" ? (
                             <Field
                               label="Duration in minutes"
                               required
@@ -971,7 +975,7 @@ export default function CouponsPage() {
                                 })
                               }
                             />
-                          )}
+                          ) : null}
                         </div>
                       ) : null}
                     </div>

@@ -46,6 +46,7 @@ type Props = {
   rating: number;
   reviews: number;
   offers?: ProductOffer[];
+  offersLoading?: boolean;
   colors: Color[];
   selectedColor?: string | null;
   onSelectColor?: (color: string) => void;
@@ -91,22 +92,40 @@ const formatCountdown = (ms: number) => {
   return `${minutes}m ${seconds}s`;
 };
 
+const getDurationTimerStart = (start: number, now: number, durationMs: number) => {
+  if (!start || !durationMs || now >= start) return start;
+
+  const timezoneDriftMs = Math.abs(new Date().getTimezoneOffset()) * 60 * 1000;
+  const startsIn = start - now;
+
+  if (timezoneDriftMs > 0 && Math.abs(startsIn - timezoneDriftMs) <= 5 * 60 * 1000) {
+    const correctedStart = start - timezoneDriftMs;
+    const correctedEnd = correctedStart + durationMs;
+
+    if (now < correctedEnd) return correctedStart;
+  }
+
+  return start;
+};
+
 const getOfferCountdown = (offer: ProductOffer | undefined, now: number) => {
   if (!offer?.timer?.enabled) return null;
 
-  const start = offer.timer.startAt ? new Date(offer.timer.startAt).getTime() : 0;
+  let start = offer.timer.startAt ? new Date(offer.timer.startAt).getTime() : 0;
   const couponEnd = offer.endsAt ? new Date(offer.endsAt).getTime() : 0;
   const timerEnd = offer.timer.endAt ? new Date(offer.timer.endAt).getTime() : 0;
   const hardEnd = [couponEnd, timerEnd].filter(Boolean).sort((a, b) => a - b)[0] || 0;
-
-  if (start && now < start) {
-    return { title: "Offer starts in", value: formatCountdown(start - now) };
-  }
 
   if (hardEnd && now >= hardEnd) return null;
 
   if (offer.timer.type === "LOOP") {
     const durationMs = Math.max(1, Number(offer.timer.durationMinutes || 0)) * 60 * 1000;
+    start = getDurationTimerStart(start, now, durationMs);
+
+    if (start && now < start) {
+      return { title: "Offer starts in", value: formatCountdown(start - now) };
+    }
+
     const elapsed = Math.max(0, now - (start || now));
     const loopRemaining = durationMs - (elapsed % durationMs);
     const remaining = hardEnd ? Math.min(loopRemaining, hardEnd - now) : loopRemaining;
@@ -118,10 +137,21 @@ const getOfferCountdown = (offer: ProductOffer | undefined, now: number) => {
   }
 
   if (offer.timer.type === "ONE_TIME") {
-    const end = (start || now) + Math.max(1, Number(offer.timer.durationMinutes || 0)) * 60 * 1000;
+    const durationMs = Math.max(1, Number(offer.timer.durationMinutes || 0)) * 60 * 1000;
+    start = getDurationTimerStart(start, now, durationMs);
+
+    if (start && now < start) {
+      return { title: "Offer starts in", value: formatCountdown(start - now) };
+    }
+
+    const end = (start || now) + durationMs;
     const remainingEnd = hardEnd ? Math.min(end, hardEnd) : end;
     if (now >= remainingEnd) return null;
     return { title: "Offer ends in", value: formatCountdown(remainingEnd - now) };
+  }
+
+  if (start && now < start) {
+    return { title: "Offer starts in", value: formatCountdown(start - now) };
   }
 
   if (hardEnd) return { title: "Offer ends in", value: formatCountdown(hardEnd - now) };
@@ -139,6 +169,29 @@ const getOfferRequirement = (offer: ProductOffer | undefined) => {
   return "";
 };
 
+function OfferSkeleton() {
+  return (
+    <div className="grid gap-2">
+      <div className="rounded-[4px] border border-slate-200 bg-white px-3 py-3 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <span className="h-8 w-24 animate-pulse rounded-[4px] bg-slate-200" />
+            <span className="h-8 w-9 animate-pulse rounded-[4px] bg-slate-100" />
+          </div>
+          <span className="h-9 w-28 shrink-0 animate-pulse rounded-[4px] bg-slate-100" />
+        </div>
+      </div>
+      <div className="rounded-[8px] border border-slate-200 bg-white p-3">
+        <div className="flex items-center justify-between gap-3">
+          <span className="h-4 w-32 animate-pulse rounded bg-slate-200" />
+          <span className="h-7 w-20 animate-pulse rounded bg-slate-100" />
+        </div>
+        <span className="mt-3 block h-3 w-3/4 animate-pulse rounded bg-slate-100" />
+      </div>
+    </div>
+  );
+}
+
 export default function InfoPanel({
   breadcrumbs,
   name,
@@ -148,6 +201,7 @@ export default function InfoPanel({
   rating,
   reviews,
   offers = [],
+  offersLoading = false,
   colors,
   selectedColor,
   onSelectColor,
@@ -270,6 +324,8 @@ export default function InfoPanel({
         </div>
         <span className="text-base font-medium text-black">{rating.toFixed(1)} ( {reviews} )</span>
       </div>
+
+      {offersLoading && !offers.length ? <OfferSkeleton /> : null}
 
       {liveCountdown ? (
         <div className="rounded-[4px] border border-red-200 bg-red-50/80 px-3 py-3 shadow-sm">

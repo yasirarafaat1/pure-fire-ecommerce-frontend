@@ -64,7 +64,17 @@ type ProductPromo = {
   discountType?: "PERCENTAGE" | "FIXED";
   discountValue?: number;
   minimumOrderAmount?: number;
+  minimumQuantity?: number;
   maxDiscountAmount?: number;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  timer?: {
+    enabled?: boolean;
+    type?: "FIXED_WINDOW" | "ONE_TIME" | "LOOP";
+    startAt?: string | null;
+    endAt?: string | null;
+    durationMinutes?: number;
+  } | null;
 };
 
 export default function ProductPageClient() {
@@ -74,7 +84,6 @@ export default function ProductPageClient() {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [actionToast, setActionToast] = useState<ActionToast | null>(null);
-  const [productPromos, setProductPromos] = useState<ProductPromo[]>([]);
   const toastTimerRef = useRef<number | null>(null);
 
   const {
@@ -86,6 +95,8 @@ export default function ProductPageClient() {
     setCartItems,
     wishlistIds,
     setWishlistIds,
+    productPromos,
+    promosLoading,
     loading,
     setReviews,
   } = useProductPageData({
@@ -175,41 +186,6 @@ export default function ProductPageClient() {
       if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
     };
   }, []);
-
-  useEffect(() => {
-    const id = product?.product_id || productId;
-
-    if (!id) {
-      setProductPromos([]);
-      return;
-    }
-
-    let mounted = true;
-    const loadProductPromos = async () => {
-      try {
-        const params = new URLSearchParams({
-          product_id: String(id),
-          price: String(displayPrice || product?.selling_price || product?.price || 1),
-        });
-        const response = await fetch(`${API_BASE}/promos/public?${params.toString()}`, {
-          cache: "no-store",
-        });
-        const data = await response.json();
-
-        if (!mounted) return;
-
-        setProductPromos(Array.isArray(data.promos) ? data.promos : []);
-      } catch {
-        if (mounted) setProductPromos([]);
-      }
-    };
-
-    void loadProductPromos();
-
-    return () => {
-      mounted = false;
-    };
-  }, [displayPrice, product?.price, product?.product_id, product?.selling_price, productId]);
 
   const requireAuth = () => {
     const token = getToken();
@@ -411,6 +387,7 @@ export default function ProductPageClient() {
                   rating={avgRating || 0}
                   reviews={reviewCount}
                   offers={productPromos}
+                  offersLoading={promosLoading}
                   colors={colorOptions}
                   selectedColor={selectedColor}
                   onSelectColor={setSelectedColor}
