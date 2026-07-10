@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AddressList from "./components/AddressList";
@@ -48,6 +48,9 @@ export default function CheckoutPage() {
   const [panelMode, setPanelMode] = useState<"add" | "edit">("add");
   const [panelAddress, setPanelAddress] = useState<Address | null>(null);
   const [checkoutPromo, setCheckoutPromo] = useState<CheckoutPromo | null>(null);
+  const [promoCode, setPromoCode] = useState("");
+  const [promoMessage, setPromoMessage] = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
 
   useEffect(() => {
     const token = getUserToken();
@@ -121,24 +124,17 @@ export default function CheckoutPage() {
     load();
   }, [authReady]);
 
-  useEffect(() => {
-    if (!authReady || !cartItems.length) return;
+  const validatePromo = useCallback(
+    async (code: string, silent = false) => {
+      const normalized = code.trim().toUpperCase();
+      if (!normalized) {
+        setPromoMessage("Enter a promo code first.");
+        return null;
+      }
+      if (!cartItems.length) return null;
 
-    const raw = localStorage.getItem(promoStorageKey);
-    if (!raw) {
-      setCheckoutPromo(null);
-      return;
-    }
-
-    let saved: CheckoutPromo | null = null;
-    try {
-      saved = JSON.parse(raw) as CheckoutPromo;
-    } catch {
-      localStorage.removeItem(promoStorageKey);
-    }
-    if (!saved?.code) return;
-
-    const validate = async () => {
+      setPromoLoading(true);
+      if (!silent) setPromoMessage("");
       try {
         const response = await fetch(`${API_BASE}/validate-promo`, {
           method: "POST",
@@ -147,7 +143,7 @@ export default function CheckoutPage() {
             "x-user-token": getUserToken(),
           },
           body: JSON.stringify({
-            code: saved.code,
+            code: normalized,
             items: cartItems.map((item) => ({
               product_id: item.product_id,
               quantity: item.qty || item.quantity || 1,
@@ -161,24 +157,55 @@ export default function CheckoutPage() {
         if (!response.ok || !data.status) {
           localStorage.removeItem(promoStorageKey);
           setCheckoutPromo(null);
+          setPromoMessage(data.message || "Promo code is not applicable.");
           return;
         }
         const nextPromo = {
-          code: data.promo?.code || saved.code,
+          code: data.promo?.code || normalized,
           description: data.promo?.description || "",
           discountAmount: Number(data.discountAmount || 0),
           totalAfterDiscount: Number(data.totalAfterDiscount || 0),
           message: data.message || "",
         };
         setCheckoutPromo(nextPromo);
+        setPromoCode(nextPromo.code);
+        setPromoMessage(data.message || "Promo applied successfully.");
         localStorage.setItem(promoStorageKey, JSON.stringify(nextPromo));
+        return nextPromo;
       } catch {
         setCheckoutPromo(null);
+        if (!silent) setPromoMessage("Promo validation failed.");
+        return null;
+      } finally {
+        setPromoLoading(false);
       }
-    };
+    },
+    [cartItems],
+  );
 
-    void validate();
-  }, [authReady, cartItems]);
+  useEffect(() => {
+    if (!authReady || !cartItems.length) return;
+
+    const raw = localStorage.getItem(promoStorageKey);
+    if (!raw) {
+      setCheckoutPromo(null);
+      return;
+    }
+
+    try {
+      const saved = JSON.parse(raw) as CheckoutPromo;
+      if (saved?.code) void validatePromo(saved.code, true);
+    } catch {
+      localStorage.removeItem(promoStorageKey);
+    }
+  }, [authReady, cartItems.length, validatePromo]);
+
+  const removePromo = () => {
+    localStorage.removeItem(promoStorageKey);
+    setCheckoutPromo(null);
+    setPromoCode("");
+    setPromoMessage("Promo removed.");
+  };
 
   const refreshAddresses = async () => {
     const addrRes = await fetch(`${API_BASE}/get-user-addresess`, {
@@ -308,6 +335,12 @@ export default function CheckoutPage() {
             onSuccess={(orderId) => router.replace(`/order-success?order_id=${orderId}`)}
             mode={isBuyNow ? "buy_now" : "cart"}
             promo={checkoutPromo}
+            promoCode={promoCode}
+            promoMessage={promoMessage}
+            promoLoading={promoLoading}
+            onPromoCodeChange={(value) => setPromoCode(value.toUpperCase())}
+            onApplyPromo={() => validatePromo(promoCode)}
+            onRemovePromo={removePromo}
           />
         </aside>
       </div>

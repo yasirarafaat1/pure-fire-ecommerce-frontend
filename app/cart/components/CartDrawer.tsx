@@ -79,7 +79,7 @@ export default function CartDrawer({
       />
       <aside
         aria-label="Shopping cart panel"
-        className={`absolute right-0 top-0 flex h-full w-full max-w-xl flex-col bg-white shadow-2xl transition-transform duration-500 ease-out ${open ? "translate-x-0" : "translate-x-full"}`}
+        className={`absolute right-0 top-0 flex h-full w-full max-w-3xl flex-col bg-white shadow-2xl transition-transform duration-500 ease-out ${open ? "translate-x-0" : "translate-x-full"}`}
       >
         {loading ? (
           <CartSkeleton />
@@ -99,7 +99,7 @@ export default function CartDrawer({
                 <CloseIcon />
               </button>
             </header>
-            <div className="flex-1 overflow-y-auto p-5">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5">
               {!items.length ? (
                 <div className="grid place-items-center gap-5 py-20 text-center text-sm text-[var(--muted)]">
                   <p>Your cart is empty.</p>
@@ -121,7 +121,7 @@ export default function CartDrawer({
               )}
             </div>
             {items.length > 0 && (
-              <footer className="grid gap-3 border-t border-black/10 bg-white p-5">
+              <footer className="grid gap-3 border-t border-black/10 bg-white p-4 sm:p-5">
                 <div className="flex items-center justify-between text-sm">
                   <span>MRP</span><span>{formatMoney(totals.mrpTotal)}</span>
                 </div>
@@ -219,12 +219,18 @@ function CartDrawerItem({
   onUpdateQty: (item: CartItem, quantity: number) => void;
 }) {
   return (
-    <div className="flex gap-4 border-b border-black/15 pb-4">
-      <a href={buildProductHref({ id: item.id, name: item.title, color: item.color, size: item.size })}>
-        <img src={item.image} alt={item.title} className="h-32 w-24 rounded-[5px] object-cover" />
+    <div className="flex gap-3 border-b border-black/15 pb-4 sm:gap-4">
+      <a
+        href={buildProductHref({ id: item.id, name: item.title, color: item.color, size: item.size })}
+        className="shrink-0"
+      >
+        <img src={item.image} alt={item.title} className="h-28 w-20 rounded-[5px] object-cover sm:h-32 sm:w-24" />
       </a>
-      <div className="grid flex-1 gap-2 text-sm">
-        <div><p className="font-semibold">{item.title}</p>{item.subcategory && <p className="text-[var(--muted)]">{item.subcategory}</p>}</div>
+      <div className="grid min-w-0 flex-1 gap-2 text-sm">
+        <div className="min-w-0">
+          <p className="line-clamp-2 font-semibold leading-snug">{item.title}</p>
+          {item.subcategory && <p className="truncate text-[var(--muted)]">{item.subcategory}</p>}
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-semibold">{formatMoney(item.price)}</span>
           {item.mrp != null && <span className="text-xs text-[#999] line-through">{formatMoney(item.mrp)}</span>}
@@ -239,8 +245,8 @@ function CartDrawerItem({
           <button className="px-3 py-1" onClick={() => onUpdateQty(item, item.qty + 1)}>+</button>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button className="rounded-[5px] border border-black/20 px-4 py-2 text-xs hover:bg-black/10" onClick={() => onRemove(item)}>Remove</button>
-          <button className="rounded-[5px] border border-black/20 px-4 py-2 text-xs hover:bg-black/10" onClick={() => onToggleWishlist(item)}>
+          <button className="rounded-[5px] border border-black/20 px-3 py-2 text-xs hover:bg-black/10 sm:px-4" onClick={() => onRemove(item)}>Remove</button>
+          <button className="rounded-[5px] border border-black/20 px-3 py-2 text-xs hover:bg-black/10 sm:px-4" onClick={() => onToggleWishlist(item)}>
             {wishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
           </button>
         </div>

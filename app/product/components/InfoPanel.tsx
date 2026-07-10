@@ -7,6 +7,7 @@ import { FaTruckFast } from "react-icons/fa6";
 import { MdOutlinePayments } from "react-icons/md";
 import { PiHeartFill, PiHeartLight } from "react-icons/pi";
 import { returnPolicyText } from "../data/returnPolicy";
+import { Check, Clock, Copy, Timer } from "lucide-react";
 
 type Crumb = { label: string; href?: string };
 type Highlight = { key: string; value: string };
@@ -128,6 +129,16 @@ const getOfferCountdown = (offer: ProductOffer | undefined, now: number) => {
   return null;
 };
 
+const getOfferRequirement = (offer: ProductOffer | undefined) => {
+  if (!offer) return "";
+  const minimumOrderAmount = Number(offer.minimumOrderAmount || 0);
+  const minimumQuantity = Number(offer.minimumQuantity || 1);
+
+  if (minimumOrderAmount > 0) return `Min Order Rs ${minimumOrderAmount.toLocaleString("en-IN")}`;
+  if (minimumQuantity > 1) return `Min Qty ${minimumQuantity}`;
+  return "";
+};
+
 export default function InfoPanel({
   breadcrumbs,
   name,
@@ -176,7 +187,20 @@ export default function InfoPanel({
   const policyHeading = policyLines.shift() || "Returns, Exchange & Refund Policy";
   const liveOffer = useMemo(() => offers.find((offer) => offer.timer?.enabled), [offers]);
   const liveCountdown = useMemo(() => getOfferCountdown(liveOffer, now), [liveOffer, now]);
+  const liveOfferRequirement = useMemo(() => getOfferRequirement(liveOffer), [liveOffer]);
+  const [offerCopied, setOfferCopied] = useState(false);
 
+  const copyLiveOfferCode = async () => {
+    const code = liveOffer?.code || "LIVEOFFER";
+
+    try {
+      await navigator.clipboard.writeText(code);
+      setOfferCopied(true);
+      window.setTimeout(() => setOfferCopied(false), 1600);
+    } catch {
+      setOfferCopied(false);
+    }
+  };
   useEffect(() => {
     if (!liveOffer) return undefined;
 
@@ -248,14 +272,43 @@ export default function InfoPanel({
       </div>
 
       {liveCountdown ? (
-        <div className="rounded-[8px] border border-black/10 bg-black px-3 py-2 text-white">
+        <div className="rounded-[4px] border border-red-200 bg-red-50/80 px-3 py-3 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="mt-1 truncate text-sm font-black">{liveOffer?.code}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-[4px] border border-red-200 bg-white px-3 py-1.5 text-sm font-black tracking-wide text-red-700">
+                  {liveOffer?.code || "LIVEOFFER"}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={copyLiveOfferCode}
+                  className={`inline-flex h-8 items-center gap-1.5 rounded-[4px] border px-2.5 text-xs font-black transition active:scale-[0.97] ${offerCopied
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-red-200 hover:text-red-700"
+                    }`}
+                >
+                  {offerCopied ? (
+                    <>
+                      <Check size={13} strokeWidth={2.8} />
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={13} strokeWidth={2.8} />
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-            <span className="shrink-0 rounded-[5px] bg-white px-3 py-1.5 text-sm font-black tabular-nums text-black">
-              {liveCountdown.value}
-            </span>
+            <div className="flex items-center gap-2 shrink-0 rounded-[4px] border border-red-200 bg-white px-3 py-2 text-center shadow-sm">
+            <Clock size={16} />
+              <span
+                aria-live="polite"
+                className="block min-w-[84px] text-base font-black tabular-nums text-slate-950"
+              >
+                {liveCountdown.value}
+              </span>
+            </div>
           </div>
         </div>
       ) : null}
@@ -275,6 +328,7 @@ export default function InfoPanel({
                 offer.discountType === "PERCENTAGE"
                   ? `${offer.discountValue || 0}% OFF`
                   : `Rs ${Number(offer.discountValue || 0).toLocaleString("en-IN")} OFF`;
+              const requirement = getOfferRequirement(offer);
 
               return (
                 <article
@@ -298,14 +352,12 @@ export default function InfoPanel({
 
                   <p className="mt-2 line-clamp-2 text-xs font-medium leading-5 text-slate-600">
                     {offer.description ||
-                      `Use code ${offer.code} on this product${offer.minimumOrderAmount ? ` above Rs ${offer.minimumOrderAmount}` : ""}.`}
+                      `Use code ${offer.code} on this product${requirement ? ` with ${requirement.toLowerCase()}` : ""}.`}
                   </p>
 
-                  {offer.minimumOrderAmount || offer.minimumQuantity || offer.maxDiscountAmount ? (
+                  {requirement ? (
                     <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-bold text-slate-500">
-                      {offer.minimumOrderAmount ? <span>Min amount Rs {offer.minimumOrderAmount}</span> : null}
-                      {offer.minimumQuantity && offer.minimumQuantity > 1 ? <span>Min qty {offer.minimumQuantity}</span> : null}
-                      {offer.maxDiscountAmount ? <span>Max off Rs {offer.maxDiscountAmount}</span> : null}
+                      <span>{requirement}</span>
                     </div>
                   ) : null}
                 </article>
@@ -333,9 +385,8 @@ export default function InfoPanel({
                   setSelectionError(null);
                   onSelectColor?.(c.swatch);
                 }}
-                className={`w-9 h-9 p-4 bg-white cursor-pointer rounded-full border ${
-                  active ? "border-1 border-black shadow-[0_0_0_2px_#fff]" : "border-black/30"
-                } transition-transform duration-200 hover:scale-105 active:scale-95`}
+                className={`w-9 h-9 p-4 bg-white cursor-pointer rounded-full border ${active ? "border-1 border-black shadow-[0_0_0_2px_#fff]" : "border-black/30"
+                  } transition-transform duration-200 hover:scale-105 active:scale-95`}
                 style={{ background: c.swatch }}
                 title={c.name}
               />
@@ -368,9 +419,8 @@ export default function InfoPanel({
                   if (selectedSizeProp !== undefined) onSelectSize?.(s);
                   else setLocalSize(s);
                 }}
-                className={`relative cursor-pointer px-4 py-3 mb-4 border rounded-[8px] text-sm transition-all ${
-                  active ? "bg-black text-white border-black" : "border-gray-400 hover:bg-black hover:text-white"
-                } transition-transform duration-200 hover:-translate-y-[1px] active:scale-95`}
+                className={`relative cursor-pointer px-4 py-3 mb-4 border rounded-[8px] text-sm transition-all ${active ? "bg-black text-white border-black" : "border-gray-400 hover:bg-black hover:text-white"
+                  } transition-transform duration-200 hover:-translate-y-[1px] active:scale-95`}
               >
                 {s}
               </button>
@@ -412,11 +462,10 @@ export default function InfoPanel({
       <button
         type="button"
         onClick={onToggleWishlist}
-        className={`hidden w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] border px-4 py-3 text-sm font-extrabold uppercase tracking-wide transition-all duration-200 active:scale-[0.98] md:flex ${
-          wishlisted
-            ? "border-red-500 bg-red-50 text-red-600 hover:bg-red-100"
-            : "border-red-200 bg-white text-black hover:border-red-500 hover:bg-red-50 hover:text-red-600"
-        }`}
+        className={`hidden w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] border px-4 py-3 text-sm font-extrabold uppercase tracking-wide transition-all duration-200 active:scale-[0.98] md:flex ${wishlisted
+          ? "border-red-500 bg-red-50 text-red-600 hover:bg-red-100"
+          : "border-red-200 bg-white text-black hover:border-red-500 hover:bg-red-50 hover:text-red-600"
+          }`}
       >
         {wishlisted ? <PiHeartFill size={18} /> : <PiHeartLight size={18} />}
         {wishlisted ? "Added to Wishlist" : "Add to Wishlist"}

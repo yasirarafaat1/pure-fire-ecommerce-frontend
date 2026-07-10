@@ -29,6 +29,12 @@ type Props = {
     discountAmount: number;
     message?: string;
   } | null;
+  promoCode: string;
+  promoMessage: string;
+  promoLoading: boolean;
+  onPromoCodeChange: (value: string) => void;
+  onApplyPromo: () => void;
+  onRemovePromo: () => void;
 };
 
 type RazorpayResponse = {
@@ -68,7 +74,20 @@ const loadRazorpay = () =>
     document.body.appendChild(script);
   });
 
-export default function CheckoutPayment({ items, selectedAddress, onSuccess, onError, mode = "cart", promo }: Props) {
+export default function CheckoutPayment({
+  items,
+  selectedAddress,
+  onSuccess,
+  onError,
+  mode = "cart",
+  promo,
+  promoCode,
+  promoMessage,
+  promoLoading,
+  onPromoCodeChange,
+  onApplyPromo,
+  onRemovePromo,
+}: Props) {
   const [paying, setPaying] = useState(false);
 
   const failToPage = (message: string, orderId?: string | number) => {
@@ -193,6 +212,12 @@ export default function CheckoutPayment({ items, selectedAddress, onSuccess, onE
       paying={paying}
       disabled={!selectedAddress}
       promo={promo}
+      promoCode={promoCode}
+      promoMessage={promoMessage}
+      promoLoading={promoLoading}
+      onPromoCodeChange={onPromoCodeChange}
+      onApplyPromo={onApplyPromo}
+      onRemovePromo={onRemovePromo}
     />
   );
 }
