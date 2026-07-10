@@ -11,12 +11,14 @@ const getRandomDelay = (min: number, max: number) =>
 export default function AssistantLauncher({
   open,
   onClick,
+  onQuestionClick,
   productPage = false,
   allowAutoOpen = false,
   questions = [],
 }: {
   open: boolean;
   onClick: () => void;
+  onQuestionClick?: (question: string) => void;
   productPage?: boolean;
   allowAutoOpen?: boolean;
   questions?: string[];
@@ -99,6 +101,14 @@ export default function AssistantLauncher({
   }, [bubblePhase, questionIndex]);
 
   const activeQuestion = questions[questionIndex] || questions[0] || "";
+  const handleQuestionClick = () => {
+    if (onQuestionClick && activeQuestion) {
+      onQuestionClick(activeQuestion);
+      return;
+    }
+
+    onClick();
+  };
 
   return (
     <div
@@ -125,7 +135,7 @@ export default function AssistantLauncher({
           ref={bubbleRef}
           type="button"
           data-question={activeQuestion}
-          onClick={onClick}
+          onClick={handleQuestionClick}
           className="assistant-question-bubble assistant-question-bubble-message assistant-question-bubble-animate"
           aria-label="Open shopping assistant suggestion"
         />
@@ -137,7 +147,7 @@ export default function AssistantLauncher({
         onClick={onClick}
         className="assistant-launcher-button grid h-14 w-14 shrink-0 place-items-center rounded-full bg-green-700 text-white shadow-[0_18px_45px_rgba(15,23,42,0.28)] transition hover:bg-green-800 active:scale-[0.96]"
       >
-        <Bot size={23} />
+        <Bot size={30} />
       </button>
 
       <style jsx>{`

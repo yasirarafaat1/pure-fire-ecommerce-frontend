@@ -24,6 +24,10 @@ type PendingCheckout = {
   createdAt?: number;
 };
 
+type SendMessageOptions = {
+  replyTo?: AssistantMessage["replyTo"];
+};
+
 const readPendingCheckout = (): PendingCheckout | null => {
   if (typeof window === "undefined") return null;
 
@@ -122,20 +126,20 @@ export const useAssistantChat = ({
   }, [welcomeMessage]);
 
   const sendMessage = useCallback(
-    async (text: string) => {
+    async (text: string, options: SendMessageOptions = {}) => {
       const trimmed = text.trim();
       if (!trimmed || loading) return;
       setError("");
+      const activeReplyTo = options.replyTo ?? replyTo;
       const userMessage: AssistantMessage = {
         id: `user_${Date.now()}`,
         role: "user",
         content: trimmed,
-        replyTo,
+        replyTo: activeReplyTo,
         createdAt: new Date().toISOString(),
       };
       setMessages((current) => [...current, userMessage]);
-      const activeReplyTo = replyTo;
-      setReplyTo(null);
+      if (!options.replyTo) setReplyTo(null);
 
       const pendingCheckout = readPendingCheckout();
       if (pendingCheckout && isConfirmCheckoutReply(trimmed)) {
@@ -207,6 +211,37 @@ export const useAssistantChat = ({
       }
     },
     [addAssistantNotice, ensureSession, guestId, loading, pageContext, replyTo, sessionId],
+  );
+
+  const getLauncherReply = useCallback((question: string) => {
+    const normalized = question.toLowerCase();
+    if (/\?|chahiye|chaiye|dikhau|dikhaun|kar du|karna hai|check|suggest|recommend|buy|cart|order|wishlist|profile|address|policy|help/.test(normalized)) {
+      return "Yes";
+    }
+    return question;
+  }, []);
+
+  const sendLauncherQuestion = useCallback(
+    async (question: string) => {
+      const trimmed = question.trim();
+      if (!trimmed || loading) return;
+      const assistantQuestion: AssistantMessage = {
+        id: `assistant_launcher_${Date.now()}`,
+        role: "assistant",
+        content: trimmed,
+        suggestions: ["Yes", "No"],
+        createdAt: new Date().toISOString(),
+      };
+      setMessages((current) => [...current, assistantQuestion]);
+      await sendMessage(getLauncherReply(trimmed), {
+        replyTo: {
+          id: assistantQuestion.id,
+          role: "assistant",
+          content: trimmed,
+        },
+      });
+    },
+    [getLauncherReply, loading, sendMessage],
   );
 
   const lookupOrder = useCallback(
@@ -320,6 +355,7 @@ export const useAssistantChat = ({
       error,
       sessions,
       sendMessage,
+      sendLauncherQuestion,
       lookupOrder,
       refreshSessions,
       openHistory,
@@ -328,6 +364,6 @@ export const useAssistantChat = ({
       replyTo,
       setReplyTo,
     }),
-    [addAssistantNotice, error, historyLoading, loading, lookupOrder, messages, openHistory, refreshSessions, replyTo, sendMessage, sessions, startNewChat],
+    [addAssistantNotice, error, historyLoading, loading, lookupOrder, messages, openHistory, refreshSessions, replyTo, sendLauncherQuestion, sendMessage, sessions, startNewChat],
   );
 };

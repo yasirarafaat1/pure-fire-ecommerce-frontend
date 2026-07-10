@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import AssistantLauncher from "./AssistantLauncher";
 import AssistantPanel from "./AssistantPanel";
+import { assistantPost } from "./assistant-api";
 import { useAssistantChat } from "./hooks/useAssistantChat";
 import { useAssistantSession } from "./hooks/useAssistantSession";
 import { getAssistantPageContext } from "./pageContext";
@@ -78,12 +79,22 @@ const getLauncherQuestions = (pageContext: ReturnType<typeof getAssistantPageCon
   ];
 };
 
+const shuffleQuestions = (items: string[]) => {
+  const next = [...items];
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+  }
+  return next;
+};
+
 export default function AssistantWidget() {
   const pathname = usePathname() || "/";
   const [open, setOpen] = useState(false);
   const [allowAutoOpen, setAllowAutoOpen] = useState(false);
   const pageContext = useMemo(() => getAssistantPageContext(pathname), [pathname]);
-  const launcherQuestions = useMemo(() => getLauncherQuestions(pageContext), [pageContext]);
+  const fallbackLauncherQuestions = useMemo(() => getLauncherQuestions(pageContext), [pageContext]);
+  const [launcherQuestions, setLauncherQuestions] = useState<string[]>(fallbackLauncherQuestions);
   const session = useAssistantSession(open);
   const chat = useAssistantChat({
     sessionId: session.sessionId,
@@ -94,6 +105,39 @@ export default function AssistantWidget() {
     pageContext,
   });
   const { addAssistantNotice } = chat;
+
+  useEffect(() => {
+    let mounted = true;
+    const fallback = shuffleQuestions(fallbackLauncherQuestions);
+    setLauncherQuestions(fallback);
+
+    const loadLauncherQuestions = async () => {
+      try {
+        const data = await assistantPost<{ status: boolean; suggestions?: string[] }>(
+          "/launcher-suggestions",
+          {
+            context: pageContext,
+            fallback,
+          },
+        );
+        if (!mounted) return;
+        const suggestions = Array.isArray(data.suggestions)
+          ? data.suggestions
+              .map((item) => String(item || "").trim())
+              .filter(Boolean)
+          : [];
+        setLauncherQuestions(suggestions.length ? shuffleQuestions(suggestions) : fallback);
+      } catch {
+        if (mounted) setLauncherQuestions(fallback);
+      }
+    };
+
+    void loadLauncherQuestions();
+
+    return () => {
+      mounted = false;
+    };
+  }, [fallbackLauncherQuestions, pageContext]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -210,7 +254,11 @@ export default function AssistantWidget() {
       />
       <AssistantLauncher
         open={open}
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => setOpen(true)}
+        onQuestionClick={(question) => {
+          setOpen(true);
+          void chat.sendLauncherQuestion(question);
+        }}
         productPage={isProductPage}
         allowAutoOpen={allowAutoOpen}
         questions={launcherQuestions}
