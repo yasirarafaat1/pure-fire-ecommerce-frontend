@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   Star,
+  TicketPercent,
   Truck,
   X,
 } from "lucide-react";
@@ -60,6 +61,7 @@ const sections: { label: string; items: Item[] }[] = [
     label: "Sales",
     items: [
       { label: "Orders", href: "/admin/orders", icon: PackageCheck },
+      { label: "Promo Codes", href: "/admin/coupons", icon: TicketPercent, roles: ["SUPER_ADMIN", "MANAGER"] },
       { label: "Invoices", href: "/admin/invoices", icon: FileText },
       { label: "Returns", href: "/admin/returns", icon: RotateCcw },
     ],

@@ -12,6 +12,23 @@ const getToken = () => getUserToken();
 
 type CartResponse = { items?: RawCartItem[] };
 type ProductsResponse = { products?: ProductSummary[]; data?: ProductSummary[] };
+type PublicPromo = {
+  code: string;
+  description?: string;
+  discountType?: "PERCENTAGE" | "FIXED";
+  discountValue?: number;
+  minimumOrderAmount?: number;
+  maxDiscountAmount?: number;
+};
+
+type AppliedPromo = {
+  code: string;
+  description?: string;
+  discountAmount: number;
+  totalAfterDiscount: number;
+};
+
+const promoStorageKey = "purefire_checkout_promo";
 
 type Props = {
   open: boolean;
@@ -27,6 +44,11 @@ export default function CartModal({ open, onClose }: Props) {
   const [loadingCart, setLoadingCart] = useState(false);
   const [wishlistIds, setWishlistIds] = useState<Set<string>>(new Set());
   const [clearingCart, setClearingCart] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
+  const [promoMessage, setPromoMessage] = useState("");
+  const [publicPromos, setPublicPromos] = useState<PublicPromo[]>([]);
+  const [appliedPromo, setAppliedPromo] = useState<AppliedPromo | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
 
   const requireAuth = () => {
     const token = getToken();
@@ -107,8 +129,107 @@ export default function CartModal({ open, onClose }: Props) {
   const totals = useMemo(() => {
     const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
     const mrpTotal = items.reduce((sum, item) => sum + (item.mrp ?? item.price) * item.qty, 0);
-    return { subtotal, mrpTotal };
-  }, [items]);
+    const promoDiscount = appliedPromo?.discountAmount || 0;
+    return { subtotal, mrpTotal, promoDiscount, payable: Math.max(subtotal - promoDiscount, 0) };
+  }, [appliedPromo, items]);
+
+  const cartPayloadItems = useMemo(
+    () =>
+      items.map((item) => ({
+        product_id: item.id,
+        quantity: item.qty,
+        price: item.price,
+        color: item.color || "",
+        size: item.size || "",
+      })),
+    [items]
+  );
+
+  const validatePromo = async (code: string, silent = false) => {
+    const normalized = code.trim().toUpperCase();
+    if (!normalized) {
+      setPromoMessage("Enter a promo code first.");
+      return null;
+    }
+    if (!cartPayloadItems.length) return null;
+    setPromoLoading(true);
+    if (!silent) setPromoMessage("");
+    try {
+      const response = await fetch(`${API_BASE}/validate-promo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-user-token": getToken() },
+        body: JSON.stringify({ code: normalized, items: cartPayloadItems }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.status) {
+        localStorage.removeItem(promoStorageKey);
+        setAppliedPromo(null);
+        setPromoMessage(data.message || "Promo code is not applicable.");
+        return null;
+      }
+      const nextPromo = {
+        code: data.promo?.code || normalized,
+        description: data.promo?.description || "",
+        discountAmount: Number(data.discountAmount || 0),
+        totalAfterDiscount: Number(data.totalAfterDiscount || 0),
+      };
+      setAppliedPromo(nextPromo);
+      setPromoCode(nextPromo.code);
+      setPromoMessage(data.message || "Promo applied successfully.");
+      localStorage.setItem(promoStorageKey, JSON.stringify(nextPromo));
+      return nextPromo;
+    } catch {
+      if (!silent) setPromoMessage("Promo validation failed.");
+      return null;
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!open || !items.length) return;
+    const loadPromos = async () => {
+      try {
+        const responses = await Promise.all([
+          fetch(`${API_BASE}/promos/public`).then((response) => response.json()),
+          ...items.map((item) =>
+            fetch(`${API_BASE}/promos/public?product_id=${encodeURIComponent(String(item.id))}&price=${item.price}`).then((response) =>
+              response.json()
+            )
+          ),
+        ]);
+        const map = new Map<string, PublicPromo>();
+        responses.forEach((response) => {
+          (response.promos || []).forEach((promo: PublicPromo) => {
+            if (promo.code) map.set(promo.code.toUpperCase(), promo);
+          });
+        });
+        setPublicPromos(Array.from(map.values()));
+      } catch {
+        setPublicPromos([]);
+      }
+    };
+    void loadPromos();
+  }, [items, open]);
+
+  useEffect(() => {
+    if (!open || !items.length) return;
+    const raw = localStorage.getItem(promoStorageKey);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw) as AppliedPromo;
+      if (saved?.code) void validatePromo(saved.code, true);
+    } catch {
+      localStorage.removeItem(promoStorageKey);
+    }
+  }, [cartPayloadItems, items.length, open]);
+
+  const removePromo = () => {
+    localStorage.removeItem(promoStorageKey);
+    setAppliedPromo(null);
+    setPromoCode("");
+    setPromoMessage("Promo removed.");
+  };
 
   const updateQty = async (item: CartItem, nextQty: number) => {
     if (!cartId) return;
@@ -149,7 +270,11 @@ export default function CartModal({ open, onClose }: Props) {
         body: JSON.stringify({ cart_id: cartId }),
       });
       const data = (await response.json()) as CartResponse;
-      if (data.items) applyCartItems(data.items);
+      if (data.items) {
+        applyCartItems(data.items);
+        localStorage.removeItem(promoStorageKey);
+        setAppliedPromo(null);
+      }
     } finally {
       setClearingCart(false);
     }
@@ -185,9 +310,18 @@ export default function CartModal({ open, onClose }: Props) {
       clearing={clearingCart}
       wishlistIds={wishlistIds}
       totals={totals}
+      promoCode={promoCode}
+      promoMessage={promoMessage}
+      publicPromos={publicPromos}
+      appliedPromo={appliedPromo}
+      promoLoading={promoLoading}
       onClose={onClose}
       onClear={clearCart}
       onCheckout={checkout}
+      onPromoCodeChange={setPromoCode}
+      onApplyPromo={() => validatePromo(promoCode)}
+      onApplyPublicPromo={(code) => validatePromo(code)}
+      onRemovePromo={removePromo}
       onRemove={removeItem}
       onToggleWishlist={toggleWishlist}
       onUpdateQty={updateQty}

@@ -12,6 +12,14 @@ type Crumb = { label: string; href?: string };
 type Highlight = { key: string; value: string };
 type Color = { name: string; swatch: string };
 type SizeInput = string | { label?: string; size?: string };
+type ProductOffer = {
+  code: string;
+  description?: string;
+  discountType?: "PERCENTAGE" | "FIXED";
+  discountValue?: number;
+  minimumOrderAmount?: number;
+  maxDiscountAmount?: number;
+};
 
 function normalizeSize(value: SizeInput) {
   if (typeof value === "string") return value;
@@ -26,6 +34,7 @@ type Props = {
   discount: string;
   rating: number;
   reviews: number;
+  offers?: ProductOffer[];
   colors: Color[];
   selectedColor?: string | null;
   onSelectColor?: (color: string) => void;
@@ -67,6 +76,7 @@ export default function InfoPanel({
   discount,
   rating,
   reviews,
+  offers = [],
   colors,
   selectedColor,
   onSelectColor,
@@ -165,6 +175,63 @@ export default function InfoPanel({
         </div>
         <span className="text-base font-medium text-black">{rating.toFixed(1)} ( {reviews} )</span>
       </div>
+
+      {offers.length ? (
+        <div className="grid gap-2">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-black uppercase tracking-wide text-black">Available offers</p>
+            <span className="text-[11px] font-semibold text-[var(--muted)]">
+              {offers.length} offer{offers.length > 1 ? "s" : ""}
+            </span>
+          </div>
+
+          <div className="offer-scroll flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1">
+            {offers.map((offer) => {
+              const discountLabel =
+                offer.discountType === "PERCENTAGE"
+                  ? `${offer.discountValue || 0}% OFF`
+                  : `Rs ${Number(offer.discountValue || 0).toLocaleString("en-IN")} OFF`;
+
+              return (
+                <article
+                  key={offer.code}
+                  className="min-w-full snap-start rounded-[8px] border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-amber-50 p-3 shadow-[0_8px_22px_rgba(15,23,42,0.06)]"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">
+                        Product offer
+                      </p>
+                      <h3 className="mt-1 text-sm font-black text-black">{discountLabel}</h3>
+                    </div>
+                    <button
+                      type="button"
+                      className="shrink-0 rounded-[5px] border border-black/15 bg-white px-3 py-1.5 text-xs font-black text-black transition hover:bg-black hover:text-white"
+                      onClick={() => {
+                        void navigator.clipboard?.writeText(offer.code);
+                      }}
+                    >
+                      {offer.code}
+                    </button>
+                  </div>
+
+                  <p className="mt-2 line-clamp-2 text-xs font-medium leading-5 text-slate-600">
+                    {offer.description ||
+                      `Use code ${offer.code} on this product${offer.minimumOrderAmount ? ` above Rs ${offer.minimumOrderAmount}` : ""}.`}
+                  </p>
+
+                  {offer.minimumOrderAmount || offer.maxDiscountAmount ? (
+                    <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-bold text-slate-500">
+                      {offer.minimumOrderAmount ? <span>Min Rs {offer.minimumOrderAmount}</span> : null}
+                      {offer.maxDiscountAmount ? <span>Max Rs {offer.maxDiscountAmount}</span> : null}
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid gap-2">
         <p className="text-lg font-semibold">
@@ -413,6 +480,19 @@ export default function InfoPanel({
           </ul>
         )}
       </div>
+
+      <style jsx>{`
+        .offer-scroll {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+
+        .offer-scroll::-webkit-scrollbar {
+          display: none;
+          width: 0;
+          height: 0;
+        }
+      `}</style>
     </section>
   );
 }

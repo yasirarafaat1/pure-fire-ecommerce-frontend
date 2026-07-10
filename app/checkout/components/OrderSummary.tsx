@@ -17,6 +17,11 @@ type Props = {
   onPay: () => void;
   paying: boolean;
   disabled?: boolean;
+  promo?: {
+    code: string;
+    discountAmount: number;
+    message?: string;
+  } | null;
 };
 
 const toNum = (v: any) => {
@@ -24,10 +29,12 @@ const toNum = (v: any) => {
   return Number.isFinite(n) ? n : 0;
 };
 
-export default function OrderSummary({ items, onPay, paying, disabled }: Props) {
+export default function OrderSummary({ items, onPay, paying, disabled, promo }: Props) {
   const subtotal = items.reduce((sum, i) => sum + toNum(i.price) * toNum(i.qty || i.quantity || 1), 0);
   const mrpTotal = items.reduce((sum, i) => sum + toNum(i.mrp || i.price) * toNum(i.qty || i.quantity || 1), 0);
   const savings = Math.max(mrpTotal - subtotal, 0);
+  const promoDiscount = Number(promo?.discountAmount || 0);
+  const payable = Math.max(subtotal - promoDiscount, 0);
 
   return (
     <div className="border-b border-t border-black/20 p-4 grid gap-3">
@@ -44,6 +51,16 @@ export default function OrderSummary({ items, onPay, paying, disabled }: Props) 
         <div className="flex items-center justify-between">
           <span>Subtotal</span>
           <span>{"\u20B9"}{subtotal.toFixed(0)}</span>
+        </div>
+        {promo ? (
+          <div className="flex items-center justify-between text-green-700">
+            <span>Promo {promo.code}</span>
+            <span>- {"\u20B9"}{promoDiscount.toFixed(0)}</span>
+          </div>
+        ) : null}
+        <div className="flex items-center justify-between border-t border-black/10 pt-2 font-semibold">
+          <span>Total</span>
+          <span>{"\u20B9"}{payable.toFixed(0)}</span>
         </div>
       </div>
       <button

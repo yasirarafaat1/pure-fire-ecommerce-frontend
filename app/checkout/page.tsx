@@ -25,6 +25,16 @@ type CartItem = {
   size?: string;
 };
 
+type CheckoutPromo = {
+  code: string;
+  description?: string;
+  discountAmount: number;
+  totalAfterDiscount?: number;
+  message?: string;
+};
+
+const promoStorageKey = "purefire_checkout_promo";
+
 export default function CheckoutPage() {
   const router = useRouter();
   const [authReady, setAuthReady] = useState(false);
@@ -37,6 +47,7 @@ export default function CheckoutPage() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelMode, setPanelMode] = useState<"add" | "edit">("add");
   const [panelAddress, setPanelAddress] = useState<Address | null>(null);
+  const [checkoutPromo, setCheckoutPromo] = useState<CheckoutPromo | null>(null);
 
   useEffect(() => {
     const token = getUserToken();
@@ -109,6 +120,65 @@ export default function CheckoutPage() {
     };
     load();
   }, [authReady]);
+
+  useEffect(() => {
+    if (!authReady || !cartItems.length) return;
+
+    const raw = localStorage.getItem(promoStorageKey);
+    if (!raw) {
+      setCheckoutPromo(null);
+      return;
+    }
+
+    let saved: CheckoutPromo | null = null;
+    try {
+      saved = JSON.parse(raw) as CheckoutPromo;
+    } catch {
+      localStorage.removeItem(promoStorageKey);
+    }
+    if (!saved?.code) return;
+
+    const validate = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/validate-promo`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-user-token": getUserToken(),
+          },
+          body: JSON.stringify({
+            code: saved.code,
+            items: cartItems.map((item) => ({
+              product_id: item.product_id,
+              quantity: item.qty || item.quantity || 1,
+              price: item.price || 0,
+              color: item.color || "",
+              size: item.size || "",
+            })),
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.status) {
+          localStorage.removeItem(promoStorageKey);
+          setCheckoutPromo(null);
+          return;
+        }
+        const nextPromo = {
+          code: data.promo?.code || saved.code,
+          description: data.promo?.description || "",
+          discountAmount: Number(data.discountAmount || 0),
+          totalAfterDiscount: Number(data.totalAfterDiscount || 0),
+          message: data.message || "",
+        };
+        setCheckoutPromo(nextPromo);
+        localStorage.setItem(promoStorageKey, JSON.stringify(nextPromo));
+      } catch {
+        setCheckoutPromo(null);
+      }
+    };
+
+    void validate();
+  }, [authReady, cartItems]);
 
   const refreshAddresses = async () => {
     const addrRes = await fetch(`${API_BASE}/get-user-addresess`, {
@@ -237,6 +307,7 @@ export default function CheckoutPage() {
             onError={handlePaymentError}
             onSuccess={(orderId) => router.replace(`/order-success?order_id=${orderId}`)}
             mode={isBuyNow ? "buy_now" : "cart"}
+            promo={checkoutPromo}
           />
         </aside>
       </div>

@@ -24,6 +24,11 @@ type Props = {
   onSuccess: (orderId: string | number) => void;
   onError: (message: string, meta?: { failedPage?: boolean; orderId?: string | number }) => void;
   mode?: "cart" | "buy_now";
+  promo?: {
+    code: string;
+    discountAmount: number;
+    message?: string;
+  } | null;
 };
 
 type RazorpayResponse = {
@@ -63,7 +68,7 @@ const loadRazorpay = () =>
     document.body.appendChild(script);
   });
 
-export default function CheckoutPayment({ items, selectedAddress, onSuccess, onError, mode = "cart" }: Props) {
+export default function CheckoutPayment({ items, selectedAddress, onSuccess, onError, mode = "cart", promo }: Props) {
   const [paying, setPaying] = useState(false);
 
   const failToPage = (message: string, orderId?: string | number) => {
@@ -99,6 +104,7 @@ export default function CheckoutPayment({ items, selectedAddress, onSuccess, onE
           items: itemsPayload,
           address_id: selectedAddress,
           email: getUserEmail(),
+          promo_code: promo?.code || "",
         }),
       });
       const orderJson = await orderRes.json();
@@ -147,6 +153,7 @@ export default function CheckoutPayment({ items, selectedAddress, onSuccess, onE
             }
             localStorage.removeItem("checkout_selected_address_id");
             localStorage.removeItem("checkout_started_from_assistant");
+            localStorage.removeItem("purefire_checkout_promo");
             onSuccess(verifyJson.order_id || orderJson.local_order_id);
           } else {
             failToPage(
@@ -185,6 +192,7 @@ export default function CheckoutPayment({ items, selectedAddress, onSuccess, onE
       onPay={handlePay}
       paying={paying}
       disabled={!selectedAddress}
+      promo={promo}
     />
   );
 }
