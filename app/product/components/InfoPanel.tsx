@@ -251,9 +251,6 @@ export default function InfoPanel({
         <div className="rounded-[8px] border border-black/10 bg-black px-3 py-2 text-white">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/60">
-                {liveCountdown.title}
-              </p>
               <p className="mt-1 truncate text-sm font-black">{liveOffer?.code}</p>
             </div>
             <span className="shrink-0 rounded-[5px] bg-white px-3 py-1.5 text-sm font-black tabular-nums text-black">
