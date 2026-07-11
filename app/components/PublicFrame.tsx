@@ -50,7 +50,6 @@ export default function PublicFrame({ children }: { children: React.ReactNode })
   if (hideChrome) {
     return (
       <div className="min-h-screen bg-white">
-        <NavStrip />
         {children}
       </div>
     );
