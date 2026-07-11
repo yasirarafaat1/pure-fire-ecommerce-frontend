@@ -59,6 +59,11 @@ const CUSTOMER_LINKS = [
     href: "/wishlist",
     subtitle: "View your saved products",
   },
+    {
+    label: "Size Guide",
+    href: "/size-guide",
+    subtitle: "View your saved products",
+  },
   {
     label: "Support",
     href: "/support",

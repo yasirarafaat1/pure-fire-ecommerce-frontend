@@ -28,7 +28,7 @@ const links = {
   ],
   help: [
     { label: "Orders", href: "/orders" },
-    { label: "Support", href: "/support" },
+    { label: "Size Guide", href: "/size-guide" },
     { label: "Shipping Info", href: "/shipping-info" },
     { label: "Contact", href: "/contact" }
   ],
