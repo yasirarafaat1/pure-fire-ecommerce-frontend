@@ -225,7 +225,8 @@ export default function AssistantWidget() {
     };
   }, [addAssistantNotice]);
 
-  const isProductPage = pageContext.pageType === "product";
+  const useRaisedLauncher =
+    pageContext.pageType === "product" || pageContext.pageType === "profile";
 
   return (
     <>
@@ -259,7 +260,7 @@ export default function AssistantWidget() {
           setOpen(true);
           void chat.sendLauncherQuestion(question);
         }}
-        productPage={isProductPage}
+        productPage={useRaisedLauncher}
         allowAutoOpen={allowAutoOpen}
         questions={launcherQuestions}
       />
