@@ -355,10 +355,6 @@ export default function ProfileForm({ email }: { email: string }) {
               value={profile.email}
               readOnly
             />
-
-            <span className="text-xs font-semibold text-slate-500">
-              Email is linked to your login OTP.
-            </span>
           </label>
         </div>
 

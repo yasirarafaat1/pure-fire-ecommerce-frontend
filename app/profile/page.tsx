@@ -65,6 +65,108 @@ const sections: {
 
 function ProfilePageSkeleton() {
   return (
+    <main className="mx-auto max-w-6xl px-4 py-6 pb-36 md:px-6 md:pb-6">
+      <div className="mb-5 rounded-[4px] border border-slate-200 bg-white p-4 shadow-sm md:hidden">
+        <div className="flex items-center gap-3">
+          <div className="h-11 w-11 shrink-0 animate-pulse rounded-[4px] bg-slate-200" />
+          <div className="min-w-0 flex-1">
+            <div className="h-3 w-20 animate-pulse rounded-[4px] bg-slate-200" />
+            <div className="mt-2 h-5 w-28 animate-pulse rounded-[4px] bg-slate-100" />
+            <div className="mt-2 h-3 w-44 max-w-full animate-pulse rounded-[4px] bg-slate-100" />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-[270px_minmax(0,1fr)] md:items-start">
+        <aside className="profile-sidebar hidden md:block md:self-start">
+          <div className="profile-sidebar-card overflow-hidden rounded-[4px] border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-200 bg-slate-950 p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-11 w-11 shrink-0 animate-pulse rounded-[4px] bg-white/80" />
+                <div className="min-w-0 flex-1">
+                  <div className="h-3 w-16 animate-pulse rounded-[4px] bg-white/25" />
+                  <div className="mt-2 h-4 w-36 animate-pulse rounded-[4px] bg-white/40" />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-1 p-2">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="grid grid-cols-[36px_minmax(0,1fr)] items-center gap-3 rounded-[4px] border border-slate-100 px-2 py-2.5"
+                >
+                  <div className="h-9 w-9 animate-pulse rounded-[4px] bg-slate-100" />
+                  <div className="min-w-0">
+                    <div className="h-4 w-24 animate-pulse rounded-[4px] bg-slate-100" />
+                    <div className="mt-2 h-3 w-36 animate-pulse rounded-[4px] bg-slate-50" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </aside>
+
+        <section className="min-h-[520px] overflow-hidden rounded-[4px] border border-slate-200 bg-white shadow-sm">
+          <div className="hidden border-b border-slate-200 bg-white px-5 py-4 md:block">
+            <div className="h-3 w-24 animate-pulse rounded-[4px] bg-slate-100" />
+            <div className="mt-3 h-7 w-36 animate-pulse rounded-[4px] bg-slate-100" />
+            <div className="mt-3 h-4 w-72 max-w-full animate-pulse rounded-[4px] bg-slate-100" />
+          </div>
+
+          <div className="p-3 md:p-5">
+            <div className="flex items-center gap-4 rounded-[4px] border border-slate-100 bg-slate-50/60 p-4">
+              <div className="h-16 w-16 shrink-0 animate-pulse rounded-full bg-slate-200" />
+              <div className="min-w-0 flex-1">
+                <div className="h-5 w-44 animate-pulse rounded-[4px] bg-slate-200" />
+                <div className="mt-2 h-4 w-56 max-w-full animate-pulse rounded-[4px] bg-slate-100" />
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <div className="grid gap-2">
+                <div className="h-3 w-20 animate-pulse rounded-[4px] bg-slate-100" />
+                <div className="h-11 animate-pulse rounded-[5px] border border-slate-100 bg-slate-50" />
+              </div>
+              <div className="grid gap-2">
+                <div className="h-3 w-16 animate-pulse rounded-[4px] bg-slate-100" />
+                <div className="h-11 animate-pulse rounded-[5px] border border-slate-100 bg-slate-50" />
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              <div className="h-16 animate-pulse rounded-[4px] border border-slate-100 bg-slate-50" />
+              <div className="h-16 animate-pulse rounded-[4px] border border-slate-100 bg-slate-50" />
+              <div className="h-16 animate-pulse rounded-[4px] border border-slate-100 bg-slate-50" />
+            </div>
+
+            <div className="mt-6 flex flex-wrap gap-2">
+              <div className="h-10 w-32 animate-pulse rounded-[5px] bg-slate-950/15" />
+              <div className="h-10 w-24 animate-pulse rounded-[5px] border border-slate-100 bg-slate-50" />
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur md:hidden">
+        <div className="mx-auto grid max-w-md grid-cols-5 gap-1 py-2">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div
+              key={index}
+              className="flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-[4px] bg-slate-50 px-1"
+            >
+              <div className="h-5 w-5 animate-pulse rounded-[4px] bg-slate-200" />
+              <div className="h-2.5 w-10 animate-pulse rounded-[4px] bg-slate-100" />
+            </div>
+          ))}
+        </div>
+      </nav>
+    </main>
+  );
+}
+
+function OldProfilePageSkeleton() {
+  return (
     <main className="mx-auto max-w-6xl px-4 py-6 pb-24 md:px-6 md:pb-6">
       <div className="grid gap-6 md:grid-cols-[270px_minmax(0,1fr)] md:items-start">
         <aside className="hidden rounded-[4px] border border-slate-200 bg-white p-3 shadow-sm md:grid">
