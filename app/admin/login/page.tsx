@@ -50,9 +50,6 @@ export default function AdminLoginPage() {
         className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm"
         onSubmit={login}
       >
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-          PureFire Internal
-        </p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-950">Admin sign in</h1>
         <p className="mt-2 text-sm text-slate-500">
           Use your assigned administrator account.
