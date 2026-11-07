@@ -109,13 +109,25 @@ export default function SettingsPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
   const logoObjectUrlRef = useRef("");
+  const [faviconFileName, setFaviconFileName] = useState("");
+  const [faviconFile, setFaviconFile] = useState<File | null>(null);
+  const [faviconPreviewUrl, setFaviconPreviewUrl] = useState("");
+  const faviconObjectUrlRef = useRef("");
 
   const currentLogoUrl = logoPreviewUrl || form.seo?.logoUrl || "";
+  const currentFaviconUrl = faviconPreviewUrl || form.seo?.faviconUrl || "";
 
   const clearLogoObjectUrl = () => {
     if (logoObjectUrlRef.current) {
       URL.revokeObjectURL(logoObjectUrlRef.current);
       logoObjectUrlRef.current = "";
+    }
+  };
+
+  const clearFaviconObjectUrl = () => {
+    if (faviconObjectUrlRef.current) {
+      URL.revokeObjectURL(faviconObjectUrlRef.current);
+      faviconObjectUrlRef.current = "";
     }
   };
 
@@ -141,6 +153,7 @@ export default function SettingsPage() {
 
     return () => {
       clearLogoObjectUrl();
+      clearFaviconObjectUrl();
     };
   }, []);
 
@@ -180,6 +193,35 @@ export default function SettingsPage() {
     setLogoFile(null);
   };
 
+  const handleFaviconFile = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    setMessage("");
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setMessage("Please select a valid image file.");
+      event.target.value = "";
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setMessage("Favicon image should be under 2MB.");
+      event.target.value = "";
+      return;
+    }
+    clearFaviconObjectUrl();
+    const nextUrl = URL.createObjectURL(file);
+    faviconObjectUrlRef.current = nextUrl;
+    setFaviconFileName(file.name);
+    setFaviconFile(file);
+    setFaviconPreviewUrl(nextUrl);
+  };
+
+  const removeFaviconPreview = () => {
+    clearFaviconObjectUrl();
+    setFaviconPreviewUrl("");
+    setFaviconFileName("");
+    setFaviconFile(null);
+  };
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setMessage("");
@@ -188,6 +230,7 @@ export default function SettingsPage() {
     try {
       let payload = form;
       let uploadedLogo = false;
+      let uploadedFavicon = false;
 
       if (logoFile) {
         const body = new FormData();
@@ -203,11 +246,27 @@ export default function SettingsPage() {
         uploadedLogo = true;
       }
 
+      if (faviconFile) {
+        const body = new FormData();
+        body.append("favicon", faviconFile);
+        const uploadResponse = await adminApi.post<{ faviconUrl: string }>("/settings/favicon", body);
+        payload = {
+          ...payload,
+          seo: { ...payload.seo, faviconUrl: uploadResponse.faviconUrl },
+        };
+        uploadedFavicon = true;
+      }
+
       const response = await adminApi.put<{ data: Settings }>("/settings", payload);
 
       setForm(normalizeSettings(response.data));
       removeLogoPreview();
-      setMessage(uploadedLogo ? "Logo uploaded and settings saved." : "Store settings updated.");
+      removeFaviconPreview();
+      setMessage(
+        uploadedLogo || uploadedFavicon
+          ? `${[uploadedLogo ? "Logo" : "", uploadedFavicon ? "favicon" : ""].filter(Boolean).join(" and ")} uploaded and settings saved.`
+          : "Store settings updated.",
+      );
     } catch (requestError) {
       setMessage(
         requestError instanceof AdminApiError
@@ -306,6 +365,58 @@ export default function SettingsPage() {
                       Remove preview
                     </button>
                   </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </SettingsCard>
+
+        <SettingsCard
+          title="Browser favicon"
+          description="Upload the icon shown in browser tabs and bookmarks. A square PNG, JPG, WEBP or SVG works best."
+        >
+          <div className="md:col-span-2 grid gap-4 lg:grid-cols-[160px_1fr]">
+            <div className="grid content-start justify-items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="grid h-24 w-24 place-items-center overflow-hidden rounded-xl border border-dashed border-slate-300 bg-white p-3">
+                {currentFaviconUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={currentFaviconUrl} alt="Favicon preview" className="h-full w-full object-contain" />
+                ) : (
+                  <span className="text-xs text-slate-500">No favicon</span>
+                )}
+              </div>
+              <p className="max-w-full truncate text-xs font-medium text-slate-600">
+                {faviconFileName || (form.seo?.faviconUrl ? "Current favicon" : "Favicon preview")}
+              </p>
+            </div>
+            <div className="grid content-start gap-4">
+              <label className="group cursor-pointer rounded-2xl border border-dashed border-slate-300 bg-white p-5 transition hover:border-slate-950 hover:bg-slate-50">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml,image/x-icon,image/vnd.microsoft.icon,.ico"
+                  className="sr-only"
+                  onChange={handleFaviconFile}
+                />
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-950">Upload favicon</p>
+                    <p className="mt-1 text-xs text-slate-500">PNG, JPG, WEBP or SVG. Maximum 2MB.</p>
+                  </div>
+                  <span className="rounded-lg bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition group-hover:bg-black">
+                    Choose file
+                  </span>
+                </div>
+              </label>
+              {faviconPreviewUrl && (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                  <p className="text-xs font-medium text-amber-800">Preview selected. It will upload when you save settings.</p>
+                  <button
+                    type="button"
+                    onClick={removeFaviconPreview}
+                    className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-100"
+                  >
+                    Remove preview
+                  </button>
                 </div>
               )}
             </div>

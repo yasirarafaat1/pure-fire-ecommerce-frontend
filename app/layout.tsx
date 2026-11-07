@@ -31,15 +31,40 @@ const bodoniModa = Bodoni_Moda({
  * Global metadata configuration
  * Applies to all pages unless overridden by page-specific metadata
  */
-export const metadata: Metadata = {
-  ...defaultMetadata,
-  metadataBase: siteConfig.url ? new URL(siteConfig.url) : undefined,
-  manifest: "/favicon_io/site.webmanifest",
-  icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon-32x32.png",
-    apple: "/apple-touch-icon.png",
-  },
+async function getAdminFaviconUrl() {
+  const rawBase =
+    process.env.BACKEND_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    "https://purefire-backend.onrender.com";
+  const trimmedBase = rawBase.trim();
+  const base = /^https?:\/\//i.test(trimmedBase)
+    ? trimmedBase
+    : /^(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?$/i.test(trimmedBase)
+      ? `http://${trimmedBase}`
+      : `https://${trimmedBase}`;
+
+  try {
+    const response = await fetch(`${base.replace(/\/$/, "")}/admin/settings/public`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!response.ok) return "";
+    const payload = (await response.json()) as { data?: { seo?: { faviconUrl?: string } } };
+    return payload.data?.seo?.faviconUrl || "";
+  } catch {
+    return "";
+  }
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const faviconUrl = await getAdminFaviconUrl();
+  return {
+    ...defaultMetadata,
+    metadataBase: siteConfig.url ? new URL(siteConfig.url) : undefined,
+    manifest: "/favicon_io/site.webmanifest",
+    icons: faviconUrl
+      ? { icon: faviconUrl, shortcut: faviconUrl, apple: faviconUrl }
+      : undefined,
   formatDetection: {
     telephone: true,
     email: true,
@@ -55,7 +80,8 @@ export const metadata: Metadata = {
       return codes.length === 1 ? codes[0] : codes;
     })(),
   },
-};
+  };
+}
 
 /**
  * Viewport configuration for responsive design
